@@ -1,0 +1,65 @@
+# ==================== Java ====================
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ==================== IDE ====================
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+.metadata/
+bin/
+tmp/
+
+# VS Code
+.vscode/
+
+# ==================== Node.js / 前端 ====================
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+# ==================== 系统文件 ====================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==================== 日志 ====================
+*.log
+logs/
+
+# ==================== 导出文件 ====================
+export-files/
+
+# ==================== 环境配置 ====================
+*.env
+*.env.local
+*.env.*.local
