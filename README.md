@@ -1,6 +1,6 @@
 # DSP 数据服务平台
 
-公司级统一数据服务基础设施平台，通过 XML 配置定义接口逻辑，实现"零代码"接口发布。
+数据服务基础设施平台，通过 XML 配置定义接口逻辑，实现"零代码"接口发布。
 
 ## 技术栈
 
@@ -19,9 +19,9 @@ DSP/
 │   │   ├── dsp-common/           # 公共模块 (jar)
 │   │   ├── dsp-core/            # 核心代码模块 (jar)
 │   │   ├── dsp-engine/          # 引擎模块 (jar)
-│   │   ├── dsp-data-service/    # 数据服务 (可部署 jar, port=8080)
-│   │   ├── dsp-offline-service/ # 离线导出服务 (可部署 jar, port=8081)
-│   │   └── dsp-admin-service/   # 管理平台服务 (可部署 jar, port=8082)
+│ │ ├── dsp-data-service/ # 数据服务 (可部署 jar, 端口=8080)
+│ │ ├── dsp-offline-service/ # 离线导出服务 (可部署 jar, 端口=8081)
+│ │ └── dsp-admin-service/ # 管理平台服务（可部署 jar，端口=8082）
 │   └── dsp-admin-web/           # 前端项目 (Vue 3 + Vite)
 └── CODEBUDDY.md
 ```
@@ -42,10 +42,10 @@ mvn clean package
 # 运行数据服务 (port=8080)
 java -jar dsp-data-service/target/dsp-data-service-1.0.0.jar
 
-# 运行离线导出服务 (port=8081)
+# 运行离线导出服务 (端口=8081)
 java -jar dsp-offline-service/target/dsp-offline-service-1.0.0.jar
 
-# 运行管理平台服务 (port=8082)
+# 运行管理平台服务 (端口=8082)
 java -jar dsp-admin-service/target/dsp-admin-service-1.0.0.jar
 ```
 
@@ -58,10 +58,10 @@ cd dsp/dsp-admin-web
 npm install
 
 # 开发模式 (Vite 热更新，代理到 localhost:8082)
-npm run dev
+npm 运行 dev
 
 # 生产构建
-npm run build
+npm 运行构建
 ```
 
 ## 核心特性
