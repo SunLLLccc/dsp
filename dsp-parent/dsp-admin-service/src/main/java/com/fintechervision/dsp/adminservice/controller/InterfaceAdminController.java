@@ -5,9 +5,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fintechervision.dsp.common.model.ApiResponse;
 import com.fintechervision.dsp.engine.XmlEngine;
 import com.fintechervision.dsp.entity.ApprovalRecord;
+import com.fintechervision.dsp.entity.InterfaceDatasource;
 import com.fintechervision.dsp.entity.InterfaceInfo;
 import com.fintechervision.dsp.entity.InterfaceVersion;
 import com.fintechervision.dsp.service.ApprovalRecordService;
+import com.fintechervision.dsp.service.InterfaceDatasourceService;
 import com.fintechervision.dsp.service.InterfaceInfoService;
 import com.fintechervision.dsp.service.InterfaceVersionService;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -26,6 +29,7 @@ public class InterfaceAdminController {
     private final InterfaceInfoService interfaceInfoService;
     private final InterfaceVersionService interfaceVersionService;
     private final ApprovalRecordService approvalRecordService;
+    private final InterfaceDatasourceService interfaceDatasourceService;
     private final XmlEngine xmlEngine;
 
     @GetMapping("/list")
@@ -172,5 +176,37 @@ public class InterfaceAdminController {
             @RequestParam(defaultValue = "10") Integer pageSize) {
         return ApiResponse.success("APPROVAL_PENDING", "",
                 approvalRecordService.listPending(pageNum, pageSize));
+    }
+
+    // ==================== 接口-数据源关联 ====================
+
+    @GetMapping("/{transno}/datasources")
+    public ApiResponse<List<InterfaceDatasource>> listDatasources(@PathVariable String transno) {
+        return ApiResponse.success("INTERFACE_DATASOURCES", "",
+                interfaceDatasourceService.listByTransno(transno));
+    }
+
+    @PostMapping("/{transno}/datasources")
+    public ApiResponse<Void> bindDatasources(
+            @PathVariable String transno,
+            @RequestBody Map<String, List<String>> body) {
+        interfaceDatasourceService.bindDatasources(transno, body.get("dsNames"));
+        return ApiResponse.success("INTERFACE_DATASOURCE_BIND", "", null);
+    }
+
+    @PostMapping("/{transno}/datasource/{dsName}")
+    public ApiResponse<Void> addDatasource(
+            @PathVariable String transno,
+            @PathVariable String dsName) {
+        interfaceDatasourceService.addDatasource(transno, dsName);
+        return ApiResponse.success("INTERFACE_DATASOURCE_ADD", "", null);
+    }
+
+    @DeleteMapping("/{transno}/datasource/{dsName}")
+    public ApiResponse<Void> removeDatasource(
+            @PathVariable String transno,
+            @PathVariable String dsName) {
+        interfaceDatasourceService.removeDatasource(transno, dsName);
+        return ApiResponse.success("INTERFACE_DATASOURCE_REMOVE", "", null);
     }
 }
