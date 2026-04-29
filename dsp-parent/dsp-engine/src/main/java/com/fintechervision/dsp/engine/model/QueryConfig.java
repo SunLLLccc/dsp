@@ -12,6 +12,7 @@ public class QueryConfig {
     private List<DynamicSqlConfig> dynamicSqls = new ArrayList<>();
     private HttpQueryConfig httpConfig;
     private DubboQueryConfig dubboConfig;
+    private MongoQueryConfig mongoConfig;
     private PaginationConfig paginationConfig;
     private List<String> depends = new ArrayList<>();
 }

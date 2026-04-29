@@ -19,6 +19,7 @@ public class XmlEngine {
     private final SqlExecutor sqlExecutor;
     private final HttpExecutor httpExecutor;
     private final DubboExecutor dubboExecutor;
+    private final MongoExecutor mongoExecutor;
     private final PaginationHandler paginationHandler;
     private final DynamicSqlHandler dynamicSqlHandler;
     private final ResultMapper resultMapper;
@@ -77,7 +78,7 @@ public class XmlEngine {
             case "dubbo":
                 return executeDubboQuery(query, requestData, previousResults);
             case "mongo":
-                throw new RuntimeException("MongoDB查询类型暂未实现");
+                return executeMongoQuery(query, requestData, previousResults);
             default:
                 throw new RuntimeException("不支持的查询类型: " + type);
         }
@@ -126,6 +127,15 @@ public class XmlEngine {
             throw new RuntimeException("Dubbo查询缺少<dubbo>配置，queryId=" + query.getId());
         }
         return dubboExecutor.execute(query.getDubboConfig(), query.getDatasource(), requestData, previousResults);
+    }
+
+    private List<Map<String, Object>> executeMongoQuery(QueryConfig query,
+                                                          Map<String, Object> requestData,
+                                                          Map<String, Object> previousResults) {
+        if (query.getMongoConfig() == null) {
+            throw new RuntimeException("MongoDB查询缺少<mongo>配置，queryId=" + query.getId());
+        }
+        return mongoExecutor.execute(query.getMongoConfig(), query.getDatasource(), requestData, previousResults);
     }
 
     private void validateParams(RequestDataConfig requestDataConfig, Map<String, Object> requestData) {

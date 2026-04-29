@@ -102,6 +102,8 @@ public class XmlConfigParser {
             parseHttpQuery(element, config);
         } else if ("dubbo".equals(type)) {
             parseDubboQuery(element, config);
+        } else if ("mongo".equals(type)) {
+            parseMongoQuery(element, config);
         } else {
             log.warn("暂不支持的查询类型: {}，按SQL处理", type);
             parseSqlContent(element, config);
@@ -165,6 +167,32 @@ public class XmlConfigParser {
         }
 
         config.setDubboConfig(dubboConfig);
+    }
+
+    private void parseMongoQuery(Element element, QueryConfig config) {
+        Element mongoEl = element.element("mongo");
+        if (mongoEl == null) {
+            throw new RuntimeException("MongoDB查询缺少<mongo>配置标签");
+        }
+        MongoQueryConfig mongoConfig = new MongoQueryConfig();
+        mongoConfig.setCollection(mongoEl.attributeValue("collection"));
+
+        Element filterEl = mongoEl.element("filter");
+        if (filterEl != null) mongoConfig.setFilter(filterEl.getTextTrim());
+
+        Element projectionEl = mongoEl.element("projection");
+        if (projectionEl != null) mongoConfig.setProjection(projectionEl.getTextTrim());
+
+        Element sortEl = mongoEl.element("sort");
+        if (sortEl != null) mongoConfig.setSort(sortEl.getTextTrim());
+
+        Element limitEl = mongoEl.element("limit");
+        if (limitEl != null) mongoConfig.setLimit(Integer.parseInt(limitEl.getTextTrim()));
+
+        Element skipEl = mongoEl.element("skip");
+        if (skipEl != null) mongoConfig.setSkip(Integer.parseInt(skipEl.getTextTrim()));
+
+        config.setMongoConfig(mongoConfig);
     }
 
     private void parsePagination(Element element, QueryConfig config) {
