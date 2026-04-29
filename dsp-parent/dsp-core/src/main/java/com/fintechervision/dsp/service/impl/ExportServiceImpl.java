@@ -17,9 +17,10 @@ import com.fintechervision.dsp.export.ExportType;
 import com.fintechervision.dsp.export.FileFormat;
 import com.fintechervision.dsp.mapper.ExportTaskMapper;
 import com.fintechervision.dsp.service.ExportService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -32,11 +33,18 @@ import java.util.*;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ExportServiceImpl extends ServiceImpl<ExportTaskMapper, ExportTask>
         implements ExportService {
 
     private final DataQueryService dataQueryService;
+
+    @Lazy
+    @Autowired
+    private ExportService selfProxy;
+
+    public ExportServiceImpl(DataQueryService dataQueryService) {
+        this.dataQueryService = dataQueryService;
+    }
 
     @Value("${dsp.export.base-dir:./export-files}")
     private String exportBaseDir;
@@ -83,7 +91,7 @@ public class ExportServiceImpl extends ServiceImpl<ExportTaskMapper, ExportTask>
         task.setApplyUser(applyUser);
         task.setCreatedTime(LocalDateTime.now());
         save(task);
-        executeOfflineExport(task.getId(), transno, params, FileFormat.fromExtension(format));
+        selfProxy.executeOfflineExport(task.getId(), transno, params, FileFormat.fromExtension(format));
         return task;
     }
 

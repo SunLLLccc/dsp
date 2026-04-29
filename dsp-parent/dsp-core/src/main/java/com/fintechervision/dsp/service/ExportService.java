@@ -2,6 +2,7 @@ package com.fintechervision.dsp.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fintechervision.dsp.entity.ExportTask;
+import com.fintechervision.dsp.export.FileFormat;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
@@ -11,4 +12,5 @@ public interface ExportService {
     ExportTask getExportTask(Long taskId);
     Page<ExportTask> listExportTask(Integer pageNum, Integer pageSize, String transno, Integer status);
     void downloadExportFile(Long taskId, HttpServletResponse response);
+    void executeOfflineExport(Long taskId, String transno, Map<String, Object> params, FileFormat format);
 }
