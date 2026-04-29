@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板12: 多数据源SQL查询
+  场景: 同一接口中查询不同数据源（如MySQL + Doris + PostgreSQL）
+  适用: 跨库数据聚合、OLTP + OLAP 混合查询
+  说明: 不同 query 通过 datasource 属性指定不同的数据源
+-->
+<interface transno="CROSS_DB_REPORT" name="跨库报表查询" description="同时查询MySQL业务库和Doris分析库，聚合生成报表">
+
+    <requestData>
+        <param name="merchantId" type="String" required="true" description="商户ID" />
+        <param name="startDate" type="String" required="false" description="开始日期" />
+        <param name="endDate" type="String" required="false" description="结束日期" />
+    </requestData>
+
+    <!-- MySQL 业务数据源 -->
+    <datasource name="ds_mysql" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/business_db" username="root" password="123456" />
+
+    <!-- Doris 分析数据源 -->
+    <datasource name="ds_doris" type="DORIS"
+                url="jdbc:mysql://doris-host:9030/analytics_db" username="root" password="123456" />
+
+    <!-- PostgreSQL 数据源 -->
+    <datasource name="ds_pg" type="POSTGRESQL"
+                url="jdbc:postgresql://pg-host:5432/config_db" username="postgres" password="123456" />
+
+    <!-- 查询1: 从MySQL查商户基本信息（并行） -->
+    <query id="q1_merchant" type="mysql" datasource="ds_mysql">
+        SELECT id, merchant_name, contact_name, phone, status, created_at
+        FROM merchants
+        WHERE id = #{requestData.merchantId}
+    </query>
+
+    <!-- 查询2: 从Doris查交易统计（并行） -->
+    <query id="q2_trade_stats" type="doris" datasource="ds_doris">
+        SELECT merchant_id,
+               COUNT(*) AS trade_count,
+               SUM(amount) AS total_amount,
+               AVG(amount) AS avg_amount
+        FROM trade_fact
+        WHERE merchant_id = #{requestData.merchantId}
+        <if test="$requestData.startDate != null">AND trade_date &gt;= #{requestData.startDate}</if>
+        <if test="$requestData.endDate != null">AND trade_date &lt;= #{requestData.endDate}</if>
+        GROUP BY merchant_id
+    </query>
+
+    <!-- 查询3: 从PostgreSQL查配置信息（并行） -->
+    <query id="q3_config" type="postgresql" datasource="ds_pg">
+        SELECT config_key, config_value
+        FROM merchant_config
+        WHERE merchant_id = #{requestData.merchantId}
+    </query>
+
+    <resultMap id="merchantMap" query="q1_merchant">
+        <field name="merchantId" column="id" />
+        <field name="merchantName" column="merchant_name" />
+        <field name="contactName" column="contact_name" />
+        <field name="phone" column="phone" />
+        <field name="status" column="status" />
+        <field name="createdAt" column="created_at" function="fn:DATE_FORMAT,yyyy-MM-dd" />
+    </resultMap>
+
+    <resultMap id="tradeStatsMap" query="q2_trade_stats">
+        <field name="tradeCount" column="trade_count" function="fn:TYPE_CONVERT,LONG" />
+        <field name="totalAmount" column="total_amount" function="fn:ROUND,2" />
+        <field name="avgAmount" column="avg_amount" function="fn:ROUND,2" />
+    </resultMap>
+
+    <resultMap id="configMap" query="q3_config">
+        <field name="configKey" column="config_key" />
+        <field name="configValue" column="config_value" />
+    </resultMap>
+
+    <responseData>
+        <field name="merchant" mapTo="merchantMap" />
+        <field name="tradeStats" mapTo="tradeStatsMap" />
+        <field name="configs" mapTo="configMap" />
+    </responseData>
+
+</interface>

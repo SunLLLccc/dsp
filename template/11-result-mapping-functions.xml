@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板11: 结果映射与函数转换
+  场景: 展示所有内置函数的使用方式，覆盖日期、字符串、类型转换、JSON、空值处理、聚合、数学等函数
+  适用: 需要对查询结果进行数据转换和格式化的场景
+  说明: function="fn:函数名,参数1,参数2" — 第一个参数始终是字段值，后续参数来自逗号分隔列表
+-->
+<interface transno="DATA_TRANSFORM_DEMO" name="数据转换演示" description="演示所有内置函数的结果映射转换">
+
+    <requestData>
+        <param name="userId" type="String" required="true" description="用户ID" />
+    </requestData>
+
+    <datasource name="ds_main" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+
+    <query id="q1" type="mysql" datasource="ds_main">
+        SELECT id, user_name, email, phone, amount, rate, json_ext,
+               created_at, birthday, status, remark
+        FROM user_detail
+        WHERE id = #{requestData.userId}
+    </query>
+
+    <resultMap id="transformMap" query="q1">
+        <!-- ====== 日期函数 ====== -->
+        <!-- DATE_FORMAT: 格式化日期时间 -->
+        <field name="createdAt" column="created_at" function="fn:DATE_FORMAT,yyyy-MM-dd HH:mm:ss" />
+        <!-- DATE_ADD: 日期加天数 -->
+        <field name="expireDate" column="created_at" function="fn:DATE_ADD,30" />
+        <!-- DATE_SUB: 日期减天数 -->
+        <field name="startDate" column="created_at" function="fn:DATE_SUB,7" />
+
+        <!-- ====== 字符串函数 ====== -->
+        <!-- UPPER: 转大写 -->
+        <field name="userNameUpper" column="user_name" function="fn:UPPER" />
+        <!-- LOWER: 转小写 -->
+        <field name="emailLower" column="email" function="fn:LOWER" />
+        <!-- TRIM: 去首尾空格 -->
+        <field name="phoneTrimmed" column="phone" function="fn:TRIM" />
+        <!-- CONCAT: 字符串拼接 -->
+        <field name="displayName" column="user_name" function="fn:CONCAT,-DSP" />
+        <!-- SUBSTRING: 截取子串 -->
+        <field name="phonePrefix" column="phone" function="fn:SUBSTRING,0,3" />
+        <!-- REPLACE: 字符串替换 -->
+        <field name="emailMasked" column="email" function="fn:REPLACE,@,***@" />
+        <!-- PAD_LEFT: 左补齐 -->
+        <field name="userIdPadded" column="id" function="fn:PAD_LEFT,8,0" />
+        <!-- LENGTH: 字符串长度 -->
+        <field name="nameLength" column="user_name" function="fn:LENGTH" />
+
+        <!-- ====== 类型转换函数 ====== -->
+        <!-- TYPE_CONVERT: 转换为指定类型 (STRING/INTEGER/LONG/DOUBLE) -->
+        <field name="amountDouble" column="amount" function="fn:TYPE_CONVERT,DOUBLE" />
+        <field name="idLong" column="id" function="fn:TYPE_CONVERT,LONG" />
+
+        <!-- ====== 数学函数 ====== -->
+        <!-- ROUND: 四舍五入（可指定小数位数） -->
+        <field name="amountRounded" column="amount" function="fn:ROUND,2" />
+        <!-- CEIL: 向上取整 -->
+        <field name="amountCeil" column="amount" function="fn:CEIL" />
+        <!-- FLOOR: 向下取整 -->
+        <field name="amountFloor" column="amount" function="fn:FLOOR" />
+
+        <!-- ====== 空值处理函数 ====== -->
+        <!-- IFNULL: 空值替换 -->
+        <field name="remarkOrDefault" column="remark" function="fn:IFNULL,暂无备注" />
+        <!-- NVL: 返回第一个非空值 -->
+        <field name="contactInfo" column="phone" function="fn:NVL,联系方式未知" />
+
+        <!-- ====== JSON函数 ====== -->
+        <!-- JSON_EXTRACT: 从JSON字符串中提取值 -->
+        <field name="extTag" column="json_ext" function="fn:JSON_EXTRACT,tag" />
+    </resultMap>
+
+    <responseData resultMap="transformMap">
+        <field name="detail" />
+    </responseData>
+
+</interface>

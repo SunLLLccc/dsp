@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板09: 多查询并行编排
+  场景: 多个独立查询并行执行，互不依赖，结果汇总到响应中
+  适用: 仪表盘、聚合多个独立数据源的概览页面
+  说明: 没有 depends 属性的查询会自动并行执行
+-->
+<interface transno="DASHBOARD_OVERVIEW" name="仪表盘概览" description="并行查询多个数据源聚合仪表盘数据">
+
+    <requestData>
+        <param name="dateRange" type="String" required="false" defaultValue="7d" description="日期范围" />
+    </requestData>
+
+    <datasource name="ds_main" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+
+    <!-- 查询1: 用户统计（并行执行） -->
+    <query id="q_user_stats" type="mysql" datasource="ds_main">
+        SELECT COUNT(*) AS total_users,
+               SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_users,
+               SUM(CASE WHEN created_at &gt;= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS new_users
+        FROM users
+    </query>
+
+    <!-- 查询2: 订单统计（并行执行） -->
+    <query id="q_order_stats" type="mysql" datasource="ds_main">
+        SELECT COUNT(*) AS total_orders,
+               COALESCE(SUM(amount), 0) AS total_amount,
+               COALESCE(AVG(amount), 0) AS avg_amount
+        FROM orders
+        WHERE created_at &gt;= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    </query>
+
+    <!-- 查询3: 接口调用统计（并行执行） -->
+    <query id="q_api_stats" type="mysql" datasource="ds_main">
+        SELECT COUNT(*) AS total_calls,
+               SUM(CASE WHEN status = 'SUCCESS' THEN 1 ELSE 0 END) AS success_calls,
+               SUM(CASE WHEN status = 'FAIL' THEN 1 ELSE 0 END) AS fail_calls
+        FROM api_call_log
+        WHERE created_at &gt;= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    </query>
+
+    <!-- 各查询结果映射 -->
+    <resultMap id="userStatsMap" query="q_user_stats">
+        <field name="totalUsers" column="total_users" function="fn:TYPE_CONVERT,LONG" />
+        <field name="activeUsers" column="active_users" function="fn:TYPE_CONVERT,LONG" />
+        <field name="newUsers" column="new_users" function="fn:TYPE_CONVERT,LONG" />
+    </resultMap>
+
+    <resultMap id="orderStatsMap" query="q_order_stats">
+        <field name="totalOrders" column="total_orders" function="fn:TYPE_CONVERT,LONG" />
+        <field name="totalAmount" column="total_amount" function="fn:ROUND,2" />
+        <field name="avgAmount" column="avg_amount" function="fn:ROUND,2" />
+    </resultMap>
+
+    <resultMap id="apiStatsMap" query="q_api_stats">
+        <field name="totalCalls" column="total_calls" function="fn:TYPE_CONVERT,LONG" />
+        <field name="successCalls" column="success_calls" function="fn:TYPE_CONVERT,LONG" />
+        <field name="failCalls" column="fail_calls" function="fn:TYPE_CONVERT,LONG" />
+    </resultMap>
+
+    <!-- 汇总响应: 将三个并行查询的结果组装到一起 -->
+    <responseData>
+        <field name="userStats" mapTo="userStatsMap" />
+        <field name="orderStats" mapTo="orderStatsMap" />
+        <field name="apiStats" mapTo="apiStatsMap" />
+    </responseData>
+
+</interface>

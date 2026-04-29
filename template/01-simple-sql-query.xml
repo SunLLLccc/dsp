@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板01: 简单单表SQL查询
+  场景: 最基础的查询，单数据源、单SQL、无动态条件、无分页、简单结果映射
+  适用: 根据ID查详情、字典查询等简单场景
+-->
+<interface transno="USER_GET_BY_ID" name="根据ID查询用户" description="根据用户ID查询用户详细信息">
+
+    <!-- 请求参数 -->
+    <requestData>
+        <param name="userId" type="String" required="true" description="用户ID" />
+    </requestData>
+
+    <!-- 数据源配置 -->
+    <datasource name="ds_main" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+
+    <!-- 单条SQL查询 -->
+    <query id="q1" type="mysql" datasource="ds_main">
+        SELECT id, user_name, email, phone, status, created_at, updated_at
+        FROM users
+        WHERE id = #{requestData.userId}
+    </query>
+
+    <!-- 结果映射: 数据库字段 → 输出字段 -->
+    <resultMap id="userMap" query="q1">
+        <field name="userId" column="id" />
+        <field name="userName" column="user_name" />
+        <field name="email" column="email" />
+        <field name="phone" column="phone" />
+        <field name="status" column="status" />
+        <field name="createdAt" column="created_at" function="fn:DATE_FORMAT,yyyy-MM-dd HH:mm:ss" />
+        <field name="updatedAt" column="updated_at" function="fn:DATE_FORMAT,yyyy-MM-dd HH:mm:ss" />
+    </resultMap>
+
+    <!-- 响应组装 -->
+    <responseData resultMap="userMap">
+        <field name="user" />
+    </responseData>
+
+</interface>

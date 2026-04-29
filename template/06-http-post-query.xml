@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板06: HTTP POST请求调用
+  场景: 调用外部POST接口，携带请求体
+  适用: 提交数据到外部系统、调用需要请求体的API
+-->
+<interface transno="RISK_CHECK" name="风控检查" description="调用风控系统POST接口进行风险评估">
+
+    <requestData>
+        <param name="userId" type="String" required="true" description="用户ID" />
+        <param name="amount" type="String" required="true" description="交易金额" />
+        <param name="token" type="String" required="true" description="认证令牌" />
+    </requestData>
+
+    <datasource name="ds_main" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+
+    <!-- HTTP POST 请求示例 -->
+    <query id="q1" type="http">
+        <http url="https://risk.internal.com/api/v1/evaluate"
+              method="POST"
+              headers='{"Authorization":"Bearer #{$requestData.token}","Content-Type":"application/json"}'
+              body='{"userId":"#{$requestData.userId}","amount":"#{$requestData.amount}","scene":"TRADE"}'
+              responsePath="data.riskResult" />
+    </query>
+
+    <resultMap id="riskMap" query="q1">
+        <field name="riskLevel" column="risk_level" />
+        <field name="riskScore" column="risk_score" function="fn:TYPE_CONVERT,INTEGER" />
+        <field name="decision" column="decision" />
+        <field name="reason" column="reason" function="fn:IFNULL,未提供原因" />
+    </resultMap>
+
+    <responseData resultMap="riskMap">
+        <field name="riskResult" />
+    </responseData>
+
+</interface>

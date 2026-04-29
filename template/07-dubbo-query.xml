@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板07: Dubbo泛化调用
+  场景: 通过Dubbo泛化调用远程服务，无需引入服务接口JAR包
+  适用: 调用内部Dubbo微服务获取数据
+  注意: 数据源的 extraConfig 中需要配置 Dubbo 注册中心地址
+-->
+<interface transno="CUSTOMER_PROFILE" name="客户画像查询" description="通过Dubbo调用客户服务获取客户画像信息">
+
+    <requestData>
+        <param name="customerId" type="String" required="true" description="客户ID" />
+        <param name="sceneType" type="String" required="false" defaultValue="FULL" description="场景类型" />
+    </requestData>
+
+    <!--
+      Dubbo数据源配置:
+      extraConfig 中 registry 字段指定注册中心地址
+    -->
+    <datasource name="dubbo_ds" type="DUBBO"
+                url="" username="" password=""
+                extraConfig='{"registry":"zookeeper://127.0.0.1:2181"}' />
+
+    <!--
+      Dubbo泛化调用:
+      service  - 服务接口全限定名
+      method   - 调用的方法名
+      version  - 服务版本号（默认1.0.0）
+      group    - 服务分组
+      timeout  - 超时时间（毫秒，默认3000）
+      <param>  - 方法参数，type指定Java类型，value支持SpEL表达式
+    -->
+    <query id="q1" type="dubbo" datasource="dubbo_ds">
+        <dubbo service="com.fintechervision.customer.CustomerProfileService"
+               method="getProfile"
+               version="1.0.0"
+               group="production"
+               timeout="5000">
+            <param type="String" value="#{$requestData.customerId}" />
+            <param type="String" value="#{$requestData.sceneType}" />
+        </dubbo>
+    </query>
+
+    <resultMap id="profileMap" query="q1">
+        <field name="customerId" column="customerId" />
+        <field name="customerName" column="customerName" function="fn:UPPER" />
+        <field name="level" column="level" function="fn:IFNULL,UNKNOWN" />
+        <field name="totalAssets" column="totalAssets" function="fn:ROUND,2" />
+        <field name="riskPreference" column="riskPreference" />
+        <field name="tags" column="tags" function="fn:JSON_EXTRACT,list" />
+    </resultMap>
+
+    <responseData resultMap="profileMap">
+        <field name="profile" />
+    </responseData>
+
+</interface>

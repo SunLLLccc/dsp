@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板04: 优化分页查询
+  场景: 深分页优化查询，使用子查询方式避免大OFFSET性能问题
+  适用: PC端传统分页、报表翻页查询
+  说明:
+    - 第1页(offset=0): ORDER BY id LIMIT pageSize
+    - 第N页(offset>0): WHERE id >= (SELECT id FROM table ORDER BY id LIMIT offset, 1) ORDER BY id LIMIT pageSize
+-->
+<interface transno="REPORT_LIST_OPTIMIZED" name="报表优化分页查询" description="使用子查询优化的深分页报表查询">
+
+    <requestData>
+        <param name="reportType" type="String" required="false" description="报表类型" />
+        <param name="pageNum" type="Integer" required="false" defaultValue="1" description="页码（从1开始）" />
+        <param name="pageSize" type="Integer" required="false" defaultValue="20" description="每页条数" />
+    </requestData>
+
+    <datasource name="ds_main" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+
+    <!--
+      pagination="optimized"      : 优化分页模式（子查询方式）
+      order-by="id"               : 排序字段
+      page-size-param="pageSize"   : 每页条数参数名
+      page-num-param="pageNum"     : 页码参数名
+      default-page-size="20"       : 默认每页条数
+      max-page-size="100"          : 最大每页条数
+    -->
+    <query id="q1" type="mysql" datasource="ds_main"
+           pagination="optimized" order-by="id"
+           page-size-param="pageSize" page-num-param="pageNum"
+           default-page-size="20" max-page-size="100">
+        SELECT id, report_name, report_type, generated_by, file_size, status, created_at
+        FROM report_records
+        WHERE 1=1
+        <if test="$requestData.reportType != null">AND report_type = #{requestData.reportType}</if>
+    </query>
+
+    <resultMap id="reportMap" query="q1">
+        <field name="id" column="id" />
+        <field name="reportName" column="report_name" />
+        <field name="reportType" column="report_type" />
+        <field name="generatedBy" column="generated_by" />
+        <field name="fileSize" column="file_size" function="fn:TYPE_CONVERT,LONG" />
+        <field name="status" column="status" />
+        <field name="createdAt" column="created_at" function="fn:DATE_FORMAT,yyyy-MM-dd HH:mm:ss" />
+    </resultMap>
+
+    <responseData resultMap="reportMap">
+        <field name="list" />
+    </responseData>
+
+</interface>

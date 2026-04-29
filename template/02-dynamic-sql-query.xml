@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板02: 动态SQL查询
+  场景: 多条件可选查询，使用 <if> 条件判断和 <foreach> 集合遍历
+  适用: 列表筛选、多条件组合查询
+-->
+<interface transno="USER_LIST_QUERY" name="用户列表查询" description="支持多条件筛选的用户列表查询">
+
+    <requestData>
+        <param name="userName" type="String" required="false" description="用户名（模糊查询）" />
+        <param name="status" type="String" required="false" defaultValue="active" description="状态" />
+        <param name="departmentId" type="String" required="false" description="部门ID" />
+        <param name="ids" type="List" required="false" description="用户ID列表（批量查询）" />
+        <param name="minAge" type="Integer" required="false" description="最小年龄" />
+        <param name="maxAge" type="Integer" required="false" description="最大年龄" />
+    </requestData>
+
+    <datasource name="ds_main" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+
+    <query id="q1" type="mysql" datasource="ds_main">
+        SELECT id, user_name, email, phone, status, age, department_id, created_at
+        FROM users
+        WHERE 1=1
+        <if test="$requestData.userName != null">AND user_name LIKE #{requestData.userName}</if>
+        <if test="$requestData.status != null">AND status = #{requestData.status}</if>
+        <if test="$requestData.departmentId != null">AND department_id = #{requestData.departmentId}</if>
+        <if test="$requestData.minAge != null">AND age &gt;= #{requestData.minAge}</if>
+        <if test="$requestData.maxAge != null">AND age &lt;= #{requestData.maxAge}</if>
+        <foreach collection="$requestData.ids" item="id" separator="," open="AND id IN (" close=")">
+            #{id}
+        </foreach>
+        ORDER BY created_at DESC
+    </query>
+
+    <resultMap id="userListMap" query="q1">
+        <field name="userId" column="id" />
+        <field name="userName" column="user_name" />
+        <field name="email" column="email" />
+        <field name="phone" column="phone" />
+        <field name="status" column="status" />
+        <field name="age" column="age" function="fn:TYPE_CONVERT,INTEGER" />
+        <field name="departmentId" column="department_id" />
+        <field name="createdAt" column="created_at" function="fn:DATE_FORMAT,yyyy-MM-dd" />
+    </resultMap>
+
+    <responseData resultMap="userListMap">
+        <field name="list" />
+    </responseData>
+
+</interface>

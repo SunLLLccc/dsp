@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板15: 无结果映射的简单查询
+  场景: 不需要字段映射，直接返回查询原始结果
+  适用: 简单字典查询、配置查询等不需要转换字段的场景
+  说明: 无 resultMap 时，引擎直接返回查询结果的原始 Map
+-->
+<interface transno="DICT_QUERY" name="字典查询" description="查询数据字典，直接返回原始结果">
+
+    <requestData>
+        <param name="dictType" type="String" required="true" description="字典类型编码" />
+    </requestData>
+
+    <datasource name="ds_main" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+
+    <query id="q1" type="mysql" datasource="ds_main">
+        SELECT dict_code, dict_label, dict_value, sort_order, remark
+        FROM sys_dict
+        WHERE dict_type = #{requestData.dictType}
+        ORDER BY sort_order
+    </query>
+
+    <!-- 不定义 resultMap，直接返回原始查询结果 -->
+
+</interface>

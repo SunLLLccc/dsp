@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板16: 综合全功能示例
+  场景: 综合使用所有引擎功能 — 多数据源、多查询类型、依赖编排、动态SQL、
+        分页、函数转换、结果映射、响应组装
+  适用: 复杂业务聚合接口的参考模板
+
+  业务场景: 交易详情聚合查询
+  流程:
+    1. [并行] q1_sql: 从MySQL查交易基础信息（带动态条件+游标分页）
+    2. [并行] q4_mongo: 从MongoDB查交易操作日志
+    3. [依赖q1] q2_http: 用q1的结果调HTTP接口查风控信息
+    4. [依赖q1] q3_dubbo: 用q1的结果调Dubbo服务查客户信息
+-->
+<interface transno="TRADE_DETAIL_AGGREGATE" name="交易详情聚合查询" description="综合查询交易详情，聚合多数据源信息">
+
+    <!-- ====== 请求参数 ====== -->
+    <requestData>
+        <param name="tradeId" type="String" required="true" description="交易ID" />
+        <param name="status" type="String" required="false" description="交易状态" />
+        <param name="productType" type="String" required="false" description="产品类型" />
+        <param name="token" type="String" required="true" description="认证令牌" />
+        <param name="lastId" type="String" required="false" description="分页游标（上一页最后ID）" />
+        <param name="pageSize" type="Integer" required="false" defaultValue="20" description="每页条数" />
+    </requestData>
+
+    <!-- ====== 数据源配置 ====== -->
+    <datasource name="ds_mysql" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/business_db" username="root" password="123456" />
+    <datasource name="dubbo_ds" type="DUBBO"
+                url="" username="" password=""
+                extraConfig='{"registry":"zookeeper://127.0.0.1:2181"}' />
+    <datasource name="ds_mongo" type="MONGO"
+                url="mongodb://localhost:27017/dsp_logs" username="" password="" />
+
+    <!-- ====== 查询定义 ====== -->
+
+    <!-- 查询1: MySQL查询交易列表（带动态SQL + 游标分页，无依赖，并行执行） -->
+    <query id="q1_trades" type="mysql" datasource="ds_mysql"
+           pagination="cursor" order-by="id"
+           page-size-param="pageSize" last-id-param="lastId"
+           default-page-size="20" max-page-size="100">
+        SELECT id, trade_no, customer_id, product_type, amount, status, channel, created_at
+        FROM trades
+        WHERE 1=1
+        <if test="$requestData.status != null">AND status = #{requestData.status}</if>
+        <if test="$requestData.productType != null">AND product_type = #{requestData.productType}</if>
+        ORDER BY created_at DESC
+    </query>
+
+    <!-- 查询4: MongoDB查询操作日志（无依赖，与q1并行） -->
+    <query id="q4_logs" type="mongo" datasource="ds_mongo">
+        <mongo collection="trade_operation_logs">
+            <filter>{"tradeId": "#{tradeId}"}</filter>
+            <projection>{"operator":1, "action":1, "detail":1, "time":1}</projection>
+            <sort>{"time": -1}</sort>
+            <limit>20</limit>
+        </mongo>
+    </query>
+
+    <!-- 查询2: HTTP查询风控信息（依赖q1，用q1单行结果的字段） -->
+    <query id="q2_risk" type="http" depends="q1_trades">
+        <http url="https://risk.internal.com/api/v1/trade/risk/#{$q1_trades.trade_no}"
+              method="GET"
+              headers='{"Authorization":"Bearer #{$requestData.token}"}'
+              responsePath="data" />
+    </query>
+
+    <!-- 查询3: Dubbo查询客户信息（依赖q1，用q1单行结果的字段） -->
+    <query id="q3_customer" type="dubbo" datasource="dubbo_ds" depends="q1_trades">
+        <dubbo service="com.fintechervision.customer.CustomerService"
+               method="getCustomerDetail"
+               version="1.0.0"
+               timeout="3000">
+            <param type="String" value="#{$q1_trades.customer_id}" />
+        </dubbo>
+    </query>
+
+    <!-- ====== 结果映射 ====== -->
+
+    <resultMap id="tradeMap" query="q1_trades">
+        <field name="tradeId" column="id" />
+        <field name="tradeNo" column="trade_no" />
+        <field name="customerId" column="customer_id" />
+        <field name="productType" column="product_type" />
+        <field name="amount" column="amount" function="fn:ROUND,2" />
+        <field name="status" column="status" />
+        <field name="channel" column="channel" />
+        <field name="createdAt" column="created_at" function="fn:DATE_FORMAT,yyyy-MM-dd HH:mm:ss" />
+    </resultMap>
+
+    <resultMap id="riskMap" query="q2_risk">
+        <field name="riskLevel" column="riskLevel" function="fn:IFNULL,UNKNOWN" />
+        <field name="riskScore" column="riskScore" function="fn:TYPE_CONVERT,INTEGER" />
+        <field name="frozenFlag" column="frozen" function="fn:IFF,true,是,否" />
+    </resultMap>
+
+    <resultMap id="customerMap" query="q3_customer">
+        <field name="customerId" column="customerId" />
+        <field name="customerName" column="customerName" />
+        <field name="certType" column="certType" />
+        <field name="certNo" column="certNo" />
+        <field name="level" column="level" function="fn:IFNULL,普通客户" />
+    </resultMap>
+
+    <resultMap id="logMap" query="q4_logs">
+        <field name="operator" column="operator" />
+        <field name="action" column="action" />
+        <field name="detail" column="detail" />
+        <field name="time" column="time" />
+    </resultMap>
+
+    <!-- ====== 响应组装 ====== -->
+    <responseData>
+        <field name="trade" mapTo="tradeMap" />
+        <field name="riskInfo" mapTo="riskMap" />
+        <field name="customerInfo" mapTo="customerMap" />
+        <field name="operationLogs" mapTo="logMap" />
+    </responseData>
+
+</interface>

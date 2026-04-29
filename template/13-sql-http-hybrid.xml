@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板13: SQL + HTTP 混合查询（依赖编排）
+  场景: 先从数据库查基础数据，再用查到的数据调用外部HTTP接口补充信息
+  适用: 内部数据 + 外部接口聚合场景
+  说明: q2 依赖 q1，q1 的结果通过 #{q1.fieldName} 传入 q2
+-->
+<interface transno="USER_WITH_EXT_INFO" name="用户信息聚合查询" description="先查本地用户数据，再调外部接口补充扩展信息">
+
+    <requestData>
+        <param name="userId" type="String" required="true" description="用户ID" />
+        <param name="token" type="String" required="true" description="外部接口令牌" />
+    </requestData>
+
+    <datasource name="ds_main" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+
+    <!-- 第一步: 查本地用户数据 -->
+    <query id="q1_local" type="mysql" datasource="ds_main">
+        SELECT id, user_name, email, phone, ext_code, created_at
+        FROM users
+        WHERE id = #{requestData.userId}
+    </query>
+
+    <!-- 第二步: 用q1查到的ext_code调用外部接口（依赖q1） -->
+    <!-- 单行结果可直接用 #{q1.fieldName} 引用 -->
+    <query id="q2_external" type="http" depends="q1_local">
+        <http url="https://external-api.com/user/profile/#{$q1_local.ext_code}"
+              method="GET"
+              headers='{"Authorization":"Bearer #{$requestData.token}"}'
+              responsePath="data" />
+    </query>
+
+    <resultMap id="localMap" query="q1_local">
+        <field name="userId" column="id" />
+        <field name="userName" column="user_name" />
+        <field name="email" column="email" />
+        <field name="phone" column="phone" />
+        <field name="extCode" column="ext_code" />
+    </resultMap>
+
+    <resultMap id="extMap" query="q2_external">
+        <field name="creditScore" column="creditScore" function="fn:TYPE_CONVERT,INTEGER" />
+        <field name="memberLevel" column="memberLevel" function="fn:IFNULL,0" />
+        <field name="lastLoginTime" column="lastLoginTime" />
+    </resultMap>
+
+    <responseData>
+        <field name="localInfo" mapTo="localMap" />
+        <field name="externalInfo" mapTo="extMap" />
+    </responseData>
+
+</interface>

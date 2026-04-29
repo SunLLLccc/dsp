@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板05: HTTP外部接口调用
+  场景: 调用外部HTTP API获取数据，支持GET/POST、请求头、请求体、响应路径提取
+  适用: 聚合第三方接口数据、微服务间HTTP调用
+-->
+<interface transno="WEATHER_QUERY" name="天气查询" description="调用外部天气API查询城市天气信息">
+
+    <requestData>
+        <param name="cityCode" type="String" required="true" description="城市编码" />
+        <param name="token" type="String" required="true" description="API访问令牌" />
+    </requestData>
+
+    <datasource name="ds_main" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+
+    <!-- HTTP GET 请求示例 -->
+    <query id="q1" type="http">
+        <http url="https://api.weather.com/v1/current?city=#{$requestData.cityCode}"
+              method="GET"
+              headers='{"Authorization":"Bearer #{$requestData.token}","X-Request-Id":"#{$requestData.cityCode}"}'
+              responsePath="data.current" />
+    </query>
+
+    <resultMap id="weatherMap" query="q1">
+        <field name="temperature" column="temperature" function="fn:TYPE_CONVERT,DOUBLE" />
+        <field name="humidity" column="humidity" function="fn:TYPE_CONVERT,INTEGER" />
+        <field name="description" column="description" />
+        <field name="windSpeed" column="wind_speed" function="fn:TYPE_CONVERT,DOUBLE" />
+        <field name="updateTime" column="update_time" />
+    </resultMap>
+
+    <responseData resultMap="weatherMap">
+        <field name="weather" />
+    </responseData>
+
+</interface>

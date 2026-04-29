@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模板14: SQL + Dubbo 混合查询
+  场景: 先查数据库获取参数，再用参数调用Dubbo服务
+  适用: 本地数据 + 内部微服务聚合场景
+-->
+<interface transno="LOAN_RISK_ASSESS" name="贷款风险评估" description="查库获取用户贷款信息，再调Dubbo风控服务评估风险">
+
+    <requestData>
+        <param name="loanId" type="String" required="true" description="贷款申请ID" />
+    </requestData>
+
+    <datasource name="ds_main" type="MYSQL"
+                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+    <datasource name="dubbo_ds" type="DUBBO"
+                url="" username="" password=""
+                extraConfig='{"registry":"zookeeper://127.0.0.1:2181"}' />
+
+    <!-- 第一步: 查贷款申请信息 -->
+    <query id="q1_loan" type="mysql" datasource="ds_main">
+        SELECT id, applicant_id, amount, term_months, product_code, apply_time
+        FROM loan_application
+        WHERE id = #{requestData.loanId}
+    </query>
+
+    <!-- 第二步: 用q1的结果调Dubbo风控服务（依赖q1） -->
+    <query id="q2_risk" type="dubbo" datasource="dubbo_ds" depends="q1_loan">
+        <dubbo service="com.fintechervision.risk.RiskAssessService"
+               method="assess"
+               version="1.0.0"
+               timeout="5000">
+            <param type="String" value="#{$q1_loan.applicant_id}" />
+            <param type="String" value="#{$q1_loan.product_code}" />
+            <param type="Double" value="#{$q1_loan.amount}" />
+        </dubbo>
+    </query>
+
+    <resultMap id="loanMap" query="q1_loan">
+        <field name="loanId" column="id" />
+        <field name="applicantId" column="applicant_id" />
+        <field name="amount" column="amount" function="fn:ROUND,2" />
+        <field name="termMonths" column="term_months" function="fn:TYPE_CONVERT,INTEGER" />
+        <field name="productCode" column="product_code" />
+        <field name="applyTime" column="apply_time" function="fn:DATE_FORMAT,yyyy-MM-dd HH:mm:ss" />
+    </resultMap>
+
+    <resultMap id="riskMap" query="q2_risk">
+        <field name="riskLevel" column="riskLevel" />
+        <field name="riskScore" column="riskScore" function="fn:TYPE_CONVERT,INTEGER" />
+        <field name="suggestion" column="suggestion" function="fn:IFNULL,需人工审核" />
+        <field name="rejectReason" column="rejectReason" function="fn:IFNULL,无" />
+    </resultMap>
+
+    <responseData>
+        <field name="loanInfo" mapTo="loanMap" />
+        <field name="riskResult" mapTo="riskMap" />
+    </responseData>
+
+</interface>
