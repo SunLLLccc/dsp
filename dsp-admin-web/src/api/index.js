@@ -36,3 +36,9 @@ export const appAuthApi = {
   delete: (id) => request.delete(`/app/${id}`),
   generateToken: (appId) => request.post(`/app/${appId}/token`)
 }
+
+// 导出任务API
+export const exportApi = {
+  list: (params) => request.get('/export/list', { params }),
+  detail: (id) => request.get(`/export/${id}`)
+}

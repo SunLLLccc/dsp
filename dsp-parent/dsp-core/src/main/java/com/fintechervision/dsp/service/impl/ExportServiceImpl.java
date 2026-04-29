@@ -3,6 +3,8 @@ package com.fintechervision.dsp.service.impl;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.excel.EasyExcel;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fintechervision.dsp.common.enums.ErrorCode;
 import com.fintechervision.dsp.common.exception.BusinessException;
@@ -87,6 +89,20 @@ public class ExportServiceImpl extends ServiceImpl<ExportTaskMapper, ExportTask>
 
     @Override
     public ExportTask getExportTask(Long taskId) { return getById(taskId); }
+
+    @Override
+    public Page<ExportTask> listExportTask(Integer pageNum, Integer pageSize, String transno, Integer status) {
+        Page<ExportTask> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<ExportTask> wrapper = new LambdaQueryWrapper<>();
+        if (transno != null && !transno.isEmpty()) {
+            wrapper.like(ExportTask::getTransno, transno);
+        }
+        if (status != null) {
+            wrapper.eq(ExportTask::getStatus, status);
+        }
+        wrapper.orderByDesc(ExportTask::getCreatedTime);
+        return page(page, wrapper);
+    }
 
     @Override
     public void downloadExportFile(Long taskId, HttpServletResponse response) {
