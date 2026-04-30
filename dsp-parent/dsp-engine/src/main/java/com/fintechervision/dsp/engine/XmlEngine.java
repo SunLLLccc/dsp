@@ -25,11 +25,24 @@ public class XmlEngine {
     private final ResultMapper resultMapper;
     private final QueryOrchestrator queryOrchestrator;
 
+    /**
+     * 数据源注册回调，由外部服务注入实现。
+     * XML 中定义的内联 datasource 可通过此回调动态注册到运行时。
+     */
+    private DataSourceRegistrar dataSourceRegistrar;
+
+    public void setDataSourceRegistrar(DataSourceRegistrar registrar) {
+        this.dataSourceRegistrar = registrar;
+    }
+
     public Object execute(String xmlConfig, Map<String, Object> requestData) {
         InterfaceConfig config = xmlConfigParser.parse(xmlConfig);
         log.info("XML解析完成: transno={}, queries={}", config.getTransno(), config.getQueries().size());
 
         validateParams(config.getRequestData(), requestData);
+
+        // 注册 XML 中定义的内联数据源
+        registerInlineDataSources(config.getDataSources());
 
         OrchestrationContext context = new OrchestrationContext(requestData);
 
@@ -51,6 +64,20 @@ public class XmlEngine {
 
         log.info("查询执行完成: transno={}", config.getTransno());
         return responseData;
+    }
+
+    private void registerInlineDataSources(List<DataSourceConfig> dataSources) {
+        if (dataSourceRegistrar == null || dataSources == null || dataSources.isEmpty()) {
+            return;
+        }
+        for (DataSourceConfig ds : dataSources) {
+            try {
+                dataSourceRegistrar.register(ds);
+                log.debug("XML内联数据源注册: name={}, type={}", ds.getName(), ds.getType());
+            } catch (Exception e) {
+                log.warn("XML内联数据源注册失败: name={}, error={}", ds.getName(), e.getMessage());
+            }
+        }
     }
 
     private List<Map<String, Object>> executeQueryWithContext(QueryConfig query,

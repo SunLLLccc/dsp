@@ -80,7 +80,7 @@ async function loadData() {
 }
 
 function handleDownload(row) {
-  window.open(`/dsp/offline/export/${row.id}/download`, '_blank')
+  window.open(`/dsp/admin/export/${row.id}/download`, '_blank')
 }
 
 async function handleRefresh(row) {

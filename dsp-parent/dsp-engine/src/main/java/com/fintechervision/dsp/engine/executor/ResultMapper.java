@@ -56,6 +56,9 @@ public class ResultMapper {
         Map<String, Object> response = new LinkedHashMap<>();
         for (ResponseFieldConfig field : config.getFields()) {
             Object value = resolveFieldValue(field, config.getResultMap(), mappedResults);
+            if (field.getFunction() != null && !field.getFunction().isEmpty()) {
+                value = applyFunction(field.getFunction(), value);
+            }
             response.put(field.getName(), value);
         }
 

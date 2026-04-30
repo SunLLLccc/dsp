@@ -2,6 +2,7 @@ package com.fintechervision.dsp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fintechervision.dsp.common.util.PasswordEncryptor;
 import com.fintechervision.dsp.entity.DatasourceConfig;
 import com.fintechervision.dsp.mapper.DatasourceConfigMapper;
 import com.fintechervision.dsp.service.DatasourceManagerService;
@@ -24,6 +25,7 @@ public class DatasourceManagerServiceImpl extends ServiceImpl<DatasourceConfigMa
 
     private final DynamicRoutingDataSource dynamicRoutingDataSource;
     private final DefaultDataSourceCreator defaultDataSourceCreator;
+    private final PasswordEncryptor passwordEncryptor;
 
     @Override
     public DatasourceConfig getByDsName(String dsName) {
@@ -62,7 +64,7 @@ public class DatasourceManagerServiceImpl extends ServiceImpl<DatasourceConfigMa
         DataSourceProperty property = new DataSourceProperty();
         property.setUrl(config.getJdbcUrl());
         property.setUsername(config.getUsername());
-        property.setPassword(config.getPassword());
+        property.setPassword(passwordEncryptor.decrypt(config.getPassword()));
 
         switch (dsType) {
             case "MYSQL": case "DORIS":
