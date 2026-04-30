@@ -41,11 +41,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="updatedTime" label="更新时间" width="180" />
-        <el-table-column label="操作" fixed="right" width="320">
+        <el-table-column label="操作" fixed="right" width="370">
           <template #default="{ row }">
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
             <el-button size="small" type="success" @click="handlePublish(row)" v-if="row.status === 0">发布</el-button>
             <el-button size="small" type="warning" @click="handleOffline(row)" v-if="row.status === 1">下线</el-button>
+            <el-button size="small" @click="showVersionHistory(row)">版本历史</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -58,6 +59,36 @@
           @size-change="loadData" @current-change="loadData" />
       </div>
     </el-card>
+
+    <!-- 版本历史弹窗 -->
+    <el-dialog v-model="versionDialogVisible" :title="`版本历史 - ${versionTransno}`" width="900px">
+      <el-table :data="versionData" border stripe>
+        <el-table-column prop="versionNo" label="版本号" width="80" />
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="verStatusType(row.status)">{{ verStatusText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="changeLog" label="变更说明" show-overflow-tooltip />
+        <el-table-column prop="createdBy" label="创建人" width="100" />
+        <el-table-column prop="createdTime" label="创建时间" width="170" />
+        <el-table-column label="操作" width="100">
+          <template #default="{ row }">
+            <el-button size="small" @click="viewXml(row)">查看XML</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="mt-16" style="display:flex;justify-content:flex-end">
+        <el-pagination v-model:current-page="versionPage.pageNum" v-model:page-size="versionPage.pageSize"
+          :total="versionTotal" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next"
+          @size-change="loadVersions" @current-change="loadVersions" />
+      </div>
+    </el-dialog>
+
+    <!-- XML查看弹窗 -->
+    <el-dialog v-model="xmlDialogVisible" :title="`XML配置 - V${xmlVersionNo}`" width="700px">
+      <el-input type="textarea" :rows="20" :model-value="xmlContent" readonly style="font-family:monospace" />
+    </el-dialog>
   </div>
 </template>
 
@@ -74,6 +105,21 @@ const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', name: '', status
 
 const statusText = (s) => ({ 0: '草稿', 1: '已发布', 2: '已下线' }[s] || '未知')
 const statusType = (s) => ({ 0: 'info', 1: 'success', 2: 'danger' }[s] || 'info')
+
+const verStatusText = (s) => ({ 0: '草稿', 1: '待审批', 2: '已驳回', 3: '已发布' }[s] || '未知')
+const verStatusType = (s) => ({ 0: 'info', 1: 'warning', 2: 'danger', 3: 'success' }[s] || 'info')
+
+// 版本历史
+const versionDialogVisible = ref(false)
+const versionTransno = ref('')
+const versionData = ref([])
+const versionTotal = ref(0)
+const versionPage = ref({ pageNum: 1, pageSize: 10 })
+
+// XML查看
+const xmlDialogVisible = ref(false)
+const xmlContent = ref('')
+const xmlVersionNo = ref('')
 
 async function loadData() {
   const res = await interfaceApi.list(searchForm.value)
@@ -113,6 +159,26 @@ async function handleDelete(row) {
   await interfaceApi.delete(row.id)
   ElMessage.success('已删除')
   loadData()
+}
+
+async function showVersionHistory(row) {
+  versionTransno.value = row.transno
+  versionPage.value = { pageNum: 1, pageSize: 10 }
+  versionDialogVisible.value = true
+  loadVersions()
+}
+
+async function loadVersions() {
+  const res = await interfaceApi.versions(versionTransno.value, versionPage.value)
+  versionData.value = res.data?.records || []
+  versionTotal.value = res.data?.total || 0
+}
+
+async function viewXml(row) {
+  const res = await interfaceApi.getVersion(versionTransno.value, row.versionNo)
+  xmlContent.value = res.data?.xmlConfig || ''
+  xmlVersionNo.value = row.versionNo
+  xmlDialogVisible.value = true
 }
 
 onMounted(() => loadData())

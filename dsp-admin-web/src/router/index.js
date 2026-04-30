@@ -45,6 +45,11 @@ const routes = [
     path: '/audit',
     name: '审计日志',
     component: () => import('../views/audit/List.vue')
+  },
+  {
+    path: '/approval',
+    name: '审批管理',
+    component: () => import('../views/approval/List.vue')
   }
 ]
 

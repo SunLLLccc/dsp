@@ -53,7 +53,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { exportApi } from '@/api/index'
+import { exportApi } from '../../api'
 
 const tableData = ref([])
 const loading = ref(false)

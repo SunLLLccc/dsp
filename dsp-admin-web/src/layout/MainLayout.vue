@@ -12,6 +12,10 @@
           <el-icon><Coin /></el-icon>
           <span>数据源管理</span>
         </el-menu-item>
+        <el-menu-item index="/approval">
+          <el-icon><Stamp /></el-icon>
+          <span>审批管理</span>
+        </el-menu-item>
         <el-menu-item index="/appauth">
           <el-icon><Key /></el-icon>
           <span>应用授权</span>
@@ -51,7 +55,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { Document, Coin, Key, Download, Monitor, Notebook } from '@element-plus/icons-vue'
+import { Document, Coin, Key, Download, Monitor, Notebook, Stamp } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
