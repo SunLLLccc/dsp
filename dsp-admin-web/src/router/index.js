@@ -40,6 +40,11 @@ const routes = [
     path: '/export',
     name: '导出管理',
     component: () => import('../views/export/List.vue')
+  },
+  {
+    path: '/audit',
+    name: '审计日志',
+    component: () => import('../views/audit/List.vue')
   }
 ]
 

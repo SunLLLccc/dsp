@@ -47,3 +47,16 @@ export const exportApi = {
   list: (params) => request.get('/export/list', { params }),
   detail: (id) => request.get(`/export/${id}`)
 }
+
+// 审计日志API
+export const auditApi = {
+  list: (params) => request.get('/audit/list', { params })
+}
+
+// 接口数据源关联API
+export const interfaceDatasourceApi = {
+  list: (transno) => request.get(`/interface/${transno}/datasources`),
+  bind: (transno, dsNames) => request.post(`/interface/${transno}/datasources`, { dsNames }),
+  add: (transno, dsName) => request.post(`/interface/${transno}/datasource/${dsName}`),
+  remove: (transno, dsName) => request.delete(`/interface/${transno}/datasource/${dsName}`)
+}

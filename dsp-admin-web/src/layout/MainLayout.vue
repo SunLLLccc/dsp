@@ -20,6 +20,10 @@
           <el-icon><Download /></el-icon>
           <span>导出管理</span>
         </el-menu-item>
+        <el-menu-item index="/audit">
+          <el-icon><Notebook /></el-icon>
+          <span>审计日志</span>
+        </el-menu-item>
         <el-menu-item index="/interface/debug">
           <el-icon><Monitor /></el-icon>
           <span>接口调试</span>
@@ -47,7 +51,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { Document, Coin, Key, Download, Monitor } from '@element-plus/icons-vue'
+import { Document, Coin, Key, Download, Monitor, Notebook } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
