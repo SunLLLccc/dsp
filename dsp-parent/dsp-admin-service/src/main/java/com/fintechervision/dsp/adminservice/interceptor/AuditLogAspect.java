@@ -7,11 +7,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 
 /**
  * 审计日志切面 — 自动记录管理平台操作
@@ -37,18 +41,8 @@ public class AuditLogAspect {
             try { requestData = JSONUtil.toJsonStr(args); } catch (Exception ignored) {}
         }
 
-        // 提取transno（路径变量中的）
-        String transno = "";
-        for (Object arg : args) {
-            if (arg instanceof String) {
-                String strArg = (String) arg;
-                // 路径变量中的transno
-                if (strArg.startsWith("TRX") || strArg.length() > 5) {
-                    transno = strArg;
-                    break;
-                }
-            }
-        }
+        // 提取transno（从@PathVariable("transno")注解精确提取）
+        String transno = extractPathVariable(args, joinPoint, "transno");
 
         String responseCode = "0000";
         Object result;
@@ -103,5 +97,27 @@ public class AuditLogAspect {
         } catch (Exception e) {
             return "";
         }
+    }
+
+    /**
+     * 从方法参数注解中精确提取指定名称的 @PathVariable 值
+     */
+    private String extractPathVariable(Object[] args, ProceedingJoinPoint joinPoint, String pathVarName) {
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Method method = signature.getMethod();
+        Parameter[] parameters = method.getParameters();
+        for (int i = 0; i < parameters.length && i < args.length; i++) {
+            PathVariable pv = parameters[i].getAnnotation(PathVariable.class);
+            if (pv != null) {
+                String name = pv.value().isEmpty() ? pv.name() : pv.value();
+                if (name.isEmpty()) {
+                    name = parameters[i].getName();
+                }
+                if (pathVarName.equals(name) && args[i] != null) {
+                    return args[i].toString();
+                }
+            }
+        }
+        return "";
     }
 }

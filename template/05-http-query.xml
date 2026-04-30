@@ -3,6 +3,7 @@
   模板05: HTTP外部接口调用
   场景: 调用外部HTTP API获取数据，支持GET/POST、请求头、请求体、响应路径提取
   适用: 聚合第三方接口数据、微服务间HTTP调用
+  说明: HTTP查询不需要 datasource 配置，直接在 <http> 标签中定义URL和请求参数
 -->
 <interface transno="WEATHER_QUERY" name="天气查询" description="调用外部天气API查询城市天气信息">
 
@@ -11,8 +12,7 @@
         <param name="token" type="String" required="true" description="API访问令牌" />
     </requestData>
 
-    <datasource name="ds_main" type="MYSQL"
-                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+    <!-- HTTP查询不需要datasource配置，无需声明 <datasource> -->
 
     <!-- HTTP GET 请求示例 -->
     <query id="q1" type="http">

@@ -48,6 +48,15 @@ export const exportApi = {
   detail: (id) => request.get(`/export/${id}`)
 }
 
+// 审批管理API
+export const approvalApi = {
+  pending: (params) => request.get('/interface/approval-pending', { params }),
+  records: (transno, params) => request.get(`/interface/${transno}/approval-records`, { params }),
+  submit: (transno, versionNo, data) => request.post(`/${transno}/version/${versionNo}/submit`, data),
+  approve: (transno, versionNo, data) => request.post(`/${transno}/version/${versionNo}/approve`, data),
+  reject: (transno, versionNo, data) => request.post(`/${transno}/version/${versionNo}/reject`, data)
+}
+
 // 审计日志API
 export const auditApi = {
   list: (params) => request.get('/audit/list', { params })

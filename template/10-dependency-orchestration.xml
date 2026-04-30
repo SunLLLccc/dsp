@@ -3,10 +3,13 @@
   模板10: 多查询依赖编排（串行+并行混合）
   场景: 查询之间存在依赖关系，后续查询需要前序查询的结果作为参数
   适用: 级联查询、先查后聚合、跨表关联查询
-  说明:
-    - depends="q1,q2" 表示当前查询依赖 q1 和 q2 都完成后才执行
+
+  要点:
+    - depends="q1,q2": 当前查询依赖 q1 和 q2 都完成后才执行
     - 依赖查询的结果通过 #{queryId.fieldName} 引用
-    - 单行结果: #{q1.fieldName}  多行结果: #{q2[0].fieldName}
+    - 单行结果: 引擎存储为 Map，通过 #{q1.fieldName} 直接引用
+    - 多行结果: 引擎存储为 List<Map>，需要通过索引或特殊方式引用
+    - 同层依赖的查询并行执行（如q2_dept和q2_perms都依赖q1_user，它们之间并行）
 -->
 <interface transno="USER_DETAIL_AGGREGATE" name="用户详情聚合" description="先查用户基本信息，再根据结果查询关联数据">
 
@@ -24,14 +27,14 @@
         WHERE id = #{requestData.userId}
     </query>
 
-    <!-- 第二步: 根据用户所属部门查询部门信息（依赖q1） -->
+    <!-- 第二步: 根据用户所属部门查询部门信息（依赖q1，与q2_perms并行） -->
     <query id="q2_dept" type="mysql" datasource="ds_main" depends="q1_user">
         SELECT id, dept_name, manager_id, description
         FROM departments
         WHERE id = #{q1_user.department_id}
     </query>
 
-    <!-- 第二步(并行): 根据用户等级查询权限列表（依赖q1，与q2并行） -->
+    <!-- 第二步(并行): 根据用户等级查询权限列表（依赖q1，与q2_dept并行） -->
     <query id="q2_perms" type="mysql" datasource="ds_main" depends="q1_user">
         SELECT permission_code, permission_name, resource_type
         FROM permissions
@@ -74,7 +77,7 @@
         <field name="phone" column="phone" />
     </resultMap>
 
-    <!-- 组装响应 -->
+    <!-- 组装响应: mapTo 引用 resultMap 的 id -->
     <responseData>
         <field name="user" mapTo="userMap" />
         <field name="department" mapTo="deptMap" />

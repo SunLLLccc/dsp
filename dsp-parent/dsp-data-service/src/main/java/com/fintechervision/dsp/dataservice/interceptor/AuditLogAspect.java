@@ -59,7 +59,7 @@ public class AuditLogAspect {
         } finally {
             long costTime = System.currentTimeMillis() - startTime;
             try {
-                auditLogService.log(appId, transno, operation, requestData, responseCode, costTime, ip, appId);
+                auditLogService.log(appId, transno, operation, requestData, responseCode, costTime, ip, "app:" + appId);
             } catch (Exception e) {
                 log.warn("审计日志记录失败: {}", e.getMessage());
             }

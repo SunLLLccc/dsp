@@ -4,6 +4,7 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 数据服务启动类
@@ -11,6 +12,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @SpringBootApplication(scanBasePackages = "com.fintechervision.dsp")
 @MapperScan("com.fintechervision.dsp.mapper")
 @EnableAsync
+@EnableScheduling
 public class DspDataServiceApplication {
 
     public static void main(String[] args) {

@@ -23,8 +23,8 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { authApi } from '../api/index'
+import { useAuthStore } from '../../stores/auth'
+import { authApi } from '../../api'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()

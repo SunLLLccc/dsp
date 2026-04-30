@@ -2,6 +2,8 @@ package com.fintechervision.dsp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fintechervision.dsp.common.enums.ErrorCode;
+import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.common.util.JwtUtil;
 import com.fintechervision.dsp.entity.AppAuth;
 import com.fintechervision.dsp.mapper.AppAuthMapper;
@@ -31,7 +33,7 @@ public class AppAuthServiceImpl extends ServiceImpl<AppAuthMapper, AppAuth> impl
         LambdaQueryWrapper<AppAuth> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AppAuth::getAppId, appId).eq(AppAuth::getStatus, 1);
         AppAuth app = getOne(wrapper);
-        if (app == null) throw new RuntimeException("应用不存在或已禁用");
+        if (app == null) throw new BusinessException(ErrorCode.APP_NOT_FOUND);
         List<String> allowedTransnos;
         if (app.getAllowedTransnos() != null && !app.getAllowedTransnos().trim().isEmpty()) {
             allowedTransnos = Arrays.asList(app.getAllowedTransnos().split(","));

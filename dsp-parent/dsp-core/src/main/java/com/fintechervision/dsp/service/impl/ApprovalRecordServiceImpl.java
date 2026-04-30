@@ -3,6 +3,8 @@ package com.fintechervision.dsp.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fintechervision.dsp.common.enums.ErrorCode;
+import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.entity.ApprovalRecord;
 import com.fintechervision.dsp.entity.InterfaceVersion;
 import com.fintechervision.dsp.mapper.ApprovalRecordMapper;
@@ -31,10 +33,11 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
     public ApprovalRecord submitApproval(String transno, Integer versionNo, String applicant) {
         InterfaceVersion version = interfaceVersionService.getVersion(transno, versionNo);
         if (version == null) {
-            throw new RuntimeException("版本不存在");
+            throw new BusinessException(ErrorCode.VERSION_NOT_FOUND);
         }
         if (version.getStatus() != 0) {
-            throw new RuntimeException("只有草稿状态的版本才能提交审批，当前状态: " + version.getStatus());
+            throw new BusinessException(ErrorCode.VERSION_STATUS_INVALID,
+                    "只有草稿状态的版本才能提交审批，当前状态: " + version.getStatus());
         }
 
         // 检查是否已有待审批记录
@@ -43,7 +46,7 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
                 .eq(ApprovalRecord::getVersionNo, versionNo)
                 .eq(ApprovalRecord::getStatus, 0);
         if (count(wrapper) > 0) {
-            throw new RuntimeException("该版本已有待审批记录，请勿重复提交");
+            throw new BusinessException(ErrorCode.APPROVAL_DUPLICATE);
         }
 
         // 更新版本状态为待审批
@@ -69,10 +72,11 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
     public void approve(Long recordId, String approver) {
         ApprovalRecord record = getById(recordId);
         if (record == null) {
-            throw new RuntimeException("审批记录不存在");
+            throw new BusinessException(ErrorCode.APPROVAL_RECORD_NOT_FOUND);
         }
         if (record.getStatus() != 0) {
-            throw new RuntimeException("该审批记录已处理，当前状态: " + record.getStatus());
+            throw new BusinessException(ErrorCode.APPROVAL_ALREADY_PROCESSED,
+                    "该审批记录已处理，当前状态: " + record.getStatus());
         }
 
         // 更新审批记录
@@ -98,10 +102,11 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
     public void reject(Long recordId, String approver, String reason) {
         ApprovalRecord record = getById(recordId);
         if (record == null) {
-            throw new RuntimeException("审批记录不存在");
+            throw new BusinessException(ErrorCode.APPROVAL_RECORD_NOT_FOUND);
         }
         if (record.getStatus() != 0) {
-            throw new RuntimeException("该审批记录已处理，当前状态: " + record.getStatus());
+            throw new BusinessException(ErrorCode.APPROVAL_ALREADY_PROCESSED,
+                    "该审批记录已处理，当前状态: " + record.getStatus());
         }
 
         // 更新审批记录

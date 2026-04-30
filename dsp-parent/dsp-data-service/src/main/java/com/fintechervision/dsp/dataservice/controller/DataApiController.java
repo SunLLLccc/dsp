@@ -4,6 +4,7 @@ import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.common.model.ApiRequest;
 import com.fintechervision.dsp.common.model.ApiResponse;
 import com.fintechervision.dsp.engine.XmlEngine;
+import com.fintechervision.dsp.engine.cache.XmlConfigCacheManager;
 import com.fintechervision.dsp.service.InterfaceInfoService;
 import com.fintechervision.dsp.service.ExportService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class DataApiController {
 
     private final InterfaceInfoService interfaceInfoService;
     private final XmlEngine xmlEngine;
+    private final XmlConfigCacheManager xmlConfigCacheManager;
     private final ExportService exportService;
 
     @PostMapping("/{transno}")
@@ -42,8 +44,7 @@ public class DataApiController {
         try {
             log.info("数据查询: transno={}, appId={}, traceId={}", transno, getAppId(request), traceId);
 
-            String xmlConfig = interfaceInfoService.getActiveXmlConfig(transno);
-            Object result = xmlEngine.execute(xmlConfig, request.getRequestData());
+            Object result = xmlEngine.executeWithConfig(xmlConfigCacheManager.get(transno), request.getRequestData());
 
             log.info("数据查询完成: transno={}, 耗时={}ms", transno, System.currentTimeMillis() - startTime);
             return ApiResponse.success(transno, traceId, result);

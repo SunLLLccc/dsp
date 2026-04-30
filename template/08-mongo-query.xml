@@ -3,7 +3,14 @@
   模板08: MongoDB查询
   场景: 查询MongoDB集合数据，支持过滤、投影、排序、分页
   适用: 日志查询、非结构化数据查询
-  注意: 需要 spring-boot-starter-data-mongodb 依赖和 MongoTemplate Bean
+
+  要点:
+    - datasource type="MONGO": url格式 mongodb://host:port/database
+    - <mongo>标签: collection(集合名), 子元素 filter/projection/sort/limit/skip
+    - filter中参数替换: #{paramName} — 引擎会替换为请求参数值
+      注意: MongoDB参数替换使用扁平参数名(如 #{userId})，不是 #{requestData.userId}
+      因为 MongoExecutor 将 requestData 和 previousResults 合并为扁平Map
+    - 需要引入 spring-boot-starter-data-mongodb 依赖
 -->
 <interface transno="USER_LOG_QUERY" name="用户操作日志查询" description="从MongoDB查询用户操作日志">
 
@@ -17,15 +24,6 @@
     <datasource name="mongo_main" type="MONGO"
                 url="mongodb://localhost:27017/dsp_logs" username="" password="" />
 
-    <!--
-      MongoDB查询配置:
-      collection  - 集合名称
-      filter      - 查询条件（JSON，支持 #{paramName} 参数替换）
-      projection  - 字段投影（1=包含，0=排除）
-      sort        - 排序（1=升序，-1=降序）
-      limit       - 返回条数上限
-      skip        - 跳过条数
-    -->
     <query id="q1" type="mongo" datasource="mongo_main">
         <mongo collection="user_operation_logs">
             <filter>{"userId": "#{userId}"}</filter>

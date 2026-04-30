@@ -37,6 +37,13 @@ public class XmlEngine {
 
     public Object execute(String xmlConfig, Map<String, Object> requestData) {
         InterfaceConfig config = xmlConfigParser.parse(xmlConfig);
+        return executeWithConfig(config, requestData);
+    }
+
+    /**
+     * 使用已解析的 InterfaceConfig 执行查询（跳过XML解析，配合缓存使用）
+     */
+    public Object executeWithConfig(InterfaceConfig config, Map<String, Object> requestData) {
         log.info("XML解析完成: transno={}, queries={}", config.getTransno(), config.getQueries().size());
 
         validateParams(config.getRequestData(), requestData);
@@ -57,6 +64,18 @@ public class XmlEngine {
             if (queryData != null) {
                 Object mapped = resultMapper.mapResult(queryData, resultMap);
                 mappedResults.put(resultMap.getId(), mapped);
+            }
+        }
+
+        // 当没有定义任何 resultMap 时，将查询结果直接放入 mappedResults（key=queryId）
+        if (config.getResultMaps().isEmpty()) {
+            for (Map.Entry<String, List<Map<String, Object>>> entry : queryResults.entrySet()) {
+                List<Map<String, Object>> data = entry.getValue();
+                if (data.size() == 1) {
+                    mappedResults.put(entry.getKey(), data.get(0));
+                } else {
+                    mappedResults.put(entry.getKey(), data);
+                }
             }
         }
 

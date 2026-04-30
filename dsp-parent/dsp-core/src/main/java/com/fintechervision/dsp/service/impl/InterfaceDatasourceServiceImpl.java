@@ -2,6 +2,8 @@ package com.fintechervision.dsp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fintechervision.dsp.common.enums.ErrorCode;
+import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.entity.InterfaceDatasource;
 import com.fintechervision.dsp.mapper.InterfaceDatasourceMapper;
 import com.fintechervision.dsp.service.InterfaceDatasourceService;
@@ -61,7 +63,8 @@ public class InterfaceDatasourceServiceImpl extends ServiceImpl<InterfaceDatasou
         LambdaQueryWrapper<InterfaceDatasource> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(InterfaceDatasource::getTransno, transno).eq(InterfaceDatasource::getDsName, dsName);
         if (count(wrapper) > 0) {
-            throw new RuntimeException("关联已存在: transno=" + transno + ", dsName=" + dsName);
+            throw new BusinessException(ErrorCode.DATASOURCE_BIND_DUPLICATE,
+                    "关联已存在: transno=" + transno + ", dsName=" + dsName);
         }
         InterfaceDatasource rel = new InterfaceDatasource();
         rel.setTransno(transno);

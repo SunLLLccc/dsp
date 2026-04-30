@@ -74,7 +74,7 @@ public class ExportServiceImpl extends ServiceImpl<ExportTaskMapper, ExportTask>
             }
         } catch (IOException e) {
             log.error("在线导出写入失败: transno={}", transno, e);
-            throw new RuntimeException("导出文件写入失败", e);
+            throw new BusinessException(ErrorCode.EXPORT_ERROR, "导出文件写入失败");
         }
     }
 
@@ -129,7 +129,7 @@ public class ExportServiceImpl extends ServiceImpl<ExportTaskMapper, ExportTask>
             }
         } catch (IOException e) {
             log.error("导出文件下载失败: taskId={}", taskId, e);
-            throw new RuntimeException("文件下载失败", e);
+            throw new BusinessException(ErrorCode.EXPORT_ERROR, "文件下载失败");
         }
     }
 

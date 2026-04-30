@@ -3,7 +3,11 @@
   模板09: 多查询并行编排
   场景: 多个独立查询并行执行，互不依赖，结果汇总到响应中
   适用: 仪表盘、聚合多个独立数据源的概览页面
-  说明: 没有 depends 属性的查询会自动并行执行
+
+  要点:
+    - 没有 depends 属性的查询自动并行执行（引擎使用 CompletableFuture + 线程池）
+    - responseData 中 mapTo 属性引用 resultMap 的 id，将结果组装到指定输出键
+    - 多个并行查询的结果通过各自的 resultMap 映射后统一组装
 -->
 <interface transno="DASHBOARD_OVERVIEW" name="仪表盘概览" description="并行查询多个数据源聚合仪表盘数据">
 
@@ -14,7 +18,7 @@
     <datasource name="ds_main" type="MYSQL"
                 url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
 
-    <!-- 查询1: 用户统计（并行执行） -->
+    <!-- 查询1: 用户统计（无depends，并行执行） -->
     <query id="q_user_stats" type="mysql" datasource="ds_main">
         SELECT COUNT(*) AS total_users,
                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_users,
@@ -22,7 +26,7 @@
         FROM users
     </query>
 
-    <!-- 查询2: 订单统计（并行执行） -->
+    <!-- 查询2: 订单统计（无depends，并行执行） -->
     <query id="q_order_stats" type="mysql" datasource="ds_main">
         SELECT COUNT(*) AS total_orders,
                COALESCE(SUM(amount), 0) AS total_amount,
@@ -31,7 +35,7 @@
         WHERE created_at &gt;= DATE_SUB(NOW(), INTERVAL 7 DAY)
     </query>
 
-    <!-- 查询3: 接口调用统计（并行执行） -->
+    <!-- 查询3: 接口调用统计（无depends，并行执行） -->
     <query id="q_api_stats" type="mysql" datasource="ds_main">
         SELECT COUNT(*) AS total_calls,
                SUM(CASE WHEN status = 'SUCCESS' THEN 1 ELSE 0 END) AS success_calls,
@@ -59,7 +63,7 @@
         <field name="failCalls" column="fail_calls" function="fn:TYPE_CONVERT,LONG" />
     </resultMap>
 
-    <!-- 汇总响应: 将三个并行查询的结果组装到一起 -->
+    <!-- 汇总响应: mapTo 引用 resultMap 的 id，将各查询结果组装到对应输出键 -->
     <responseData>
         <field name="userStats" mapTo="userStatsMap" />
         <field name="orderStats" mapTo="orderStatsMap" />

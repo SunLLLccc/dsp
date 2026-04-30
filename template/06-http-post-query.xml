@@ -3,6 +3,8 @@
   模板06: HTTP POST请求调用
   场景: 调用外部POST接口，携带请求体
   适用: 提交数据到外部系统、调用需要请求体的API
+  说明: HTTP查询不需要 datasource 配置，直接在 <http> 标签中定义URL和请求参数
+       参数替换语法: #{$requestData.paramName} 用于URL/headers/body中的参数替换
 -->
 <interface transno="RISK_CHECK" name="风控检查" description="调用风控系统POST接口进行风险评估">
 
@@ -12,8 +14,7 @@
         <param name="token" type="String" required="true" description="认证令牌" />
     </requestData>
 
-    <datasource name="ds_main" type="MYSQL"
-                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+    <!-- HTTP查询不需要datasource配置，无需声明 <datasource> -->
 
     <!-- HTTP POST 请求示例 -->
     <query id="q1" type="http">

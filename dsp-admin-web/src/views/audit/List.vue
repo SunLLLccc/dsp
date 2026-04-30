@@ -66,7 +66,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { auditApi } from '@/api/index'
+import { auditApi } from '../../api'
 
 const tableData = ref([])
 const loading = ref(false)

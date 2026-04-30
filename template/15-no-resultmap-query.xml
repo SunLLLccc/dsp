@@ -3,7 +3,9 @@
   模板15: 无结果映射的简单查询
   场景: 不需要字段映射，直接返回查询原始结果
   适用: 简单字典查询、配置查询等不需要转换字段的场景
-  说明: 无 resultMap 时，引擎直接返回查询结果的原始 Map
+  说明: 无 resultMap 时，引擎将查询结果以 queryId 为key放入响应中
+       单行结果返回 Map，多行结果返回 List
+       responseData 中通过 mapTo 引用 queryId 获取原始结果
 -->
 <interface transno="DICT_QUERY" name="字典查询" description="查询数据字典，直接返回原始结果">
 
@@ -21,6 +23,10 @@
         ORDER BY sort_order
     </query>
 
-    <!-- 不定义 resultMap，直接返回原始查询结果 -->
+    <!-- 不定义 resultMap，引擎将原始查询结果以 queryId 为key放入 mappedResults -->
+    <!-- 通过 responseData 的 mapTo 引用 queryId 获取原始结果 -->
+    <responseData>
+        <field name="list" mapTo="q1" />
+    </responseData>
 
 </interface>

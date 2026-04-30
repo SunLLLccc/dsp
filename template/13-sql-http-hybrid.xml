@@ -3,7 +3,11 @@
   模板13: SQL + HTTP 混合查询（依赖编排）
   场景: 先从数据库查基础数据，再用查到的数据调用外部HTTP接口补充信息
   适用: 内部数据 + 外部接口聚合场景
-  说明: q2 依赖 q1，q1 的结果通过 #{q1.fieldName} 传入 q2
+
+  要点:
+    - q2 依赖 q1（depends="q1_local"），q1 完成后才执行 q2
+    - q1 单行结果通过 #{q1_local.fieldName} 引用，引擎将单行结果存储为 Map
+    - HTTP查询中用 #{$q1_local.fieldName} 引用依赖查询结果（注意$前缀）
 -->
 <interface transno="USER_WITH_EXT_INFO" name="用户信息聚合查询" description="先查本地用户数据，再调外部接口补充扩展信息">
 
@@ -23,7 +27,6 @@
     </query>
 
     <!-- 第二步: 用q1查到的ext_code调用外部接口（依赖q1） -->
-    <!-- 单行结果可直接用 #{q1.fieldName} 引用 -->
     <query id="q2_external" type="http" depends="q1_local">
         <http url="https://external-api.com/user/profile/#{$q1_local.ext_code}"
               method="GET"
@@ -45,6 +48,7 @@
         <field name="lastLoginTime" column="lastLoginTime" />
     </resultMap>
 
+    <!-- 组装响应: mapTo 引用各 resultMap 的 id -->
     <responseData>
         <field name="localInfo" mapTo="localMap" />
         <field name="externalInfo" mapTo="extMap" />
