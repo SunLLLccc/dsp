@@ -60,6 +60,8 @@ dsp:
     secret: dsp-platform-jwt-secret-key-must-be-at-least-32-characters-long-for-security
     expiration-hours: 24
   timestamp-tolerance-minutes: 5
+  security:
+    encrypt-key: DSP2026SecretKey4
   export:
     base-dir: ./export-files
     online-max-rows: 100000

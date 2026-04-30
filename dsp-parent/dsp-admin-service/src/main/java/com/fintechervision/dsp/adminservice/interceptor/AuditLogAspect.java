@@ -59,8 +59,17 @@ public class AuditLogAspect {
             throw e;
         } finally {
             long costTime = System.currentTimeMillis() - startTime;
+            // 从 request 中获取已鉴权的管理员用户名
+            String operator = "anonymous";
             try {
-                auditLogService.log("", transno, operation, requestData, responseCode, costTime, ip, "admin");
+                ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+                if (attrs != null) {
+                    Object adminUser = attrs.getRequest().getAttribute("adminUser");
+                    if (adminUser != null) operator = adminUser.toString();
+                }
+            } catch (Exception ignored) {}
+            try {
+                auditLogService.log("", transno, operation, requestData, responseCode, costTime, ip, operator);
             } catch (Exception e) {
                 log.warn("审计日志记录失败: {}", e.getMessage());
             }

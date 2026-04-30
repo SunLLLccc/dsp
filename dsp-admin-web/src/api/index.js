@@ -1,5 +1,10 @@
 import request from './request'
 
+// 认证API
+export const authApi = {
+  login: (data) => request.post('/login', data)
+}
+
 // 接口管理API
 export const interfaceApi = {
   list: (params) => request.get('/interface/list', { params }),

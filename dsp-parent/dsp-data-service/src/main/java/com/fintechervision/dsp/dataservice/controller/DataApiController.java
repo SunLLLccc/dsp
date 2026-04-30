@@ -59,11 +59,15 @@ public class DataApiController {
      */
     @PostMapping("/{transno}/export")
     public void onlineExport(@PathVariable String transno,
-                             @RequestBody Map<String, Object> requestBody,
+                             @RequestBody ApiRequest<Map<String, Object>> request,
                              HttpServletResponse response) {
+        Map<String, Object> requestData = request.getRequestData();
+        if (requestData == null) {
+            requestData = new java.util.HashMap<>();
+        }
         @SuppressWarnings("unchecked")
-        Map<String, Object> params = (Map<String, Object>) requestBody.get("params");
-        String format = (String) requestBody.getOrDefault("format", "xlsx");
+        Map<String, Object> params = (Map<String, Object>) requestData.get("params");
+        String format = (String) requestData.getOrDefault("format", "xlsx");
 
         log.info("在线导出请求: transno={}, format={}", transno, format);
         exportService.onlineExport(transno, params != null ? params : new java.util.HashMap<>(), format, response);

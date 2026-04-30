@@ -3,6 +3,7 @@ package com.fintechervision.dsp.adminservice.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fintechervision.dsp.common.model.ApiResponse;
+import com.fintechervision.dsp.common.util.PasswordEncryptor;
 import com.fintechervision.dsp.entity.DatasourceConfig;
 import com.fintechervision.dsp.service.DatasourceManagerService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 public class DatasourceAdminController {
 
     private final DatasourceManagerService datasourceManagerService;
+    private final PasswordEncryptor passwordEncryptor;
 
     @GetMapping("/list")
     public ApiResponse<Page<DatasourceConfig>> list(
@@ -46,6 +48,7 @@ public class DatasourceAdminController {
 
     @PostMapping
     public ApiResponse<DatasourceConfig> create(@RequestBody DatasourceConfig config) {
+        config.setPassword(passwordEncryptor.encrypt(config.getPassword()));
         config.setStatus(1);
         config.setCreatedTime(LocalDateTime.now());
         config.setUpdatedTime(LocalDateTime.now());
@@ -63,6 +66,10 @@ public class DatasourceAdminController {
     @PutMapping("/{id}")
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody DatasourceConfig config) {
         config.setId(id);
+        // 如果密码被修改（不是 ENC() 格式），则加密
+        if (config.getPassword() != null && !config.getPassword().startsWith("ENC(")) {
+            config.setPassword(passwordEncryptor.encrypt(config.getPassword()));
+        }
         config.setUpdatedTime(LocalDateTime.now());
         datasourceManagerService.updateById(config);
 

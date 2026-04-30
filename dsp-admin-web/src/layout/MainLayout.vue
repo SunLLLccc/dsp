@@ -31,6 +31,10 @@
     <el-container>
       <el-header class="layout-header">
         <span class="header-title">DSP 管理后台</span>
+        <div class="header-right">
+          <span class="header-user">{{ authStore.username }}</span>
+          <el-button text @click="handleLogout">退出登录</el-button>
+        </div>
       </el-header>
       <el-main>
         <router-view />
@@ -41,17 +45,27 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import { Document, Coin, Key, Download, Monitor } from '@element-plus/icons-vue'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 const activeMenu = computed(() => route.path)
+
+function handleLogout() {
+  authStore.logout()
+  router.push('/login')
+}
 </script>
 
 <style scoped>
 .layout-container { height: 100vh; }
-.layout-header { background: #fff; border-bottom: 1px solid #e6e6e6; display: flex; align-items: center; }
+.layout-header { background: #fff; border-bottom: 1px solid #e6e6e6; display: flex; align-items: center; justify-content: space-between; }
 .header-title { font-size: 16px; font-weight: 600; color: #333; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.header-user { font-size: 14px; color: #666; }
 .logo { color: #fff; text-align: center; padding: 20px 0; font-size: 16px; font-weight: 700; letter-spacing: 2px; }
 .el-aside { background: #304156; }
 .el-menu { border-right: none; }
