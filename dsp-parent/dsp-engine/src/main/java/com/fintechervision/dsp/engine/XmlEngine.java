@@ -37,6 +37,13 @@ public class XmlEngine {
 
     public Object execute(String xmlConfig, Map<String, Object> requestData) {
         InterfaceConfig config = xmlConfigParser.parse(xmlConfig);
+        return executeWithConfig(config, requestData);
+    }
+
+    /**
+     * 使用已解析的 InterfaceConfig 执行查询（跳过XML解析，配合缓存使用）
+     */
+    public Object executeWithConfig(InterfaceConfig config, Map<String, Object> requestData) {
         log.info("XML解析完成: transno={}, queries={}", config.getTransno(), config.getQueries().size());
 
         validateParams(config.getRequestData(), requestData);

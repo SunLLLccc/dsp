@@ -3,6 +3,9 @@ package com.fintechervision.dsp.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fintechervision.dsp.common.enums.ErrorCode;
+import com.fintechervision.dsp.common.exception.BusinessException;
+import com.fintechervision.dsp.common.service.XmlConfigCacheInvalidator;
 import com.fintechervision.dsp.entity.ApprovalRecord;
 import com.fintechervision.dsp.entity.InterfaceInfo;
 import com.fintechervision.dsp.entity.InterfaceVersion;
@@ -24,6 +27,7 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
 
     private final InterfaceInfoService interfaceInfoService;
     private final ApprovalRecordService approvalRecordService;
+    private final XmlConfigCacheInvalidator xmlConfigCacheInvalidator;
 
     @Override
     public InterfaceVersion saveXmlConfig(String transno, String xmlConfig, String changeLog, String operator) {
@@ -75,7 +79,7 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
                 .eq(ApprovalRecord::getStatus, 0);
         ApprovalRecord record = approvalRecordService.getOne(wrapper);
         if (record == null) {
-            throw new RuntimeException("未找到该版本的待审批记录");
+            throw new BusinessException(ErrorCode.APPROVAL_RECORD_NOT_FOUND, "未找到该版本的待审批记录");
         }
 
         // 审批通过（会更新审批记录和版本状态）
@@ -90,6 +94,7 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
             interfaceInfoService.updateById(info);
         }
         log.info("接口审批通过并发布: transno={}, version={}, approver={}", transno, versionNo, approver);
+        xmlConfigCacheInvalidator.invalidate(transno);
     }
 
     @Override
@@ -101,7 +106,7 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
                 .eq(ApprovalRecord::getStatus, 0);
         ApprovalRecord record = approvalRecordService.getOne(wrapper);
         if (record == null) {
-            throw new RuntimeException("未找到该版本的待审批记录");
+            throw new BusinessException(ErrorCode.APPROVAL_RECORD_NOT_FOUND, "未找到该版本的待审批记录");
         }
 
         // 审批驳回（会更新审批记录和版本状态）
@@ -117,5 +122,6 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
         InterfaceInfo info = interfaceInfoService.getOne(wrapper);
         if (info != null) { info.setStatus(2); info.setUpdatedTime(LocalDateTime.now()); interfaceInfoService.updateById(info); }
         log.info("接口下线: transno={}", transno);
+        xmlConfigCacheInvalidator.invalidate(transno);
     }
 }

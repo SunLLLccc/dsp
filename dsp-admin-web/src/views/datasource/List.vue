@@ -1,5 +1,28 @@
 <template>
   <div>
+    <!-- 搜索栏 -->
+    <el-card class="mb-16">
+      <el-form :inline="true" :model="searchForm">
+        <el-form-item label="数据源名称">
+          <el-input v-model="searchForm.dsName" placeholder="请输入数据源名称" clearable />
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select v-model="searchForm.dsType" placeholder="全部" clearable>
+            <el-option label="MySQL" value="MYSQL" />
+            <el-option label="Doris" value="DORIS" />
+            <el-option label="MongoDB" value="MONGODB" />
+            <el-option label="HTTP" value="HTTP" />
+            <el-option label="Dubbo" value="DUBBO" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="loadData">查询</el-button>
+          <el-button @click="resetSearch">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 操作栏 + 表格 -->
     <el-card>
       <div class="mb-16">
         <el-button type="primary" @click="showDialog(null)">新增数据源</el-button>
@@ -23,6 +46,13 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <div class="mt-16" style="display:flex;justify-content:flex-end">
+        <el-pagination v-model:current-page="searchForm.pageNum" v-model:page-size="searchForm.pageSize"
+          :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next"
+          @size-change="loadData" @current-change="loadData" />
+      </div>
     </el-card>
 
     <!-- 新增/编辑对话框 -->
@@ -68,14 +98,22 @@ import { datasourceApi } from '../../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const tableData = ref([])
+const total = ref(0)
 const dialogVisible = ref(false)
+const searchForm = ref({ pageNum: 1, pageSize: 10, dsName: '', dsType: '' })
 const editForm = ref({ dsName: '', dsType: 'MYSQL', jdbcUrl: '', username: '', password: '', extraConfig: '' })
 
 const showJdbc = computed(() => ['MYSQL', 'DORIS', 'MONGODB'].includes(editForm.value.dsType))
 
 async function loadData() {
-  const res = await datasourceApi.list({ pageNum: 1, pageSize: 100 })
+  const res = await datasourceApi.list(searchForm.value)
   tableData.value = res.data?.records || []
+  total.value = res.data?.total || 0
+}
+
+function resetSearch() {
+  searchForm.value = { pageNum: 1, pageSize: 10, dsName: '', dsType: '' }
+  loadData()
 }
 
 function showDialog(row) {
@@ -115,4 +153,5 @@ onMounted(() => loadData())
 
 <style scoped>
 .mb-16 { margin-bottom: 16px; }
+.mt-16 { margin-top: 16px; }
 </style>

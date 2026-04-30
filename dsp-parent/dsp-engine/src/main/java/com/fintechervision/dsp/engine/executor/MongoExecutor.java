@@ -1,6 +1,8 @@
 package com.fintechervision.dsp.engine.executor;
 
 import cn.hutool.json.JSONUtil;
+import com.fintechervision.dsp.common.enums.ErrorCode;
+import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.engine.model.MongoQueryConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +27,7 @@ public class MongoExecutor {
                                               Map<String, Object> requestData,
                                               Map<String, Object> previousResults) {
         if (mongoTemplate == null) {
-            throw new RuntimeException("MongoDB未配置，请引入spring-boot-starter-data-mongodb并配置MongoDB连接");
+            throw new BusinessException(ErrorCode.DATASOURCE_ERROR, "MongoDB未配置，请引入spring-boot-starter-data-mongodb并配置MongoDB连接");
         }
 
         // 解析filter，替换#{param}参数
