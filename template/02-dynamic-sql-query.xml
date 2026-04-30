@@ -3,6 +3,14 @@
   模板02: 动态SQL查询
   场景: 多条件可选查询，使用 <if> 条件判断和 <foreach> 集合遍历
   适用: 列表筛选、多条件组合查询
+
+  要点:
+    - <if test="SpEL表达式">: 条件为true时追加SQL片段
+      表达式语法: $requestData.paramName != null (注意$前缀，引擎内部转为#)
+    - <foreach>: 集合遍历生成IN语句
+      collection: SpEL表达式指向集合参数
+      item: 迭代变量名，在SQL中用 #{item} 引用
+      separator/open/close: 分隔符和包裹符号
 -->
 <interface transno="USER_LIST_QUERY" name="用户列表查询" description="支持多条件筛选的用户列表查询">
 

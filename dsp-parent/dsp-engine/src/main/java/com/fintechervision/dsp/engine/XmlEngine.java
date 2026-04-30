@@ -67,6 +67,18 @@ public class XmlEngine {
             }
         }
 
+        // 当没有定义任何 resultMap 时，将查询结果直接放入 mappedResults（key=queryId）
+        if (config.getResultMaps().isEmpty()) {
+            for (Map.Entry<String, List<Map<String, Object>>> entry : queryResults.entrySet()) {
+                List<Map<String, Object>> data = entry.getValue();
+                if (data.size() == 1) {
+                    mappedResults.put(entry.getKey(), data.get(0));
+                } else {
+                    mappedResults.put(entry.getKey(), data);
+                }
+            }
+        }
+
         Object responseData = resultMapper.buildResponse(config.getResponseData(), mappedResults);
 
         log.info("查询执行完成: transno={}", config.getTransno());

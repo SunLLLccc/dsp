@@ -3,7 +3,11 @@
   模板12: 多数据源SQL查询
   场景: 同一接口中查询不同数据源（如MySQL + Doris + PostgreSQL）
   适用: 跨库数据聚合、OLTP + OLAP 混合查询
-  说明: 不同 query 通过 datasource 属性指定不同的数据源
+
+  要点:
+    - 支持的SQL类型: mysql, doris, sql, oracle, postgresql
+    - 不同query通过 datasource 属性指定不同的数据源
+    - 无 depends 的查询自动并行执行
 -->
 <interface transno="CROSS_DB_REPORT" name="跨库报表查询" description="同时查询MySQL业务库和Doris分析库，聚合生成报表">
 
@@ -25,14 +29,14 @@
     <datasource name="ds_pg" type="POSTGRESQL"
                 url="jdbc:postgresql://pg-host:5432/config_db" username="postgres" password="123456" />
 
-    <!-- 查询1: 从MySQL查商户基本信息（并行） -->
+    <!-- 查询1: 从MySQL查商户基本信息（无依赖，并行执行） -->
     <query id="q1_merchant" type="mysql" datasource="ds_mysql">
         SELECT id, merchant_name, contact_name, phone, status, created_at
         FROM merchants
         WHERE id = #{requestData.merchantId}
     </query>
 
-    <!-- 查询2: 从Doris查交易统计（并行） -->
+    <!-- 查询2: 从Doris查交易统计（无依赖，并行执行） -->
     <query id="q2_trade_stats" type="doris" datasource="ds_doris">
         SELECT merchant_id,
                COUNT(*) AS trade_count,
@@ -45,7 +49,7 @@
         GROUP BY merchant_id
     </query>
 
-    <!-- 查询3: 从PostgreSQL查配置信息（并行） -->
+    <!-- 查询3: 从PostgreSQL查配置信息（无依赖，并行执行） -->
     <query id="q3_config" type="postgresql" datasource="ds_pg">
         SELECT config_key, config_value
         FROM merchant_config
@@ -72,6 +76,7 @@
         <field name="configValue" column="config_value" />
     </resultMap>
 
+    <!-- 汇总响应: mapTo 引用各 resultMap 的 id -->
     <responseData>
         <field name="merchant" mapTo="merchantMap" />
         <field name="tradeStats" mapTo="tradeStatsMap" />

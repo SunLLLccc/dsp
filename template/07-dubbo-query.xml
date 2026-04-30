@@ -3,7 +3,12 @@
   模板07: Dubbo泛化调用
   场景: 通过Dubbo泛化调用远程服务，无需引入服务接口JAR包
   适用: 调用内部Dubbo微服务获取数据
-  注意: 数据源的 extraConfig 中需要配置 Dubbo 注册中心地址
+
+  要点:
+    - datasource type="DUBBO": extraConfig 中配置注册中心地址
+    - <dubbo>标签: service(接口全限定名), method(方法名), version(默认1.0.0), group, timeout(默认3000ms)
+    - <param>: 方法参数, type=Java类型, value支持 #{$requestData.paramName} 参数替换
+    - 引擎内部通过 DubboExecutor 获取 RegistryConfig 进行泛化调用
 -->
 <interface transno="CUSTOMER_PROFILE" name="客户画像查询" description="通过Dubbo调用客户服务获取客户画像信息">
 
@@ -12,23 +17,11 @@
         <param name="sceneType" type="String" required="false" defaultValue="FULL" description="场景类型" />
     </requestData>
 
-    <!--
-      Dubbo数据源配置:
-      extraConfig 中 registry 字段指定注册中心地址
-    -->
+    <!-- Dubbo数据源: extraConfig 中 registry 字段指定注册中心地址 -->
     <datasource name="dubbo_ds" type="DUBBO"
                 url="" username="" password=""
                 extraConfig='{"registry":"zookeeper://127.0.0.1:2181"}' />
 
-    <!--
-      Dubbo泛化调用:
-      service  - 服务接口全限定名
-      method   - 调用的方法名
-      version  - 服务版本号（默认1.0.0）
-      group    - 服务分组
-      timeout  - 超时时间（毫秒，默认3000）
-      <param>  - 方法参数，type指定Java类型，value支持SpEL表达式
-    -->
     <query id="q1" type="dubbo" datasource="dubbo_ds">
         <dubbo service="com.fintechervision.customer.CustomerProfileService"
                method="getProfile"

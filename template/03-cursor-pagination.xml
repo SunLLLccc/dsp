@@ -3,7 +3,13 @@
   模板03: 游标分页查询
   场景: 大数据量列表查询，使用游标分页（cursor-based pagination）避免深分页性能问题
   适用: 移动端下拉加载、海量数据分页浏览
-  说明: 前端传入上一页最后一条记录的ID（lastId），引擎自动追加 WHERE id > lastId LIMIT pageSize
+
+  要点:
+    - pagination="cursor": 游标分页模式，引擎自动追加 WHERE id > lastId LIMIT pageSize
+    - order-by: 游标排序字段（默认id）
+    - page-size-param: 请求中每页条数的参数名
+    - last-id-param: 请求中上一页最后ID的参数名
+    - default-page-size / max-page-size: 默认和最大每页条数
 -->
 <interface transno="ORDER_LIST_CURSOR" name="订单游标分页查询" description="基于游标的订单列表分页查询">
 
@@ -16,14 +22,6 @@
     <datasource name="ds_main" type="MYSQL"
                 url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
 
-    <!--
-      pagination="cursor"         : 游标分页模式
-      order-by="id"               : 排序字段（游标基于此字段）
-      page-size-param="pageSize"   : 请求中每页条数的参数名
-      last-id-param="lastId"       : 请求中上一页最后ID的参数名
-      default-page-size="20"       : 默认每页条数
-      max-page-size="500"          : 最大每页条数
-    -->
     <query id="q1" type="mysql" datasource="ds_main"
            pagination="cursor" order-by="id"
            page-size-param="pageSize" last-id-param="lastId"

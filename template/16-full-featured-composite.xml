@@ -6,11 +6,19 @@
   适用: 复杂业务聚合接口的参考模板
 
   业务场景: 交易详情聚合查询
-  流程:
-    1. [并行] q1_sql: 从MySQL查交易基础信息（带动态条件+游标分页）
-    2. [并行] q4_mongo: 从MongoDB查交易操作日志
-    3. [依赖q1] q2_http: 用q1的结果调HTTP接口查风控信息
-    4. [依赖q1] q3_dubbo: 用q1的结果调Dubbo服务查客户信息
+  编排流程 (DAG):
+    q1_trades(MySQL+动态SQL+游标分页) ──┬──> q2_risk(HTTP)
+                                         └──> q3_customer(Dubbo)
+    q4_logs(MongoDB) ── 并行，无依赖
+
+  引擎特性覆盖:
+    ✅ 多数据源 (MySQL + Dubbo + MongoDB)
+    ✅ 依赖编排 (depends + CompletableFuture DAG)
+    ✅ 动态SQL (<if> 条件)
+    ✅ 游标分页 (pagination="cursor")
+    ✅ HTTP/Dubbo/MongoDB 查询
+    ✅ 函数转换 (DATE_FORMAT, ROUND, IFNULL, IFF, TYPE_CONVERT)
+    ✅ 结果映射 + 响应组装 (mapTo引用)
 -->
 <interface transno="TRADE_DETAIL_AGGREGATE" name="交易详情聚合查询" description="综合查询交易详情，聚合多数据源信息">
 
@@ -92,7 +100,8 @@
     <resultMap id="riskMap" query="q2_risk">
         <field name="riskLevel" column="riskLevel" function="fn:IFNULL,UNKNOWN" />
         <field name="riskScore" column="riskScore" function="fn:TYPE_CONVERT,INTEGER" />
-        <field name="frozenFlag" column="frozen" function="fn:IFF,true,是,否" />
+        <!-- IFF: 条件函数，第一个参数是字段值(布尔型)，当字段值为"true"时返回第二个参数，否则返回第三个参数 -->
+        <field name="frozenText" column="frozen" function="fn:IFF,已冻结,未冻结" />
     </resultMap>
 
     <resultMap id="customerMap" query="q3_customer">

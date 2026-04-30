@@ -3,6 +3,11 @@
   模板14: SQL + Dubbo 混合查询
   场景: 先查数据库获取参数，再用参数调用Dubbo服务
   适用: 本地数据 + 内部微服务聚合场景
+
+  要点:
+    - SQL查询和Dubbo查询可使用不同的数据源
+    - Dubbo参数值用 #{$q1_loan.fieldName} 引用依赖查询结果
+    - Dubbo参数类型支持: String, Integer/Int, Long/Long, Double/double, Float/float, Boolean/boolean
 -->
 <interface transno="LOAN_RISK_ASSESS" name="贷款风险评估" description="查库获取用户贷款信息，再调Dubbo风控服务评估风险">
 
@@ -51,6 +56,7 @@
         <field name="rejectReason" column="rejectReason" function="fn:IFNULL,无" />
     </resultMap>
 
+    <!-- 组装响应: mapTo 引用各 resultMap 的 id -->
     <responseData>
         <field name="loanInfo" mapTo="loanMap" />
         <field name="riskResult" mapTo="riskMap" />

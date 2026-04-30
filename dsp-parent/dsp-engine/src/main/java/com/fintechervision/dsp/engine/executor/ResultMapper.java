@@ -68,26 +68,35 @@ public class ResultMapper {
     @SuppressWarnings("unchecked")
     private Object resolveFieldValue(ResponseFieldConfig field, String defaultResultMap,
                                       Map<String, Object> mappedResults) {
-        String resultMapId = defaultResultMap;
-        Object resultMapData = resultMapId != null ? mappedResults.get(resultMapId) : null;
+        Object data;
 
-        if (resultMapData == null) {
+        // 优先将 mapTo 视为 resultMap ID 引用（从 mappedResults 中获取整个 resultMap 的数据）
+        if (field.getMapTo() != null && !field.getMapTo().isEmpty() && mappedResults.containsKey(field.getMapTo())) {
+            data = mappedResults.get(field.getMapTo());
+        } else if (defaultResultMap != null) {
+            data = mappedResults.get(defaultResultMap);
+        } else {
             return null;
         }
 
-        if (field.getMapTo() != null && !field.getMapTo().isEmpty()) {
-            if (resultMapData instanceof Map) {
-                return ((Map<String, Object>) resultMapData).get(field.getMapTo());
-            } else if (resultMapData instanceof List) {
+        if (data == null) {
+            return null;
+        }
+
+        // 当 mapTo 不是 resultMap ID 时，视为从默认 resultMap 数据中按键提取子字段
+        if (field.getMapTo() != null && !field.getMapTo().isEmpty() && !mappedResults.containsKey(field.getMapTo())) {
+            if (data instanceof Map) {
+                return ((Map<String, Object>) data).get(field.getMapTo());
+            } else if (data instanceof List) {
                 List<Object> extracted = new ArrayList<>();
-                for (Map<String, Object> item : (List<Map<String, Object>>) resultMapData) {
+                for (Map<String, Object> item : (List<Map<String, Object>>) data) {
                     extracted.add(item.get(field.getMapTo()));
                 }
                 return extracted;
             }
         }
 
-        return resultMapData;
+        return data;
     }
 
     private Object applyFunction(String function, Object value) {

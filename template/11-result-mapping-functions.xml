@@ -1,9 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   模板11: 结果映射与函数转换
-  场景: 展示所有内置函数的使用方式，覆盖日期、字符串、类型转换、JSON、空值处理、聚合、数学等函数
+  场景: 展示所有26个内置函数的使用方式
   适用: 需要对查询结果进行数据转换和格式化的场景
-  说明: function="fn:函数名,参数1,参数2" — 第一个参数始终是字段值，后续参数来自逗号分隔列表
+  说明: function="fn:函数名,参数1,参数2" — 第一个参数始终是字段值(自动传入)，后续参数来自逗号分隔列表
+
+  函数分类:
+    日期: DATE_FORMAT, DATE_ADD, DATE_SUB, WORKDAYS
+    字符串: UPPER, LOWER, TRIM, CONCAT, CONCAT_WS, SUBSTRING, REPLACE, PAD_LEFT, PAD_RIGHT, LENGTH, LIKE_MATCH, REGEX_MATCH
+    类型: TYPE_CONVERT
+    数学: ROUND, CEIL, FLOOR
+    空值: IFNULL, NVL
+    条件: IFF
+    JSON: JSON_EXTRACT
+    聚合: SUM, AVG, COUNT, MAX, MIN
 -->
 <interface transno="DATA_TRANSFORM_DEMO" name="数据转换演示" description="演示所有内置函数的结果映射转换">
 
@@ -16,60 +26,91 @@
 
     <query id="q1" type="mysql" datasource="ds_main">
         SELECT id, user_name, email, phone, amount, rate, json_ext,
-               created_at, birthday, status, remark
+               created_at, birthday, status, remark, start_date, end_date
         FROM user_detail
         WHERE id = #{requestData.userId}
     </query>
 
     <resultMap id="transformMap" query="q1">
-        <!-- ====== 日期函数 ====== -->
-        <!-- DATE_FORMAT: 格式化日期时间 -->
-        <field name="createdAt" column="created_at" function="fn:DATE_FORMAT,yyyy-MM-dd HH:mm:ss" />
-        <!-- DATE_ADD: 日期加天数 -->
-        <field name="expireDate" column="created_at" function="fn:DATE_ADD,30" />
-        <!-- DATE_SUB: 日期减天数 -->
-        <field name="startDate" column="created_at" function="fn:DATE_SUB,7" />
 
-        <!-- ====== 字符串函数 ====== -->
+        <!-- ====== 日期函数 (4个) ====== -->
+        <!-- DATE_FORMAT: 格式化日期时间，参数: 原始日期, 格式模式 -->
+        <field name="createdAt" column="created_at" function="fn:DATE_FORMAT,yyyy-MM-dd HH:mm:ss" />
+        <!-- DATE_ADD: 日期加天数，参数: 原始日期, 天数 -->
+        <field name="expireDate" column="created_at" function="fn:DATE_ADD,30" />
+        <!-- DATE_SUB: 日期减天数，参数: 原始日期, 天数 -->
+        <field name="startDate" column="created_at" function="fn:DATE_SUB,7" />
+        <!-- WORKDAYS: 计算两个日期间的工作日数，参数: 开始日期, 结束日期 -->
+        <field name="workdays" column="start_date" function="fn:WORKDAYS,2026-12-31" />
+
+        <!-- ====== 字符串函数 (12个) ====== -->
         <!-- UPPER: 转大写 -->
         <field name="userNameUpper" column="user_name" function="fn:UPPER" />
         <!-- LOWER: 转小写 -->
         <field name="emailLower" column="email" function="fn:LOWER" />
         <!-- TRIM: 去首尾空格 -->
         <field name="phoneTrimmed" column="phone" function="fn:TRIM" />
-        <!-- CONCAT: 字符串拼接 -->
+        <!-- CONCAT: 字符串拼接(所有参数拼接)，参数: 值1, 值2, ... -->
         <field name="displayName" column="user_name" function="fn:CONCAT,-DSP" />
-        <!-- SUBSTRING: 截取子串 -->
+        <!-- CONCAT_WS: 带分隔符拼接，参数: 分隔符, 值1, 值2, ... (注意: 第一个参数是分隔符，字段值作为后续参数之一) -->
+        <field name="userEmailPair" column="user_name" function="fn:CONCAT_WS,|,邮箱前缀" />
+        <!-- SUBSTRING: 截取子串，参数: 原始字符串, 起始位置, 结束位置(可选) -->
         <field name="phonePrefix" column="phone" function="fn:SUBSTRING,0,3" />
-        <!-- REPLACE: 字符串替换 -->
+        <!-- REPLACE: 字符串替换，参数: 原始字符串, 目标, 替换值 -->
         <field name="emailMasked" column="email" function="fn:REPLACE,@,***@" />
-        <!-- PAD_LEFT: 左补齐 -->
+        <!-- PAD_LEFT: 左补齐到指定长度，参数: 原始字符串, 目标长度, 补齐字符 -->
         <field name="userIdPadded" column="id" function="fn:PAD_LEFT,8,0" />
+        <!-- PAD_RIGHT: 右补齐到指定长度，参数: 原始字符串, 目标长度, 补齐字符 -->
+        <field name="userNamePadded" column="user_name" function="fn:PAD_RIGHT,10,." />
         <!-- LENGTH: 字符串长度 -->
         <field name="nameLength" column="user_name" function="fn:LENGTH" />
+        <!-- LIKE_MATCH: SQL LIKE模式匹配(返回布尔)，参数: 原始字符串, LIKE模式(%和_通配) -->
+        <field name="emailMatched" column="email" function="fn:LIKE_MATCH,%@%.com" />
+        <!-- REGEX_MATCH: 正则表达式匹配(返回布尔)，参数: 原始字符串, 正则表达式 -->
+        <field name="phoneValid" column="phone" function="fn:REGEX_MATCH,1[3-9]\d{9}" />
 
-        <!-- ====== 类型转换函数 ====== -->
-        <!-- TYPE_CONVERT: 转换为指定类型 (STRING/INTEGER/LONG/DOUBLE) -->
+        <!-- ====== 类型转换函数 (1个) ====== -->
+        <!-- TYPE_CONVERT: 转换为指定类型，参数: 原始值, 目标类型(STRING/INTEGER/LONG/DOUBLE) -->
         <field name="amountDouble" column="amount" function="fn:TYPE_CONVERT,DOUBLE" />
         <field name="idLong" column="id" function="fn:TYPE_CONVERT,LONG" />
 
-        <!-- ====== 数学函数 ====== -->
-        <!-- ROUND: 四舍五入（可指定小数位数） -->
+        <!-- ====== 数学函数 (3个) ====== -->
+        <!-- ROUND: 四舍五入，参数: 数值, 小数位数(可选,默认0) -->
         <field name="amountRounded" column="amount" function="fn:ROUND,2" />
         <!-- CEIL: 向上取整 -->
         <field name="amountCeil" column="amount" function="fn:CEIL" />
         <!-- FLOOR: 向下取整 -->
         <field name="amountFloor" column="amount" function="fn:FLOOR" />
 
-        <!-- ====== 空值处理函数 ====== -->
-        <!-- IFNULL: 空值替换 -->
+        <!-- ====== 空值处理函数 (2个) ====== -->
+        <!-- IFNULL: 空值替换，参数: 原始值, 替换值 -->
         <field name="remarkOrDefault" column="remark" function="fn:IFNULL,暂无备注" />
-        <!-- NVL: 返回第一个非空值 -->
+        <!-- NVL: 返回第一个非空值，参数: 值1, 值2, ... (字段值+后续参数中取第一个非null) -->
         <field name="contactInfo" column="phone" function="fn:NVL,联系方式未知" />
 
-        <!-- ====== JSON函数 ====== -->
-        <!-- JSON_EXTRACT: 从JSON字符串中提取值 -->
+        <!-- ====== 条件函数 (1个) ====== -->
+        <!-- IFF: 条件判断，参数: 布尔条件, 真值, 假值
+             注意: 第一个参数是字段值，当字段值为"true"字符串时返回第二个参数，否则返回第三个参数
+             适用于status等布尔型字段 -->
+        <field name="statusText" column="status" function="fn:IFF,活跃,停用" />
+
+        <!-- ====== JSON函数 (1个) ====== -->
+        <!-- JSON_EXTRACT: 从JSON字符串中按路径提取值，参数: JSON字符串, 路径 -->
         <field name="extTag" column="json_ext" function="fn:JSON_EXTRACT,tag" />
+
+        <!-- ====== 聚合函数 (5个) ====== -->
+        <!-- SUM: 求和，参数: 数值1, 数值2, ... (字段值+后续参数)
+             注意: 聚合函数在单行映射中不常用，多用于responseData层面对多个字段聚合 -->
+        <field name="amountSum" column="amount" function="fn:SUM,0" />
+        <!-- AVG: 求平均值，参数: 数值1, 数值2, ... -->
+        <field name="amountAvg" column="amount" function="fn:AVG,0" />
+        <!-- COUNT: 统计非空值个数，参数: 值1, 值2, ... -->
+        <field name="validCount" column="amount" function="fn:COUNT,extra" />
+        <!-- MAX: 取最大值，参数: 数值1, 数值2, ... -->
+        <field name="amountMax" column="amount" function="fn:MAX,0" />
+        <!-- MIN: 取最小值，参数: 数值1, 数值2, ... -->
+        <field name="amountMin" column="amount" function="fn:MIN,999999" />
+
     </resultMap>
 
     <responseData resultMap="transformMap">
