@@ -92,7 +92,7 @@ public class XmlEngine {
         for (DataSourceConfig ds : dataSources) {
             try {
                 dataSourceRegistrar.register(ds);
-                log.debug("XML内联数据源注册: name={}, type={}", ds.getName(), ds.getType());
+                log.debug("数据源校验注册: name={}", ds.getName());
             } catch (Exception e) {
                 log.warn("XML内联数据源注册失败: name={}, error={}", ds.getName(), e.getMessage());
             }

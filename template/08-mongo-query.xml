@@ -5,7 +5,7 @@
   适用: 日志查询、非结构化数据查询
 
   要点:
-    - datasource type="MONGO": url格式 mongodb://host:port/database
+    - datasource: 引用管理后台已配置的MONGO类型数据源（url格式 mongodb://host:port/database）
     - <mongo>标签: collection(集合名), 子元素 filter/projection/sort/limit/skip
     - filter中参数替换: #{paramName} — 引擎会替换为请求参数值
       注意: MongoDB参数替换使用扁平参数名(如 #{userId})，不是 #{requestData.userId}
@@ -20,9 +20,8 @@
         <param name="startDate" type="String" required="false" description="开始日期(yyyy-MM-dd)" />
     </requestData>
 
-    <!-- MongoDB数据源（url格式: mongodb://host:port/database） -->
-    <datasource name="mongo_main" type="MONGO"
-                url="mongodb://localhost:27017/dsp_logs" username="" password="" />
+    <!-- 引用已配置的MongoDB数据源（管理后台配置，类型选MONGO，url填写 mongodb://host:port/database） -->
+    <datasource name="mongo_main" />
 
     <query id="q1" type="mongo" datasource="mongo_main">
         <mongo collection="user_operation_logs">

@@ -15,8 +15,8 @@
         <param name="dateRange" type="String" required="false" defaultValue="7d" description="日期范围" />
     </requestData>
 
-    <datasource name="ds_main" type="MYSQL"
-                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+    <!-- 引用已配置的数据源 -->
+    <datasource name="ds_main" />
 
     <!-- 查询1: 用户统计（无depends，并行执行） -->
     <query id="q_user_stats" type="mysql" datasource="ds_main">

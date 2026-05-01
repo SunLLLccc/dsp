@@ -1,5 +1,7 @@
 package com.fintechervision.dsp.dataservice;
 
+import com.fintechervision.dsp.common.enums.ErrorCode;
+import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.engine.DataSourceRegistrar;
 import com.fintechervision.dsp.engine.XmlEngine;
 import com.fintechervision.dsp.engine.model.DataSourceConfig;
@@ -12,7 +14,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 
 /**
- * 将 XML 内联数据源注册到 DatasourceManagerService
+ * 校验 XML 中引用的数据源是否已在 datasource_config 表中配置
  */
 @Slf4j
 @Component
@@ -29,24 +31,14 @@ public class InlineDataSourceRegistrar implements DataSourceRegistrar {
 
     @Override
     public void register(DataSourceConfig config) {
-        // 先检查是否已注册（数据库中已有同名数据源）
-        DatasourceConfig existing = datasourceManagerService.getByDsName(config.getName());
-        if (existing != null) {
-            log.debug("数据源已存在，跳过XML内联注册: name={}", config.getName());
-            return;
+        String dsName = config.getName();
+        DatasourceConfig dsConfig = datasourceManagerService.getByDsName(dsName);
+        if (dsConfig == null) {
+            throw new BusinessException(ErrorCode.DATASOURCE_NOT_CONFIGURED,
+                    "数据源未配置: " + dsName + "，请先在管理后台添加该数据源");
         }
-
-        // 动态注册数据源
-        DatasourceConfig dsConfig = new DatasourceConfig();
-        dsConfig.setDsName(config.getName());
-        dsConfig.setDsType(config.getType() != null ? config.getType() : "MYSQL");
-        dsConfig.setJdbcUrl(config.getUrl());
-        dsConfig.setUsername(config.getUsername());
-        dsConfig.setPassword(config.getPassword());
-        dsConfig.setExtraConfig(config.getExtraConfig());
-        dsConfig.setStatus(1);
-
+        // 确保该数据源已注册到 Dynamic-DS 运行时
         datasourceManagerService.registerDatasource(dsConfig);
-        log.info("XML内联数据源已动态注册: name={}, type={}", config.getName(), config.getType());
+        log.debug("数据源校验通过并已注册: name={}", dsName);
     }
 }

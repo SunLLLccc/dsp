@@ -20,8 +20,8 @@
         <param name="pageSize" type="Integer" required="false" defaultValue="20" description="每页条数" />
     </requestData>
 
-    <datasource name="ds_main" type="MYSQL"
-                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+    <!-- 引用已配置的数据源 -->
+    <datasource name="ds_main" />
 
     <query id="q1" type="mysql" datasource="ds_main"
            pagination="optimized" order-by="id"

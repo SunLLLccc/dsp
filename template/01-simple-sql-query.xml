@@ -5,7 +5,7 @@
   适用: 根据ID查详情、字典查询等简单场景
 
   要点:
-    - datasource: 内联数据源声明，引擎会自动注册到运行时
+    - datasource: 引用管理后台已配置的数据源（通过数据源管理页面配置）
     - resultMap: 数据库字段→输出字段映射，支持 function 函数转换
     - responseData: resultMap 属性指定默认结果映射，field name 为输出键名
 -->
@@ -16,9 +16,8 @@
         <param name="userId" type="String" required="true" description="用户ID" />
     </requestData>
 
-    <!-- 内联数据源，引擎执行时自动注册到 Dynamic-DS -->
-    <datasource name="ds_main" type="MYSQL"
-                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+    <!-- 引用已配置的数据源（通过管理后台数据源管理页面添加，dsName 为唯一键） -->
+    <datasource name="ds_main" />
 
     <!-- SQL查询: 使用 #{requestData.paramName} 引用请求参数 -->
     <query id="q1" type="mysql" datasource="ds_main">
