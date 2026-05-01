@@ -23,8 +23,8 @@
         <param name="maxAge" type="Integer" required="false" description="最大年龄" />
     </requestData>
 
-    <datasource name="ds_main" type="MYSQL"
-                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+    <!-- 引用已配置的数据源 -->
+    <datasource name="ds_main" />
 
     <query id="q1" type="mysql" datasource="ds_main">
         SELECT id, user_name, email, phone, status, age, department_id, created_at

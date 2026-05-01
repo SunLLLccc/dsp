@@ -24,6 +24,7 @@ public enum ErrorCode {
     VERSION_STATUS_INVALID("4105", "版本状态不允许此操作"),
     APP_NOT_FOUND("4106", "应用不存在或已禁用"),
     DATASOURCE_BIND_DUPLICATE("4107", "数据源关联已存在"),
+    DATASOURCE_NOT_CONFIGURED("4108", "数据源未配置"),
     SYSTEM_ERROR("5001", "系统内部错误"),
     DATASOURCE_ERROR("5002", "数据源连接异常"),
     EXPORT_ERROR("5003", "导出失败");

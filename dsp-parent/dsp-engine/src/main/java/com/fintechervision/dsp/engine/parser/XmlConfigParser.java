@@ -70,11 +70,6 @@ public class XmlConfigParser {
     private DataSourceConfig parseDataSource(Element element) {
         DataSourceConfig config = new DataSourceConfig();
         config.setName(element.attributeValue("name"));
-        config.setType(element.attributeValue("type", "MYSQL"));
-        config.setUrl(element.attributeValue("url"));
-        config.setUsername(element.attributeValue("username"));
-        config.setPassword(element.attributeValue("password"));
-        config.setExtraConfig(element.attributeValue("extraConfig"));
         return config;
     }
 

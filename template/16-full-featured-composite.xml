@@ -32,14 +32,10 @@
         <param name="pageSize" type="Integer" required="false" defaultValue="20" description="每页条数" />
     </requestData>
 
-    <!-- ====== 数据源配置 ====== -->
-    <datasource name="ds_mysql" type="MYSQL"
-                url="jdbc:mysql://localhost:3306/business_db" username="root" password="123456" />
-    <datasource name="dubbo_ds" type="DUBBO"
-                url="" username="" password=""
-                extraConfig='{"registry":"zookeeper://127.0.0.1:2181"}' />
-    <datasource name="ds_mongo" type="MONGO"
-                url="mongodb://localhost:27017/dsp_logs" username="" password="" />
+    <!-- ====== 数据源配置（引用管理后台已配置的数据源） ====== -->
+    <datasource name="ds_mysql" />
+    <datasource name="dubbo_ds" />
+    <datasource name="ds_mongo" />
 
     <!-- ====== 查询定义 ====== -->
 

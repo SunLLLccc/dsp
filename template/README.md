@@ -1,14 +1,22 @@
 # XML 模板说明
 
+## 数据源配置说明
+
+XML 中 `<datasource>` 标签只需指定 `name` 属性，引用管理后台已配置的数据源（通过数据源管理页面添加）。引擎会从 `datasource_config` 表中按 dsName 查找完整配置（类型、连接地址、用户名、密码等），找不到则报错。
+
+HTTP 查询不需要 `<datasource>` 标签，直接在 `<http>` 标签中定义 URL 和参数。
+
+## 模板列表
+
 | 模板 | 文件 | 覆盖场景 |
 |------|------|----------|
 | 01 | `01-simple-sql-query.xml` | 简单单表SQL查询 + 基础结果映射 |
 | 02 | `02-dynamic-sql-query.xml` | `<if>` 条件 + `<foreach>` 集合遍历 |
 | 03 | `03-cursor-pagination.xml` | 游标分页 (cursor) |
 | 04 | `04-optimized-pagination.xml` | 优化分页 (optimized/子查询) |
-| 05 | `05-http-query.xml` | HTTP GET 外部接口调用 |
-| 06 | `06-http-post-query.xml` | HTTP POST + 请求体 + 响应路径提取 |
-| 07 | `07-dubbo-query.xml` | Dubbo 泛化调用 + 注册中心配置 |
+| 05 | `05-http-query.xml` | HTTP GET 外部接口调用（无需 datasource） |
+| 06 | `06-http-post-query.xml` | HTTP POST + 请求体 + 响应路径提取（无需 datasource） |
+| 07 | `07-dubbo-query.xml` | Dubbo 泛化调用（引用 DUBBO 类型数据源） |
 | 08 | `08-mongo-query.xml` | MongoDB 查询 (filter/projection/sort/limit/skip) |
 | 09 | `09-parallel-orchestration.xml` | 多查询并行编排 (无依赖) |
 | 10 | `10-dependency-orchestration.xml` | 依赖编排 (串行+并行混合, depends + #{} 引用) |

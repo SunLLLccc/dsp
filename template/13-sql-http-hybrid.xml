@@ -16,8 +16,8 @@
         <param name="token" type="String" required="true" description="外部接口令牌" />
     </requestData>
 
-    <datasource name="ds_main" type="MYSQL"
-                url="jdbc:mysql://localhost:3306/dsp" username="root" password="123456" />
+    <!-- 引用已配置的数据源 -->
+    <datasource name="ds_main" />
 
     <!-- 第一步: 查本地用户数据 -->
     <query id="q1_local" type="mysql" datasource="ds_main">

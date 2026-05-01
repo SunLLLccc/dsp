@@ -17,17 +17,10 @@
         <param name="endDate" type="String" required="false" description="结束日期" />
     </requestData>
 
-    <!-- MySQL 业务数据源 -->
-    <datasource name="ds_mysql" type="MYSQL"
-                url="jdbc:mysql://localhost:3306/business_db" username="root" password="123456" />
-
-    <!-- Doris 分析数据源 -->
-    <datasource name="ds_doris" type="DORIS"
-                url="jdbc:mysql://doris-host:9030/analytics_db" username="root" password="123456" />
-
-    <!-- PostgreSQL 数据源 -->
-    <datasource name="ds_pg" type="POSTGRESQL"
-                url="jdbc:postgresql://pg-host:5432/config_db" username="postgres" password="123456" />
+    <!-- 引用已配置的各数据源（管理后台数据源管理页面配置） -->
+    <datasource name="ds_mysql" />
+    <datasource name="ds_doris" />
+    <datasource name="ds_pg" />
 
     <!-- 查询1: 从MySQL查商户基本信息（无依赖，并行执行） -->
     <query id="q1_merchant" type="mysql" datasource="ds_mysql">
