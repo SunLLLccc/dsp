@@ -74,6 +74,8 @@ dsp:
     xml:
       refresh-enabled: true
       refresh-interval: 300000
+      load-templates: false
+      template-path: template
   export:
     base-dir: ./export-files
     online-max-rows: 100000
