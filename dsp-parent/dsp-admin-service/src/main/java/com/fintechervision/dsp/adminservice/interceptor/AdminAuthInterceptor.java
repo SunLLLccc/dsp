@@ -44,10 +44,11 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
             throw new BusinessException(ErrorCode.TOKEN_EXPIRED);
         }
 
-        String adminUser = (String) claims.get("adminUser");
-        if (adminUser == null || adminUser.isEmpty()) {
+        String adminUser = (String) claims.get("appId");
+        if (adminUser == null || !adminUser.startsWith("admin:")) {
             throw new BusinessException(ErrorCode.TOKEN_MISSING, "无效的管理端Token");
         }
+        adminUser = adminUser.substring(6);
 
         // 将管理员信息存入 request，供后续使用
         request.setAttribute("adminUser", adminUser);

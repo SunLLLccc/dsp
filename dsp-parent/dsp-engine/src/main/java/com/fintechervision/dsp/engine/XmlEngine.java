@@ -5,6 +5,7 @@ import com.fintechervision.dsp.engine.model.*;
 import com.fintechervision.dsp.engine.parser.XmlConfigParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -19,11 +20,13 @@ public class XmlEngine {
     private final SqlExecutor sqlExecutor;
     private final HttpExecutor httpExecutor;
     private final DubboExecutor dubboExecutor;
-    private final MongoExecutor mongoExecutor;
     private final PaginationHandler paginationHandler;
     private final DynamicSqlHandler dynamicSqlHandler;
     private final ResultMapper resultMapper;
     private final QueryOrchestrator queryOrchestrator;
+
+    @Autowired(required = false)
+    private MongoExecutor mongoExecutor;
 
     /**
      * 数据源注册回调，由外部服务注入实现。
@@ -178,6 +181,9 @@ public class XmlEngine {
     private List<Map<String, Object>> executeMongoQuery(QueryConfig query,
                                                           Map<String, Object> requestData,
                                                           Map<String, Object> previousResults) {
+        if (mongoExecutor == null) {
+            throw new RuntimeException("MongoDB未配置，请引入spring-boot-starter-data-mongodb");
+        }
         if (query.getMongoConfig() == null) {
             throw new RuntimeException("MongoDB查询缺少<mongo>配置，queryId=" + query.getId());
         }
