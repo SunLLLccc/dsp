@@ -12,6 +12,8 @@ import com.fintechervision.dsp.service.ApprovalRecordService;
 import com.fintechervision.dsp.service.InterfaceVersionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +24,12 @@ import java.time.LocalDateTime;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper, ApprovalRecord>
         implements ApprovalRecordService {
 
-    private final InterfaceVersionService interfaceVersionService;
+    @Lazy
+    @Autowired
+    private InterfaceVersionService interfaceVersionService;
 
     @Override
     @Transactional

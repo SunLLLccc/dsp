@@ -6,6 +6,7 @@ import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.engine.model.MongoQueryConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.stereotype.Component;
@@ -14,10 +15,11 @@ import java.util.*;
 
 /**
  * MongoDB查询执行器
- * 当spring-boot-starter-data-mongodb未引入或未配置时，mongoTemplate为null，执行时会给出友好提示
+ * 当spring-boot-starter-data-mongodb未引入时，此类不会被加载
  */
 @Slf4j
 @Component
+@ConditionalOnClass(name = "org.springframework.data.mongodb.core.MongoTemplate")
 public class MongoExecutor {
 
     @Autowired(required = false)
