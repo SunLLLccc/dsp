@@ -11,7 +11,7 @@ public class InterfaceInfo {
     private Long id;
     private String transno;
     private String name;
-    private String protocolType;
+    private String systemName;
     private Integer status;
     private String description;
     private Integer currentVersion;

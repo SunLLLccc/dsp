@@ -9,6 +9,9 @@
         <el-form-item label="接口名称">
           <el-input v-model="searchForm.name" placeholder="请输入接口名称" clearable />
         </el-form-item>
+        <el-form-item label="所属系统">
+          <el-input v-model="searchForm.systemName" placeholder="请输入所属系统" clearable />
+        </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="全部" clearable>
             <el-option label="草稿" :value="0" />
@@ -32,8 +35,8 @@
       <!-- 表格 -->
       <el-table :data="tableData" border stripe>
         <el-table-column prop="transno" label="接口编码" width="200" />
-        <el-table-column prop="name" label="接口名称" width="200" />
-        <el-table-column prop="protocolType" label="协议类型" width="100" />
+        <el-table-column prop="name" label="接口名称" width="180" />
+        <el-table-column prop="systemName" label="所属系统" width="150" />
         <el-table-column prop="currentVersion" label="当前版本" width="100" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
@@ -41,11 +44,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="updatedTime" label="更新时间" width="180" />
-        <el-table-column label="操作" fixed="right" width="370">
+        <el-table-column label="操作" fixed="right" width="320">
           <template #default="{ row }">
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button size="small" type="success" @click="handlePublish(row)" v-if="row.status === 0">发布</el-button>
-            <el-button size="small" type="warning" @click="handleOffline(row)" v-if="row.status === 1">下线</el-button>
             <el-button size="small" @click="showVersionHistory(row)">版本历史</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
           </template>
@@ -72,9 +73,9 @@
         <el-table-column prop="changeLog" label="变更说明" show-overflow-tooltip />
         <el-table-column prop="createdBy" label="创建人" width="100" />
         <el-table-column prop="createdTime" label="创建时间" width="170" />
-        <el-table-column label="操作" width="100">
+        <el-table-column label="操作" width="120">
           <template #default="{ row }">
-            <el-button size="small" @click="viewXml(row)">查看XML</el-button>
+            <el-button size="small" @click="viewSchema(row)">查看Schema</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -85,9 +86,16 @@
       </div>
     </el-dialog>
 
-    <!-- XML查看弹窗 -->
-    <el-dialog v-model="xmlDialogVisible" :title="`XML配置 - V${xmlVersionNo}`" width="700px">
-      <el-input type="textarea" :rows="20" :model-value="xmlContent" readonly style="font-family:monospace" />
+    <!-- Schema 查看弹窗 -->
+    <el-dialog v-model="schemaDialogVisible" :title="`Schema - V${schemaVersionNo}`" width="800px">
+      <el-tabs>
+        <el-tab-pane label="输入报文">
+          <el-input type="textarea" :rows="15" :model-value="inputSchema" readonly style="font-family:monospace" />
+        </el-tab-pane>
+        <el-tab-pane label="输出报文">
+          <el-input type="textarea" :rows="15" :model-value="outputSchema" readonly style="font-family:monospace" />
+        </el-tab-pane>
+      </el-tabs>
     </el-dialog>
   </div>
 </template>
@@ -101,7 +109,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const router = useRouter()
 const tableData = ref([])
 const total = ref(0)
-const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', name: '', status: null })
+const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', name: '', systemName: '', status: null })
 
 const statusText = (s) => ({ 0: '草稿', 1: '已发布', 2: '已下线' }[s] || '未知')
 const statusType = (s) => ({ 0: 'info', 1: 'success', 2: 'danger' }[s] || 'info')
@@ -116,10 +124,11 @@ const versionData = ref([])
 const versionTotal = ref(0)
 const versionPage = ref({ pageNum: 1, pageSize: 10 })
 
-// XML查看
-const xmlDialogVisible = ref(false)
-const xmlContent = ref('')
-const xmlVersionNo = ref('')
+// Schema 查看
+const schemaDialogVisible = ref(false)
+const inputSchema = ref('')
+const outputSchema = ref('')
+const schemaVersionNo = ref('')
 
 async function loadData() {
   const res = await interfaceApi.list(searchForm.value)
@@ -128,7 +137,7 @@ async function loadData() {
 }
 
 function resetSearch() {
-  searchForm.value = { pageNum: 1, pageSize: 10, transno: '', name: '', status: null }
+  searchForm.value = { pageNum: 1, pageSize: 10, transno: '', name: '', systemName: '', status: null }
   loadData()
 }
 
@@ -138,20 +147,6 @@ function handleCreate() {
 
 function handleEdit(row) {
   router.push(`/interface/edit/${row.id}`)
-}
-
-async function handlePublish(row) {
-  await ElMessageBox.confirm(`确认发布接口 ${row.transno}？`, '发布确认')
-  await interfaceApi.approve(row.transno, row.currentVersion || 1, { approver: 'admin' })
-  ElMessage.success('发布成功')
-  loadData()
-}
-
-async function handleOffline(row) {
-  await ElMessageBox.confirm(`确认下线接口 ${row.transno}？`, '下线确认')
-  await interfaceApi.offline(row.transno)
-  ElMessage.success('已下线')
-  loadData()
 }
 
 async function handleDelete(row) {
@@ -174,11 +169,21 @@ async function loadVersions() {
   versionTotal.value = res.data?.total || 0
 }
 
-async function viewXml(row) {
+async function viewSchema(row) {
   const res = await interfaceApi.getVersion(versionTransno.value, row.versionNo)
-  xmlContent.value = res.data?.xmlConfig || ''
-  xmlVersionNo.value = row.versionNo
-  xmlDialogVisible.value = true
+  inputSchema.value = formatJson(res.data?.inputSchema)
+  outputSchema.value = formatJson(res.data?.outputSchema)
+  schemaVersionNo.value = row.versionNo
+  schemaDialogVisible.value = true
+}
+
+function formatJson(str) {
+  if (!str) return ''
+  try {
+    return JSON.stringify(JSON.parse(str), null, 2)
+  } catch {
+    return str
+  }
 }
 
 onMounted(() => loadData())

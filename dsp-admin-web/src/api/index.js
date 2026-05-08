@@ -12,14 +12,28 @@ export const interfaceApi = {
   create: (data) => request.post('/interface', data),
   update: (id, data) => request.put(`/interface/${id}`, data),
   delete: (id) => request.delete(`/interface/${id}`),
-  saveXml: (transno, data) => request.post(`/${transno}/version`, data),
-  versions: (transno, params) => request.get(`/${transno}/versions`, { params }),
-  getVersion: (transno, versionNo) => request.get(`/${transno}/version/${versionNo}`),
-  submitApproval: (transno, versionNo, data) => request.post(`/${transno}/version/${versionNo}/submit`, data),
-  approve: (transno, versionNo, data) => request.post(`/${transno}/version/${versionNo}/approve`, data),
-  reject: (transno, versionNo, data) => request.post(`/${transno}/version/${versionNo}/reject`, data),
-  offline: (transno) => request.post(`/${transno}/offline`),
+  saveSchema: (transno, data) => request.post(`/interface/${transno}/version`, data),
+  versions: (transno, params) => request.get(`/interface/${transno}/versions`, { params }),
+  getVersion: (transno, versionNo) => request.get(`/interface/${transno}/version/${versionNo}`),
+  submitApproval: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/submit`, data),
+  approve: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/approve`, data),
+  reject: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/reject`, data),
+  offline: (transno) => request.post(`/interface/${transno}/offline`),
   debug: (data) => request.post('/interface/debug', data)
+}
+
+// XML模板管理API
+export const templateApi = {
+  list: (params) => request.get('/template/list', { params }),
+  detail: (id) => request.get(`/template/${id}`),
+  create: (data) => request.post('/template', data),
+  update: (id, data) => request.put(`/template/${id}`, data),
+  delete: (id) => request.delete(`/template/${id}`),
+  publish: (id, data) => request.post(`/template/${id}/publish`, data),
+  offline: (id) => request.post(`/template/${id}/offline`),
+  generate: (transno) => request.get('/template/generate', { params: { transno } }),
+  history: (id, params) => request.get(`/template/${id}/history`, { params }),
+  historyByTransno: (transno) => request.get(`/template/transno/${transno}/history`)
 }
 
 // 数据源管理API

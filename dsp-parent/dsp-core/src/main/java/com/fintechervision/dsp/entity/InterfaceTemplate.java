@@ -5,17 +5,20 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("interface_version")
-public class InterfaceVersion {
+@TableName("interface_template")
+public class InterfaceTemplate {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String transno;
+    private String systemName;
+    private String interfaceName;
+    private String xmlContent;
     private Integer versionNo;
-    private String inputSchema;
-    private String outputSchema;
-    private String changeLog;
     private Integer status;
     private String createdBy;
     private LocalDateTime createdTime;
-    private LocalDateTime publishedTime;
+    private String updatedBy;
+    private LocalDateTime updatedTime;
+    @TableLogic
+    private Integer deleted;
 }

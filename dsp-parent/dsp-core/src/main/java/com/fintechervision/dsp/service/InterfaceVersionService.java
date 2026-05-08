@@ -14,9 +14,9 @@ import java.util.Map;
 public interface InterfaceVersionService extends IService<InterfaceVersion> {
 
     /**
-     * 保存接口XML配置（创建新版本）
+     * 保存接口Schema配置（创建新版本）
      */
-    InterfaceVersion saveXmlConfig(String transno, String xmlConfig, String changeLog, String operator);
+    InterfaceVersion saveSchema(String transno, String inputSchema, String outputSchema, String changeLog, String operator);
 
     /**
      * 查询接口版本列表
