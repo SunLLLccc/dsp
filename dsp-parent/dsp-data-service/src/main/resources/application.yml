@@ -10,9 +10,9 @@ spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/dsp?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: root
+    url: jdbc:mysql://117.72.220.9:3306/dsp_config?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: usr_dsp
+    password: 1kun2.5nian
     druid:
       initial-size: 5
       min-idle: 5
@@ -32,7 +32,7 @@ spring:
         url-pattern: /druid/*
 
   redis:
-    host: localhost
+    host: 117.72.220.9
     port: 6379
     password:
     database: 0
