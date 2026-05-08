@@ -3,8 +3,8 @@
 -- 对应需求文档第7节 核心数据模型
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS dsp DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE dsp;
+CREATE DATABASE IF NOT EXISTS dsp_config DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE dsp_config;
 
 -- -----------------------------------------------------------
 -- 1. 接口基础信息表
