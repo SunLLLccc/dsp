@@ -86,11 +86,12 @@ public class InterfaceAdminController {
     }
 
     @PostMapping("/{transno}/version")
-    public ApiResponse<InterfaceVersion> saveXmlConfig(
+    public ApiResponse<InterfaceVersion> saveSchema(
             @PathVariable String transno,
             @RequestBody Map<String, String> body) {
-        InterfaceVersion version = interfaceVersionService.saveXmlConfig(
-                transno, body.get("xmlConfig"), body.get("changeLog"), body.get("operator"));
+        InterfaceVersion version = interfaceVersionService.saveSchema(
+                transno, body.get("inputSchema"), body.get("outputSchema"),
+                body.get("changeLog"), body.get("operator"));
         return ApiResponse.success("VERSION_SAVE", "", version);
     }
 

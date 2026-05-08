@@ -8,6 +8,10 @@
           <el-icon><Document /></el-icon>
           <span>接口管理</span>
         </el-menu-item>
+        <el-menu-item index="/template">
+          <el-icon><Files /></el-icon>
+          <span>XML模板管理</span>
+        </el-menu-item>
         <el-menu-item index="/datasource">
           <el-icon><Coin /></el-icon>
           <span>数据源管理</span>
@@ -55,7 +59,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { Document, Coin, Key, Download, Monitor, Notebook, Stamp } from '@element-plus/icons-vue'
+import { Document, Coin, Key, Download, Monitor, Notebook, Stamp, Files } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

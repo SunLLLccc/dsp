@@ -30,7 +30,7 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
     private final XmlConfigCacheInvalidator xmlConfigCacheInvalidator;
 
     @Override
-    public InterfaceVersion saveXmlConfig(String transno, String xmlConfig, String changeLog, String operator) {
+    public InterfaceVersion saveSchema(String transno, String inputSchema, String outputSchema, String changeLog, String operator) {
         LambdaQueryWrapper<InterfaceVersion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(InterfaceVersion::getTransno, transno).orderByDesc(InterfaceVersion::getVersionNo).last("LIMIT 1");
         InterfaceVersion lastVersion = getOne(wrapper);
@@ -38,13 +38,14 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
         InterfaceVersion version = new InterfaceVersion();
         version.setTransno(transno);
         version.setVersionNo(nextVersion);
-        version.setXmlConfig(xmlConfig);
+        version.setInputSchema(inputSchema);
+        version.setOutputSchema(outputSchema);
         version.setChangeLog(changeLog);
         version.setStatus(0);
         version.setCreatedBy(operator);
         version.setCreatedTime(LocalDateTime.now());
         save(version);
-        InterfaceInfo info = interfaceInfoService.getByTransno(transno);
+        InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(transno);
         if (info != null) { info.setUpdatedTime(LocalDateTime.now()); interfaceInfoService.updateById(info); }
         return version;
     }

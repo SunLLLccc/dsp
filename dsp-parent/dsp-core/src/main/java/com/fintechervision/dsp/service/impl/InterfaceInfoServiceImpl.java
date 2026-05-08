@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fintechervision.dsp.common.enums.ErrorCode;
 import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.entity.InterfaceInfo;
-import com.fintechervision.dsp.entity.InterfaceVersion;
+import com.fintechervision.dsp.entity.InterfaceTemplate;
 import com.fintechervision.dsp.mapper.InterfaceInfoMapper;
-import com.fintechervision.dsp.mapper.InterfaceVersionMapper;
+import com.fintechervision.dsp.mapper.InterfaceTemplateMapper;
 import com.fintechervision.dsp.service.InterfaceInfoService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 public class InterfaceInfoServiceImpl extends ServiceImpl<InterfaceInfoMapper, InterfaceInfo>
         implements InterfaceInfoService {
 
-    private final InterfaceVersionMapper interfaceVersionMapper;
+    private final InterfaceTemplateMapper interfaceTemplateMapper;
 
     @Override
     public InterfaceInfo getByTransno(String transno) {
@@ -41,15 +41,14 @@ public class InterfaceInfoServiceImpl extends ServiceImpl<InterfaceInfoMapper, I
             throw new BusinessException(ErrorCode.INTERFACE_NOT_FOUND);
         }
 
-        LambdaQueryWrapper<InterfaceVersion> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(InterfaceVersion::getTransno, transno)
-               .eq(InterfaceVersion::getVersionNo, info.getCurrentVersion())
-               .eq(InterfaceVersion::getStatus, 3);
-        InterfaceVersion version = interfaceVersionMapper.selectOne(wrapper);
+        LambdaQueryWrapper<InterfaceTemplate> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(InterfaceTemplate::getTransno, transno)
+               .eq(InterfaceTemplate::getStatus, 1);
+        InterfaceTemplate template = interfaceTemplateMapper.selectOne(wrapper);
 
-        if (version == null) {
-            throw new BusinessException(ErrorCode.INTERFACE_NOT_FOUND, "接口版本配置不存在");
+        if (template == null) {
+            throw new BusinessException(ErrorCode.INTERFACE_NOT_FOUND, "接口模板配置不存在");
         }
-        return version.getXmlConfig();
+        return template.getXmlContent();
     }
 }

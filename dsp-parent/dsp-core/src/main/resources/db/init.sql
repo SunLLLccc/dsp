@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS interface_info (
     id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键',
     transno         VARCHAR(64)     NOT NULL COMMENT '接口编码（唯一标识）',
     name            VARCHAR(128)    NOT NULL COMMENT '接口名称',
-    protocol_type   VARCHAR(16)     NOT NULL DEFAULT 'HTTP' COMMENT '协议类型：HTTP/DUBBO',
+    system_name     VARCHAR(128)    DEFAULT NULL COMMENT '所属系统',
     status          TINYINT         NOT NULL DEFAULT 0 COMMENT '状态：0-草稿 1-已发布 2-已下线',
     description     VARCHAR(512)    DEFAULT NULL COMMENT '接口描述',
     current_version INT             DEFAULT 0 COMMENT '当前生效版本号',
@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS interface_version (
     id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键',
     transno         VARCHAR(64)     NOT NULL COMMENT '接口编码',
     version_no      INT             NOT NULL COMMENT '版本号',
-    xml_config      MEDIUMTEXT      NOT NULL COMMENT 'XML配置内容',
+    input_schema    MEDIUMTEXT      DEFAULT NULL COMMENT '输入报文JSON Schema',
+    output_schema   MEDIUMTEXT      DEFAULT NULL COMMENT '输出报文JSON Schema',
     change_log      VARCHAR(512)    DEFAULT NULL COMMENT '变更说明',
     status          TINYINT         NOT NULL DEFAULT 0 COMMENT '0-待审批 1-已通过 2-已驳回 3-已发布',
     created_by      VARCHAR(64)     DEFAULT NULL COMMENT '提交人',
@@ -151,3 +152,42 @@ CREATE TABLE IF NOT EXISTS audit_log (
     KEY idx_transno (transno),
     KEY idx_created_time (created_time)
 ) ENGINE=InnoDB COMMENT='操作审计日志表';
+
+-- -----------------------------------------------------------
+-- 9. 接口模板信息表（维护各接口的XML配置）
+-- -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS interface_template (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键',
+    transno         VARCHAR(64)     NOT NULL COMMENT '接口编码',
+    system_name     VARCHAR(128)    DEFAULT NULL COMMENT '所属系统',
+    interface_name  VARCHAR(128)    DEFAULT NULL COMMENT '接口名称',
+    xml_content     MEDIUMTEXT      DEFAULT NULL COMMENT 'XML配置内容',
+    version_no      INT             NOT NULL DEFAULT 1 COMMENT '当前版本号',
+    status          TINYINT         NOT NULL DEFAULT 0 COMMENT '状态：0-草稿 1-已发布 2-已下线',
+    created_by      VARCHAR(64)     DEFAULT NULL COMMENT '创建人',
+    created_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_by      VARCHAR(64)     DEFAULT NULL COMMENT '更新人',
+    updated_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-正常 1-已删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_transno (transno)
+) ENGINE=InnoDB COMMENT='接口模板信息表';
+
+-- -----------------------------------------------------------
+-- 10. 接口模板历史表（XML模板变更记录）
+-- -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS interface_template_history (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键',
+    template_id     BIGINT          NOT NULL COMMENT '关联模板表ID',
+    transno         VARCHAR(64)     NOT NULL COMMENT '接口编码',
+    system_name     VARCHAR(128)    DEFAULT NULL COMMENT '所属系统',
+    interface_name  VARCHAR(128)    DEFAULT NULL COMMENT '接口名称',
+    xml_content     MEDIUMTEXT      DEFAULT NULL COMMENT 'XML配置内容',
+    version_no      INT             NOT NULL COMMENT '版本号',
+    change_log      VARCHAR(512)    DEFAULT NULL COMMENT '变更说明',
+    created_by      VARCHAR(64)     DEFAULT NULL COMMENT '创建人',
+    created_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_transno (transno),
+    KEY idx_template_id (template_id)
+) ENGINE=InnoDB COMMENT='接口模板历史表';
