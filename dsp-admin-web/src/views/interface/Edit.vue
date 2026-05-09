@@ -78,15 +78,17 @@
 
       <!-- 操作按钮 -->
       <div style="text-align:center;margin-top:16px">
+        <el-button @click="$router.back()">取消</el-button>
         <el-button type="primary" @click="handleSave">保存</el-button>
+        <el-button type="warning" @click="handleSubmitApproval" v-if="isEdit">提交审批</el-button>
       </div>
     </el-card>
 
     <!-- JSON Schema 编辑弹窗 -->
     <el-dialog v-model="schemaDialogVisible" :title="schemaDialogTitle" width="1100px" top="5vh" destroy-on-close>
-      <div class="schema-editor-container">
+      <div class="schema-editor-container" ref="editorContainer">
         <!-- 左侧：JSON 编辑 -->
-        <div class="schema-left">
+        <div class="schema-left" :style="{ width: leftWidth + 'px' }">
           <div class="schema-panel-header">JSON 编辑</div>
           <el-input
             v-model="schemaJsonText"
@@ -97,13 +99,13 @@
             style="font-family:monospace"
           />
         </div>
-        <!-- 分割线 -->
-        <div class="schema-divider" />
+        <!-- 可拖拽分割线 -->
+        <div class="schema-divider" @mousedown="startDrag" />
         <!-- 右侧：递归折叠树 -->
-        <div class="schema-right">
+        <div class="schema-right" :style="{ width: rightWidth + 'px' }">
           <div class="schema-panel-header">
             <span>字段结构</span>
-            <el-button v-if="schemaEditable" size="small" type="primary" @click="addRootField">添加根字段</el-button>
+            <el-icon v-if="schemaEditable" class="schema-add-root" @click="addRootField"><Plus /></el-icon>
           </div>
           <div class="schema-tree">
             <SchemaTreeNode
@@ -113,14 +115,12 @@
               :editable="schemaEditable"
               @remove="removeRootField(idx)"
             />
-            <div v-if="schemaFields.length === 0" class="schema-empty">暂无字段，点击上方按钮添加</div>
+            <div v-if="schemaFields.length === 0" class="schema-empty">暂无字段，点击上方图标添加</div>
           </div>
         </div>
       </div>
       <template #footer>
         <el-button @click="schemaDialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="syncJsonToFields" :disabled="!schemaEditable">JSON → 字段结构</el-button>
-        <el-button type="primary" @click="syncFieldsToJson" :disabled="!schemaEditable">字段结构 → JSON</el-button>
         <el-button type="success" @click="confirmSchema" :disabled="!schemaEditable">确认</el-button>
       </template>
     </el-dialog>
@@ -128,10 +128,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { interfaceApi, datasourceApi, interfaceDatasourceApi } from '../../api'
 import { ElMessage } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import SchemaTreeNode from '../../components/SchemaTreeNode.vue'
 
 const route = useRoute()
@@ -148,10 +149,62 @@ const boundDatasources = ref([])
 
 // Schema 编辑弹窗
 const schemaDialogVisible = ref(false)
-const schemaType = ref('input') // input 或 output
+const schemaType = ref('input')
 const schemaJsonText = ref('')
 const schemaFields = ref([])
 const schemaEditable = ref(true)
+
+// 拖拽分割线
+const editorContainer = ref(null)
+const leftWidth = ref(450)
+const rightWidth = ref(600)
+let dragging = false
+let dragStartX = 0
+let dragStartLeft = 0
+
+function startDrag(e) {
+  dragging = true
+  dragStartX = e.clientX
+  dragStartLeft = leftWidth.value
+  document.addEventListener('mousemove', onDrag)
+  document.addEventListener('mouseup', stopDrag)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+function onDrag(e) {
+  if (!dragging) return
+  const delta = e.clientX - dragStartX
+  const containerWidth = editorContainer.value?.offsetWidth || 1060
+  const newLeft = Math.max(200, Math.min(containerWidth - 250, dragStartLeft + delta))
+  leftWidth.value = newLeft
+  rightWidth.value = containerWidth - newLeft - 12
+}
+function stopDrag() {
+  dragging = false
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+onBeforeUnmount(stopDrag)
+
+// 自动同步：JSON → 字段结构
+let jsonSyncTimer = null
+watch(schemaJsonText, () => {
+  if (!schemaDialogVisible.value || !schemaEditable.value) return
+  clearTimeout(jsonSyncTimer)
+  jsonSyncTimer = setTimeout(() => { parseFieldsFromJson() }, 400)
+})
+
+// 自动同步：字段结构 → JSON（深度监听）
+let fieldSyncTimer = null
+watch(schemaFields, () => {
+  if (!schemaDialogVisible.value || !schemaEditable.value) return
+  clearTimeout(fieldSyncTimer)
+  fieldSyncTimer = setTimeout(() => {
+    schemaJsonText.value = buildJsonFromFields()
+  }, 400)
+}, { deep: true })
 
 const schemaDialogTitle = computed(() => {
   const label = schemaType.value === 'input' ? '请求报文' : '响应报文'
@@ -252,16 +305,6 @@ function buildFieldNode(field) {
   return prop
 }
 
-function syncJsonToFields() {
-  parseFieldsFromJson()
-  ElMessage.success('已从 JSON 同步到字段结构')
-}
-
-function syncFieldsToJson() {
-  schemaJsonText.value = buildJsonFromFields()
-  ElMessage.success('已从字段结构同步到 JSON')
-}
-
 function addRootField() {
   schemaFields.value.push({ name: '', title: '', type: 'string', required: false, expanded: true, children: [] })
 }
@@ -297,9 +340,19 @@ async function loadDetail() {
     form.value = res.data
     // 加载最新版本的 Schema
     try {
-      const verRes = await interfaceApi.getVersion(res.data.transno, res.data.currentVersion)
-      inputSchema.value = verRes.data?.inputSchema || ''
-      outputSchema.value = verRes.data?.outputSchema || ''
+      let verData = null
+      if (res.data.currentVersion && res.data.currentVersion > 0) {
+        const verRes = await interfaceApi.getVersion(res.data.transno, res.data.currentVersion)
+        verData = verRes.data
+      } else {
+        // 无正式版本，尝试获取最新一条
+        const verListRes = await interfaceApi.versions(res.data.transno, { pageNum: 1, pageSize: 1 })
+        verData = verListRes.data?.records?.[0]
+      }
+      if (verData) {
+        inputSchema.value = verData.inputSchema || ''
+        outputSchema.value = verData.outputSchema || ''
+      }
     } catch {
       // 无版本信息
     }
@@ -366,6 +419,33 @@ async function handleSave() {
   router.back()
 }
 
+async function handleSubmitApproval() {
+  if (!form.value.transno) {
+    ElMessage.warning('请先保存接口')
+    return
+  }
+  try {
+    // 先保存
+    await interfaceApi.update(route.params.id, form.value)
+    await interfaceApi.saveSchema(form.value.transno, {
+      inputSchema: inputSchema.value,
+      outputSchema: outputSchema.value,
+      changeLog: changeLog.value || '提交审批',
+      operator: 'admin'
+    })
+    // 获取最新版本号
+    const verListRes = await interfaceApi.versions(form.value.transno, { pageNum: 1, pageSize: 1 })
+    const latestVer = verListRes.data?.records?.[0]
+    if (latestVer) {
+      await interfaceApi.submitApproval(form.value.transno, latestVer.versionNo, { operator: 'admin' })
+      ElMessage.success('已提交审批')
+      router.back()
+    }
+  } catch {
+    ElMessage.error('提交审批失败')
+  }
+}
+
 onMounted(() => loadDetail())
 </script>
 
@@ -378,20 +458,27 @@ onMounted(() => loadDetail())
   min-height: 500px;
 }
 .schema-left {
-  flex: 1;
+  flex: none;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .schema-right {
-  flex: 1;
+  flex: none;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .schema-divider {
-  width: 1px;
-  background: #dcdfe6;
-  margin: 0 12px;
+  width: 6px;
+  cursor: col-resize;
+  background: #e4e7ed;
+  margin: 0 3px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: background 0.2s;
 }
+.schema-divider:hover { background: #409eff; }
 .schema-panel-header {
   display: flex;
   justify-content: space-between;
@@ -413,4 +500,12 @@ onMounted(() => loadDetail())
   padding: 40px 0;
   font-size: 14px;
 }
+.schema-add-root {
+  cursor: pointer;
+  font-size: 18px;
+  color: #409eff;
+  padding: 4px;
+  border-radius: 4px;
+}
+.schema-add-root:hover { background: #ecf5ff; }
 </style>

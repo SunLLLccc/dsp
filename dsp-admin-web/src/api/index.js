@@ -19,6 +19,7 @@ export const interfaceApi = {
   approve: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/approve`, data),
   reject: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/reject`, data),
   offline: (transno) => request.post(`/interface/${transno}/offline`),
+  withdraw: (transno, versionNo) => request.post(`/interface/${transno}/version/${versionNo}/withdraw`),
   debug: (data) => request.post('/interface/debug', data)
 }
 

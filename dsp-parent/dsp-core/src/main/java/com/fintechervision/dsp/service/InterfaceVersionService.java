@@ -47,4 +47,9 @@ public interface InterfaceVersionService extends IService<InterfaceVersion> {
      * 接口下线
      */
     void offline(String transno);
+
+    /**
+     * 撤销审批
+     */
+    void withdrawApproval(String transno, Integer versionNo);
 }

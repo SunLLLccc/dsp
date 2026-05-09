@@ -7,35 +7,14 @@
         class="tree-toggle"
         @click="field.expanded = !field.expanded"
       >
-        <el-icon :size="14">
-          <ArrowRight v-if="!field.expanded" />
-          <ArrowDown v-else />
-        </el-icon>
+        <el-icon :size="12"><ArrowRight v-if="!field.expanded" /><ArrowDown v-else /></el-icon>
       </span>
-      <span v-else class="tree-toggle tree-toggle-placeholder" />
+      <span v-else class="tree-toggle-placeholder" />
 
       <!-- 字段编辑 -->
-      <el-input
-        v-model="field.name"
-        placeholder="字段名"
-        size="small"
-        :disabled="!editable"
-        class="tree-input-name"
-      />
-      <el-input
-        v-model="field.title"
-        placeholder="中文名"
-        size="small"
-        :disabled="!editable"
-        class="tree-input-title"
-      />
-      <el-select
-        v-model="field.type"
-        size="small"
-        :disabled="!editable"
-        class="tree-select-type"
-        @change="onTypeChange"
-      >
+      <el-input v-model="field.name" placeholder="字段名" size="small" :disabled="!editable" class="tree-input-name" />
+      <el-input v-model="field.title" placeholder="中文名" size="small" :disabled="!editable" class="tree-input-title" />
+      <el-select v-model="field.type" size="small" :disabled="!editable" class="tree-select-type" @change="onTypeChange">
         <el-option label="string" value="string" />
         <el-option label="integer" value="integer" />
         <el-option label="number" value="number" />
@@ -43,22 +22,11 @@
         <el-option label="object" value="object" />
         <el-option label="array" value="array" />
       </el-select>
-      <el-checkbox
-        v-model="field.required"
-        :disabled="!editable"
-        size="small"
-      >必填</el-checkbox>
-      <el-button
-        v-if="editable && canHaveChildren"
-        size="small"
-        @click="addChild"
-      >子字段</el-button>
-      <el-button
-        v-if="editable"
-        size="small"
-        type="danger"
-        @click="$emit('remove')"
-      >删除</el-button>
+      <el-checkbox v-model="field.required" :disabled="!editable" size="small">必填</el-checkbox>
+
+      <!-- 操作图标 -->
+      <el-icon v-if="editable && canHaveChildren" class="tree-action" @click="addChild"><Plus /></el-icon>
+      <el-icon v-if="editable" class="tree-action tree-action-danger" @click="$emit('remove')"><Delete /></el-icon>
     </div>
 
     <!-- 子节点（递归） -->
@@ -76,7 +44,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { ArrowRight, ArrowDown } from '@element-plus/icons-vue'
+import { ArrowRight, ArrowDown, Plus, Delete } from '@element-plus/icons-vue'
 
 const props = defineProps({
   field: { type: Object, required: true },
@@ -121,38 +89,45 @@ function removeChild(idx) {
 </script>
 
 <style scoped>
-.tree-node {
-  margin-bottom: 2px;
-}
+.tree-node { margin-bottom: 2px; }
 .tree-node-row {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 3px 0;
-  flex-wrap: wrap;
 }
 .tree-toggle {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
   color: #909399;
+  border-radius: 2px;
 }
-.tree-toggle:hover {
-  color: #409eff;
-}
-.tree-toggle-placeholder {
-  cursor: default;
-}
+.tree-toggle:hover { color: #409eff; background: #ecf5ff; }
+.tree-toggle-placeholder { width: 16px; flex-shrink: 0; }
 .tree-input-name { width: 110px; }
 .tree-input-title { width: 90px; }
 .tree-select-type { width: 88px; }
+
+.tree-action {
+  cursor: pointer;
+  font-size: 15px;
+  color: #409eff;
+  flex-shrink: 0;
+  border-radius: 4px;
+  padding: 2px;
+}
+.tree-action:hover { background: #ecf5ff; }
+.tree-action-danger { color: #f56c6c; }
+.tree-action-danger:hover { background: #fef0f0; }
+
 .tree-children {
-  margin-left: 22px;
-  border-left: 2px solid #e4e7ed;
+  margin-left: 20px;
+  border-left: 1.5px dashed #d9ecff;
   padding-left: 6px;
 }
 </style>
