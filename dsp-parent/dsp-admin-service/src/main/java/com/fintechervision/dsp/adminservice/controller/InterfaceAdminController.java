@@ -145,6 +145,12 @@ public class InterfaceAdminController {
         return ApiResponse.success("INTERFACE_OFFLINE", "", null);
     }
 
+    @PostMapping("/{transno}/version/{versionNo}/withdraw")
+    public ApiResponse<Void> withdrawApproval(@PathVariable String transno, @PathVariable Integer versionNo) {
+        interfaceVersionService.withdrawApproval(transno, versionNo);
+        return ApiResponse.success("APPROVAL_WITHDRAW", "", null);
+    }
+
     @PostMapping("/debug")
     public ApiResponse<Object> debug(@RequestBody Map<String, Object> body) {
         String transno = (String) body.get("transno");

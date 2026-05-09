@@ -67,8 +67,15 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
 
     @Override
     public void submitApproval(String transno, Integer versionNo, String operator) {
-        // 委托给 ApprovalRecordService，它会校验版本状态并创建审批记录
         approvalRecordService.submitApproval(transno, versionNo, operator);
+        // 将接口状态改为待审批
+        InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(transno);
+        if (info != null) {
+            info.setStatus(3);
+            info.setUpdatedTime(LocalDateTime.now());
+            interfaceInfoService.updateById(info);
+        }
+        log.info("接口提交审批: transno={}, version={}", transno, versionNo);
     }
 
     @Override
@@ -113,6 +120,14 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
         // 审批驳回（会更新审批记录和版本状态）
         approvalRecordService.reject(record.getId(), null, reason);
 
+        // 接口状态改回草稿
+        InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(transno);
+        if (info != null) {
+            info.setStatus(0);
+            info.setUpdatedTime(LocalDateTime.now());
+            interfaceInfoService.updateById(info);
+        }
+
         log.info("接口审批驳回: transno={}, version={}, reason={}", transno, versionNo, reason);
     }
 
@@ -124,5 +139,28 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
         if (info != null) { info.setStatus(2); info.setUpdatedTime(LocalDateTime.now()); interfaceInfoService.updateById(info); }
         log.info("接口下线: transno={}", transno);
         xmlConfigCacheInvalidator.invalidate(transno);
+    }
+
+    @Override
+    public void withdrawApproval(String transno, Integer versionNo) {
+        LambdaQueryWrapper<ApprovalRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ApprovalRecord::getTransno, transno)
+                .eq(ApprovalRecord::getVersionNo, versionNo)
+                .eq(ApprovalRecord::getStatus, 0);
+        ApprovalRecord record = approvalRecordService.getOne(wrapper);
+        if (record == null) {
+            throw new BusinessException(ErrorCode.APPROVAL_RECORD_NOT_FOUND, "未找到待审批记录");
+        }
+        // 删除审批记录
+        approvalRecordService.removeById(record.getId());
+
+        // 接口状态改回草稿
+        InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(transno);
+        if (info != null) {
+            info.setStatus(0);
+            info.setUpdatedTime(LocalDateTime.now());
+            interfaceInfoService.updateById(info);
+        }
+        log.info("撤销审批: transno={}, version={}", transno, versionNo);
     }
 }
