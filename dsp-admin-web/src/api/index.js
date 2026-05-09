@@ -16,10 +16,10 @@ export const interfaceApi = {
   versions: (transno, params) => request.get(`/interface/${transno}/versions`, { params }),
   getVersion: (transno, versionNo) => request.get(`/interface/${transno}/version/${versionNo}`),
   submitApproval: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/submit`, data),
-  approve: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/approve`, data),
-  reject: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/reject`, data),
+  approve: (transno, data) => request.post(`/interface/${transno}/approve`, data),
+  reject: (transno, data) => request.post(`/interface/${transno}/reject`, data),
   offline: (transno) => request.post(`/interface/${transno}/offline`),
-  withdraw: (transno, versionNo) => request.post(`/interface/${transno}/version/${versionNo}/withdraw`),
+  withdraw: (transno) => request.post(`/interface/${transno}/withdraw`),
   debug: (data) => request.post('/interface/debug', data)
 }
 
@@ -67,9 +67,9 @@ export const exportApi = {
 export const approvalApi = {
   pending: (params) => request.get('/interface/approval-pending', { params }),
   records: (transno, params) => request.get(`/interface/${transno}/approval-records`, { params }),
-  submit: (transno, versionNo, data) => request.post(`/${transno}/version/${versionNo}/submit`, data),
-  approve: (transno, versionNo, data) => request.post(`/${transno}/version/${versionNo}/approve`, data),
-  reject: (transno, versionNo, data) => request.post(`/${transno}/version/${versionNo}/reject`, data)
+  submit: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/submit`, data),
+  approve: (transno, data) => request.post(`/interface/${transno}/approve`, data),
+  reject: (transno, data) => request.post(`/interface/${transno}/reject`, data)
 }
 
 // 审计日志API

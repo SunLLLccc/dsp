@@ -217,7 +217,7 @@ async function handleWithdraw(row) {
     const verListRes = await interfaceApi.versions(row.transno, { pageNum: 1, pageSize: 1 })
     const latestVer = verListRes.data?.records?.[0]
     if (latestVer) {
-      await interfaceApi.withdraw(row.transno, latestVer.versionNo)
+      await interfaceApi.withdraw(row.transno)
       ElMessage.success('已撤销审批')
       loadData()
     }

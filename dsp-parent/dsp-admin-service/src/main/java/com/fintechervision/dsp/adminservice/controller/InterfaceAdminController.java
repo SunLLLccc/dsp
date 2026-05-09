@@ -121,21 +121,19 @@ public class InterfaceAdminController {
         return ApiResponse.success("APPROVAL_SUBMIT", "", null);
     }
 
-    @PostMapping("/{transno}/version/{versionNo}/approve")
+    @PostMapping("/{transno}/approve")
     public ApiResponse<Void> approveAndPublish(
             @PathVariable String transno,
-            @PathVariable Integer versionNo,
             @RequestBody Map<String, String> body) {
-        interfaceVersionService.approveAndPublish(transno, versionNo, body.get("approver"));
+        interfaceVersionService.approveAndPublish(transno, body.get("approver"));
         return ApiResponse.success("APPROVAL_PASS", "", null);
     }
 
-    @PostMapping("/{transno}/version/{versionNo}/reject")
+    @PostMapping("/{transno}/reject")
     public ApiResponse<Void> rejectApproval(
             @PathVariable String transno,
-            @PathVariable Integer versionNo,
             @RequestBody Map<String, String> body) {
-        interfaceVersionService.rejectApproval(transno, versionNo, body.get("reason"));
+        interfaceVersionService.rejectApproval(transno, body.get("reason"));
         return ApiResponse.success("APPROVAL_REJECT", "", null);
     }
 
@@ -145,9 +143,9 @@ public class InterfaceAdminController {
         return ApiResponse.success("INTERFACE_OFFLINE", "", null);
     }
 
-    @PostMapping("/{transno}/version/{versionNo}/withdraw")
-    public ApiResponse<Void> withdrawApproval(@PathVariable String transno, @PathVariable Integer versionNo) {
-        interfaceVersionService.withdrawApproval(transno, versionNo);
+    @PostMapping("/{transno}/withdraw")
+    public ApiResponse<Void> withdrawApproval(@PathVariable String transno) {
+        interfaceVersionService.withdrawApproval(transno);
         return ApiResponse.success("APPROVAL_WITHDRAW", "", null);
     }
 

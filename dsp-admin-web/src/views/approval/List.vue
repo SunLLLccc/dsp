@@ -133,7 +133,7 @@ function resetSearch() {
 
 async function handleApprove(row) {
   await ElMessageBox.confirm(`确认通过接口 ${row.transno} V${row.versionNo} 的审批？`, '审批确认')
-  await approvalApi.approve(row.transno, row.versionNo, { approver: 'admin' })
+  await approvalApi.approve(row.transno, { approver: 'admin' })
   ElMessage.success('审批通过')
   loadData()
 }
@@ -150,7 +150,7 @@ async function handleReject() {
     return
   }
   const row = currentRow.value
-  await approvalApi.reject(row.transno, row.versionNo, { reason: rejectForm.value.reason })
+  await approvalApi.reject(row.transno, { reason: rejectForm.value.reason })
   ElMessage.success('已驳回')
   rejectDialogVisible.value = false
   loadData()
