@@ -56,26 +56,6 @@
         </el-form-item>
       </el-form>
 
-      <!-- 数据源关联（编辑模式） -->
-      <template v-if="isEdit && form.transno">
-        <el-divider>数据源关联</el-divider>
-        <div style="margin-bottom:12px">
-          <el-select v-model="selectedDs" placeholder="选择数据源" style="width:300px;margin-right:10px">
-            <el-option v-for="ds in availableDatasources" :key="ds.dsName" :label="`${ds.dsName} (${ds.dsType})`" :value="ds.dsName" />
-          </el-select>
-          <el-button type="primary" @click="handleAddDs" :disabled="!selectedDs">关联</el-button>
-        </div>
-        <el-table :data="boundDatasources" border stripe size="small" style="max-width:600px">
-          <el-table-column prop="dsName" label="数据源名称" />
-          <el-table-column prop="dsType" label="类型" width="100" />
-          <el-table-column label="操作" width="80">
-            <template #default="{ row }">
-              <el-button size="small" type="danger" text @click="handleRemoveDs(row.dsName)">移除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </template>
-
       <!-- 操作按钮 -->
       <div style="text-align:center;margin-top:16px">
         <el-button @click="$router.back()">取消</el-button>
@@ -130,7 +110,7 @@
 <script setup>
 import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { interfaceApi, datasourceApi, interfaceDatasourceApi } from '../../api'
+import { interfaceApi } from '../../api'
 import { useAuthStore } from '../../stores/auth'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -145,9 +125,6 @@ const form = ref({ transno: '', name: '', systemName: '', description: '' })
 const inputSchema = ref('')
 const outputSchema = ref('')
 const changeLog = ref('')
-const selectedDs = ref('')
-const availableDatasources = ref([])
-const boundDatasources = ref([])
 
 // Schema 编辑弹窗
 const schemaDialogVisible = ref(false)
@@ -350,42 +327,6 @@ async function loadDetail() {
     } catch {
       // 无版本信息
     }
-    loadDatasources(res.data.transno)
-  }
-}
-
-async function loadDatasources(transno) {
-  try {
-    const [allRes, boundRes] = await Promise.all([
-      datasourceApi.list({ pageNum: 1, pageSize: 100 }),
-      interfaceDatasourceApi.list(transno)
-    ])
-    availableDatasources.value = allRes.data?.records || []
-    boundDatasources.value = boundRes.data || []
-  } catch {
-    // ignore
-  }
-}
-
-async function handleAddDs() {
-  if (!selectedDs.value) return
-  try {
-    await interfaceDatasourceApi.add(form.value.transno, selectedDs.value)
-    ElMessage.success('关联成功')
-    selectedDs.value = ''
-    loadDatasources(form.value.transno)
-  } catch {
-    ElMessage.error('关联失败')
-  }
-}
-
-async function handleRemoveDs(dsName) {
-  try {
-    await interfaceDatasourceApi.remove(form.value.transno, dsName)
-    ElMessage.success('已移除')
-    loadDatasources(form.value.transno)
-  } catch {
-    ElMessage.error('移除失败')
   }
 }
 
