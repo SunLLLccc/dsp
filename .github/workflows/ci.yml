@@ -3,15 +3,24 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    paths:
+      - 'dsp-parent/**'
+      - 'dsp-admin-web/**'
+      - '.github/workflows/ci.yml'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
     name: Backend Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       mysql:
-        image: mysql:5.7
+        image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: dsp_config
@@ -34,6 +43,9 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Initialize database
+        run: mysql -h 127.0.0.1 -u root -proot dsp_config < dsp-parent/dsp-core/src/main/resources/db/init.sql
+
       - name: Build backend
         run: mvn clean compile -f dsp-parent/pom.xml
 
@@ -49,6 +61,7 @@ jobs:
   frontend:
     name: Frontend Build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -58,6 +71,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dsp-admin-web/package-lock.json
 
       - name: Install dependencies
         working-directory: dsp-admin-web
