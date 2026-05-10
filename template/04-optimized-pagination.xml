@@ -44,7 +44,7 @@
     </resultMap>
 
     <responseData resultMap="reportMap">
-        <field name="list" />
+        <field name="list" as="list" />
     </responseData>
 
 </interface>

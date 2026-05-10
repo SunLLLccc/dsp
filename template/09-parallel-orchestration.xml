@@ -65,9 +65,9 @@
 
     <!-- 汇总响应: mapTo 引用 resultMap 的 id，将各查询结果组装到对应输出键 -->
     <responseData>
-        <field name="userStats" mapTo="userStatsMap" />
-        <field name="orderStats" mapTo="orderStatsMap" />
-        <field name="apiStats" mapTo="apiStatsMap" />
+        <field name="userStats" mapTo="userStatsMap" as="map" />
+        <field name="orderStats" mapTo="orderStatsMap" as="map" />
+        <field name="apiStats" mapTo="apiStatsMap" as="map" />
     </responseData>
 
 </interface>

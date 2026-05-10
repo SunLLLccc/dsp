@@ -26,7 +26,7 @@
     <!-- 不定义 resultMap，引擎将原始查询结果以 queryId 为key放入 mappedResults -->
     <!-- 通过 responseData 的 mapTo 引用 queryId 获取原始结果 -->
     <responseData>
-        <field name="list" mapTo="q1" />
+        <field name="list" mapTo="q1" as="list" />
     </responseData>
 
 </interface>

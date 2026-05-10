@@ -33,7 +33,7 @@
     </resultMap>
 
     <responseData resultMap="riskMap">
-        <field name="riskResult" />
+        <field name="riskResult" as="map" />
     </responseData>
 
 </interface>

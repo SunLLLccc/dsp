@@ -272,6 +272,7 @@ public class XmlConfigParser {
             field.setName(fieldEl.attributeValue("name"));
             field.setMapTo(fieldEl.attributeValue("mapTo"));
             field.setFunction(fieldEl.attributeValue("function"));
+            field.setAs(fieldEl.attributeValue("as"));
             config.getFields().add(field);
         }
         return config;

@@ -114,7 +114,7 @@
     </resultMap>
 
     <responseData resultMap="transformMap">
-        <field name="detail" />
+        <field name="detail" as="map" />
     </responseData>
 
 </interface>

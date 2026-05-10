@@ -42,7 +42,7 @@
     </resultMap>
 
     <responseData resultMap="orderMap">
-        <field name="list" />
+        <field name="list" as="list" />
     </responseData>
 
 </interface>
