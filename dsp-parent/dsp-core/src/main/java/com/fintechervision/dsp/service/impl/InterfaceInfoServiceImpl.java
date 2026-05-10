@@ -5,6 +5,7 @@ import com.fintechervision.dsp.common.enums.ErrorCode;
 import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.entity.InterfaceInfo;
 import com.fintechervision.dsp.entity.InterfaceTemplate;
+import com.fintechervision.dsp.enums.InterfaceStatus;
 import com.fintechervision.dsp.mapper.InterfaceInfoMapper;
 import com.fintechervision.dsp.mapper.InterfaceTemplateMapper;
 import com.fintechervision.dsp.service.InterfaceInfoService;
@@ -23,7 +24,7 @@ public class InterfaceInfoServiceImpl extends ServiceImpl<InterfaceInfoMapper, I
     public InterfaceInfo getByTransno(String transno) {
         LambdaQueryWrapper<InterfaceInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(InterfaceInfo::getTransno, transno)
-               .eq(InterfaceInfo::getStatus, 1);
+               .eq(InterfaceInfo::getStatus, InterfaceStatus.PUBLISHED.getCode());
         return getOne(wrapper);
     }
 
@@ -43,7 +44,7 @@ public class InterfaceInfoServiceImpl extends ServiceImpl<InterfaceInfoMapper, I
 
         LambdaQueryWrapper<InterfaceTemplate> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(InterfaceTemplate::getTransno, transno)
-               .eq(InterfaceTemplate::getStatus, 1);
+               .eq(InterfaceTemplate::getStatus, InterfaceStatus.PUBLISHED.getCode());
         InterfaceTemplate template = interfaceTemplateMapper.selectOne(wrapper);
 
         if (template == null) {

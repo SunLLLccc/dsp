@@ -7,6 +7,8 @@ import com.fintechervision.dsp.common.enums.ErrorCode;
 import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.entity.ApprovalRecord;
 import com.fintechervision.dsp.entity.InterfaceVersion;
+import com.fintechervision.dsp.enums.ApprovalStatus;
+import com.fintechervision.dsp.enums.VersionStatus;
 import com.fintechervision.dsp.mapper.ApprovalRecordMapper;
 import com.fintechervision.dsp.service.ApprovalRecordService;
 import com.fintechervision.dsp.service.InterfaceVersionService;
@@ -38,7 +40,7 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
         if (version == null) {
             throw new BusinessException(ErrorCode.VERSION_NOT_FOUND);
         }
-        if (version.getStatus() != 0) {
+        if (version.getStatus() != VersionStatus.DRAFT.getCode()) {
             throw new BusinessException(ErrorCode.VERSION_STATUS_INVALID,
                     "只有草稿状态的版本才能提交审批，当前状态: " + version.getStatus());
         }
@@ -47,20 +49,20 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
         LambdaQueryWrapper<ApprovalRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ApprovalRecord::getTransno, transno)
                 .eq(ApprovalRecord::getVersionNo, versionNo)
-                .eq(ApprovalRecord::getStatus, 0);
+                .eq(ApprovalRecord::getStatus, ApprovalStatus.PENDING.getCode());
         if (count(wrapper) > 0) {
             throw new BusinessException(ErrorCode.APPROVAL_DUPLICATE);
         }
 
         // 更新版本状态为待审批
-        version.setStatus(1);
+        version.setStatus(VersionStatus.PENDING.getCode());
         interfaceVersionService.updateById(version);
 
         // 创建审批记录
         ApprovalRecord record = new ApprovalRecord();
         record.setTransno(transno);
         record.setVersionNo(versionNo);
-        record.setStatus(0);
+        record.setStatus(ApprovalStatus.PENDING.getCode());
         record.setApplicant(applicant);
         record.setApplyTime(LocalDateTime.now());
         record.setCreatedTime(LocalDateTime.now());
@@ -77,13 +79,13 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
         if (record == null) {
             throw new BusinessException(ErrorCode.APPROVAL_RECORD_NOT_FOUND);
         }
-        if (record.getStatus() != 0) {
+        if (record.getStatus() != ApprovalStatus.PENDING.getCode()) {
             throw new BusinessException(ErrorCode.APPROVAL_ALREADY_PROCESSED,
                     "该审批记录已处理，当前状态: " + record.getStatus());
         }
 
         // 更新审批记录
-        record.setStatus(1);
+        record.setStatus(ApprovalStatus.APPROVED.getCode());
         record.setApprover(approver);
         record.setApproveTime(LocalDateTime.now());
         updateById(record);
@@ -91,7 +93,7 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
         // 更新版本状态为已发布
         InterfaceVersion version = interfaceVersionService.getVersion(record.getTransno(), record.getVersionNo());
         if (version != null) {
-            version.setStatus(3);
+            version.setStatus(VersionStatus.PUBLISHED.getCode());
             version.setPublishedTime(LocalDateTime.now());
             interfaceVersionService.updateById(version);
         }
@@ -107,13 +109,13 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
         if (record == null) {
             throw new BusinessException(ErrorCode.APPROVAL_RECORD_NOT_FOUND);
         }
-        if (record.getStatus() != 0) {
+        if (record.getStatus() != ApprovalStatus.PENDING.getCode()) {
             throw new BusinessException(ErrorCode.APPROVAL_ALREADY_PROCESSED,
                     "该审批记录已处理，当前状态: " + record.getStatus());
         }
 
         // 更新审批记录
-        record.setStatus(2);
+        record.setStatus(ApprovalStatus.REJECTED.getCode());
         record.setApprover(approver);
         record.setApproveTime(LocalDateTime.now());
         record.setRejectReason(reason);
@@ -122,7 +124,7 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
         // 更新版本状态为已驳回
         InterfaceVersion version = interfaceVersionService.getVersion(record.getTransno(), record.getVersionNo());
         if (version != null) {
-            version.setStatus(2);
+            version.setStatus(VersionStatus.REJECTED.getCode());
             interfaceVersionService.updateById(version);
         }
 
@@ -142,7 +144,7 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
     public Page<ApprovalRecord> listPending(Integer pageNum, Integer pageSize) {
         Page<ApprovalRecord> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ApprovalRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ApprovalRecord::getStatus, 0).orderByAsc(ApprovalRecord::getApplyTime);
+        wrapper.eq(ApprovalRecord::getStatus, ApprovalStatus.PENDING.getCode()).orderByAsc(ApprovalRecord::getApplyTime);
         return page(page, wrapper);
     }
 }

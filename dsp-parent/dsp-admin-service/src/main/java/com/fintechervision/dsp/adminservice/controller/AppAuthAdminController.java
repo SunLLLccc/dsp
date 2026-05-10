@@ -2,6 +2,7 @@ package com.fintechervision.dsp.adminservice.controller;
 
 import com.fintechervision.dsp.common.model.ApiResponse;
 import com.fintechervision.dsp.entity.AppAuth;
+import com.fintechervision.dsp.enums.CommonStatus;
 import com.fintechervision.dsp.service.AppAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,7 @@ public class AppAuthAdminController {
 
     @PostMapping
     public ApiResponse<AppAuth> create(@RequestBody AppAuth appAuth) {
-        appAuth.setStatus(1);
+        appAuth.setStatus(CommonStatus.ENABLED.getCode());
         appAuth.setCreatedTime(LocalDateTime.now());
         appAuth.setUpdatedTime(LocalDateTime.now());
         if (appAuth.getAppSecret() == null || appAuth.getAppSecret().isEmpty()) {

@@ -10,6 +10,7 @@ import com.fintechervision.dsp.entity.InterfaceInfo;
 import com.fintechervision.dsp.entity.InterfaceTemplate;
 import com.fintechervision.dsp.entity.InterfaceTemplateHistory;
 import com.fintechervision.dsp.entity.InterfaceVersion;
+import com.fintechervision.dsp.enums.InterfaceStatus;
 import com.fintechervision.dsp.mapper.InterfaceTemplateHistoryMapper;
 import com.fintechervision.dsp.mapper.InterfaceTemplateMapper;
 import com.fintechervision.dsp.service.InterfaceInfoService;
@@ -66,7 +67,7 @@ public class InterfaceTemplateServiceImpl extends ServiceImpl<InterfaceTemplateM
         template.setInterfaceName(info.getName());
         template.setXmlContent(xmlContent);
         template.setVersionNo(1);
-        template.setStatus(0);
+        template.setStatus(InterfaceStatus.DRAFT.getCode());
         template.setCreatedBy(operator);
         template.setCreatedTime(LocalDateTime.now());
         template.setUpdatedBy(operator);
@@ -102,7 +103,7 @@ public class InterfaceTemplateServiceImpl extends ServiceImpl<InterfaceTemplateM
             updateById(template);
         }
 
-        if (template.getStatus() == 1) {
+        if (template.getStatus() == InterfaceStatus.PUBLISHED.getCode()) {
             xmlConfigCacheInvalidator.invalidate(template.getTransno());
         }
         return template;
@@ -115,15 +116,15 @@ public class InterfaceTemplateServiceImpl extends ServiceImpl<InterfaceTemplateM
         if (template == null) {
             throw new BusinessException(ErrorCode.INTERFACE_NOT_FOUND, "模板不存在");
         }
-        template.setStatus(1);
+        template.setStatus(InterfaceStatus.PUBLISHED.getCode());
         template.setUpdatedBy(operator);
         template.setUpdatedTime(LocalDateTime.now());
         updateById(template);
 
         // 同时将接口状态设为已发布
         InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(template.getTransno());
-        if (info != null && info.getStatus() != 1) {
-            info.setStatus(1);
+        if (info != null && info.getStatus() != InterfaceStatus.PUBLISHED.getCode()) {
+            info.setStatus(InterfaceStatus.PUBLISHED.getCode());
             info.setUpdatedTime(LocalDateTime.now());
             interfaceInfoService.updateById(info);
         }
@@ -139,7 +140,7 @@ public class InterfaceTemplateServiceImpl extends ServiceImpl<InterfaceTemplateM
         if (template == null) {
             throw new BusinessException(ErrorCode.INTERFACE_NOT_FOUND, "模板不存在");
         }
-        template.setStatus(2);
+        template.setStatus(InterfaceStatus.OFFLINE.getCode());
         template.setUpdatedTime(LocalDateTime.now());
         updateById(template);
         xmlConfigCacheInvalidator.invalidate(template.getTransno());

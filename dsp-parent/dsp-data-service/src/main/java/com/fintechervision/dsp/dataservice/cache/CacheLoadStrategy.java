@@ -1,6 +1,7 @@
 package com.fintechervision.dsp.dataservice.cache;
 
 import com.fintechervision.dsp.entity.InterfaceInfo;
+import com.fintechervision.dsp.enums.InterfaceStatus;
 import com.fintechervision.dsp.service.InterfaceInfoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +20,7 @@ import java.util.stream.Collectors;
 
 /**
  * 数据服务缓存加载策略 — 定义缓存范围
- * 当前：所有已发布接口（status=1）+ 可选的 template 目录模板
+ * 当前：所有已发布接口（status=3）+ 可选的 template 目录模板
  */
 @Slf4j
 @Component
@@ -41,7 +42,7 @@ public class CacheLoadStrategy {
         List<String> transnos = new ArrayList<>();
         try {
             List<String> dbTransnos = interfaceInfoService.list().stream()
-                    .filter(info -> info.getStatus() != null && info.getStatus() == 1)
+                    .filter(info -> info.getStatus() != null && info.getStatus() == InterfaceStatus.PUBLISHED.getCode())
                     .map(InterfaceInfo::getTransno)
                     .collect(Collectors.toList());
             transnos.addAll(dbTransnos);
