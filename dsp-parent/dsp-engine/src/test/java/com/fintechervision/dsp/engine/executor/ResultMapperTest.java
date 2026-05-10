@@ -174,7 +174,10 @@ class ResultMapperTest {
         assertTrue(result instanceof Map);
         @SuppressWarnings("unchecked")
         Map<String, Object> response = (Map<String, Object>) result;
-        assertEquals(userData, response.get("user"));
+        // applyAs 默认将 Map 转为 List
+        Object userValue = response.get("user");
+        assertTrue(userValue instanceof List);
+        assertEquals(userData, ((List<?>) userValue).get(0));
     }
 
     @Test
@@ -203,8 +206,13 @@ class ResultMapperTest {
         assertTrue(result instanceof Map);
         @SuppressWarnings("unchecked")
         Map<String, Object> response = (Map<String, Object>) result;
-        assertEquals(userStats, response.get("userStats"));
-        assertEquals(orderStats, response.get("orderStats"));
+        // applyAs 默认将 Map 转为 List
+        Object userStatsValue = response.get("userStats");
+        Object orderStatsValue = response.get("orderStats");
+        assertTrue(userStatsValue instanceof List);
+        assertTrue(orderStatsValue instanceof List);
+        assertEquals(userStats, ((List<?>) userStatsValue).get(0));
+        assertEquals(orderStats, ((List<?>) orderStatsValue).get(0));
     }
 
     @Test
@@ -248,8 +256,10 @@ class ResultMapperTest {
         Object result = resultMapper.buildResponse(config, mappedResults);
         @SuppressWarnings("unchecked")
         Map<String, Object> response = (Map<String, Object>) result;
-        // 应该返回整个 orderMap 的数据，而不是尝试从 null 默认 resultMap 中提取子字段
-        assertEquals(orderData, response.get("data"));
+        // applyAs 默认将 Map 转为 List
+        Object dataValue = response.get("data");
+        assertTrue(dataValue instanceof List);
+        assertEquals(orderData, ((List<?>) dataValue).get(0));
     }
 
     @Test

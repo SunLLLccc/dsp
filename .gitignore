@@ -63,3 +63,6 @@ export-files/
 *.env
 *.env.local
 *.env.*.local
+
+# ==================== 开发文档 ====================
+docs/superpowers/
