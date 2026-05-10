@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fintechervision.dsp.common.util.PasswordEncryptor;
 import com.fintechervision.dsp.entity.DatasourceConfig;
+import com.fintechervision.dsp.enums.CommonStatus;
 import com.fintechervision.dsp.mapper.DatasourceConfigMapper;
 import com.fintechervision.dsp.service.DatasourceManagerService;
 import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
@@ -31,7 +32,7 @@ public class DatasourceManagerServiceImpl extends ServiceImpl<DatasourceConfigMa
     public DatasourceConfig getByDsName(String dsName) {
         LambdaQueryWrapper<DatasourceConfig> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DatasourceConfig::getDsName, dsName)
-               .eq(DatasourceConfig::getStatus, 1);
+               .eq(DatasourceConfig::getStatus, CommonStatus.ENABLED.getCode());
         return getOne(wrapper);
     }
 
@@ -94,7 +95,7 @@ public class DatasourceManagerServiceImpl extends ServiceImpl<DatasourceConfigMa
 
     private List<DatasourceConfig> listEnabled() {
         LambdaQueryWrapper<DatasourceConfig> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(DatasourceConfig::getStatus, 1);
+        wrapper.eq(DatasourceConfig::getStatus, CommonStatus.ENABLED.getCode());
         return list(wrapper);
     }
 }

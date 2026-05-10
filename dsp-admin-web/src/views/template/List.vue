@@ -12,8 +12,10 @@
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="全部" clearable>
             <el-option label="草稿" :value="0" />
-            <el-option label="已发布" :value="1" />
-            <el-option label="已下线" :value="2" />
+            <el-option label="待审批" :value="1" />
+            <el-option label="已驳回" :value="2" />
+            <el-option label="已发布" :value="3" />
+            <el-option label="已下线" :value="4" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -47,7 +49,7 @@
             <el-button size="small" type="primary" @click="openEditDialog(row)">修改</el-button>
             <el-button size="small" @click="showHistory(row)">历史</el-button>
             <el-button size="small" type="success" @click="handlePublish(row)" v-if="row.status === 0">发布</el-button>
-            <el-button size="small" type="warning" @click="handleOffline(row)" v-if="row.status === 1">下线</el-button>
+            <el-button size="small" type="warning" @click="handleOffline(row)" v-if="row.status === 3">下线</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -154,6 +156,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { templateApi, interfaceApi } from '../../api'
+import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE } from '../../constants/status'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 // 列表
@@ -161,8 +164,8 @@ const tableData = ref([])
 const total = ref(0)
 const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', systemName: '', status: null })
 
-const statusText = (s) => ({ 0: '草稿', 1: '已发布', 2: '已下线' }[s] || '未知')
-const statusType = (s) => ({ 0: 'info', 1: 'success', 2: 'danger' }[s] || 'info')
+const statusText = (s) => INTERFACE_STATUS[s] || '未知'
+const statusType = (s) => INTERFACE_STATUS_TYPE[s] || 'info'
 
 // 编辑弹窗
 const editDialogVisible = ref(false)
@@ -201,7 +204,7 @@ async function openCreateDialog() {
   originalXml.value = ''
   hasUndo.value = false
   // 加载已发布接口列表
-  const res = await interfaceApi.list({ pageNum: 1, pageSize: 200, status: 1 })
+  const res = await interfaceApi.list({ pageNum: 1, pageSize: 200, status: 3 })
   publishedInterfaces.value = res.data?.records || []
   editDialogVisible.value = true
 }
