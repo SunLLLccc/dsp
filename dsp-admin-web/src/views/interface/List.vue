@@ -15,9 +15,10 @@
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="全部" clearable>
             <el-option label="草稿" :value="0" />
-            <el-option label="已发布" :value="1" />
-            <el-option label="已下线" :value="2" />
-            <el-option label="待审批" :value="3" />
+            <el-option label="待审批" :value="1" />
+            <el-option label="已驳回" :value="2" />
+            <el-option label="已发布" :value="3" />
+            <el-option label="已下线" :value="4" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -48,10 +49,10 @@
         <el-table-column label="操作" fixed="right" width="360">
           <template #default="{ row }">
             <el-button size="small" @click="handleViewSchema(row)">查看</el-button>
-            <el-button size="small" @click="handleEdit(row)" :disabled="row.status === 3">编辑</el-button>
+            <el-button size="small" @click="handleEdit(row)" :disabled="row.status === 1">编辑</el-button>
             <el-button size="small" @click="showVersionHistory(row)">版本</el-button>
-            <el-button size="small" type="warning" @click="handleWithdraw(row)" v-if="row.status === 3">撤销审批</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)" :disabled="row.status === 3">删除</el-button>
+            <el-button size="small" type="warning" @click="handleWithdraw(row)" v-if="row.status === 1">撤销审批</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)" :disabled="row.status === 1">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -65,16 +66,12 @@
     </el-card>
 
     <!-- 查看输入输出弹窗 -->
-    <el-dialog v-model="viewSchemaVisible" :title="`报文定义 - ${viewSchemaTransno}`" width="800px">
-      <el-tabs>
-        <el-tab-pane label="输入报文">
-          <el-input type="textarea" :rows="15" :model-value="viewInputSchema" readonly style="font-family:monospace" />
-        </el-tab-pane>
-        <el-tab-pane label="输出报文">
-          <el-input type="textarea" :rows="15" :model-value="viewOutputSchema" readonly style="font-family:monospace" />
-        </el-tab-pane>
-      </el-tabs>
-    </el-dialog>
+    <SchemaViewDialog
+      v-model="viewSchemaVisible"
+      :title="`报文定义 - ${viewSchemaTransno}`"
+      :input-schema="viewInputSchema"
+      :output-schema="viewOutputSchema"
+    />
 
     <!-- 版本历史弹窗 -->
     <el-dialog v-model="versionDialogVisible" :title="`版本历史 - ${versionTransno}`" width="900px">
@@ -101,17 +98,13 @@
       </div>
     </el-dialog>
 
-    <!-- Schema 查看弹窗 -->
-    <el-dialog v-model="schemaDialogVisible" :title="`Schema - V${schemaVersionNo}`" width="800px">
-      <el-tabs>
-        <el-tab-pane label="输入报文">
-          <el-input type="textarea" :rows="15" :model-value="inputSchema" readonly style="font-family:monospace" />
-        </el-tab-pane>
-        <el-tab-pane label="输出报文">
-          <el-input type="textarea" :rows="15" :model-value="outputSchema" readonly style="font-family:monospace" />
-        </el-tab-pane>
-      </el-tabs>
-    </el-dialog>
+    <!-- Schema 查看弹窗（版本历史） -->
+    <SchemaViewDialog
+      v-model="schemaDialogVisible"
+      :title="`Schema - V${schemaVersionNo}`"
+      :input-schema="inputSchema"
+      :output-schema="outputSchema"
+    />
   </div>
 </template>
 
@@ -119,18 +112,22 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { interfaceApi } from '../../api'
+import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE, VERSION_STATUS, VERSION_STATUS_TYPE } from '../../constants/status'
+import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import SchemaViewDialog from '../../components/SchemaViewDialog.vue'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const tableData = ref([])
 const total = ref(0)
 const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', name: '', systemName: '', status: null })
 
-const statusText = (s) => ({ 0: '草稿', 1: '已发布', 2: '已下线', 3: '待审批' }[s] || '未知')
-const statusType = (s) => ({ 0: 'info', 1: 'success', 2: 'danger', 3: 'warning' }[s] || 'info')
+const statusText = (s) => INTERFACE_STATUS[s] || '未知'
+const statusType = (s) => INTERFACE_STATUS_TYPE[s] || 'info'
 
-const verStatusText = (s) => ({ 0: '草稿', 1: '待审批', 2: '已驳回', 3: '已发布' }[s] || '未知')
-const verStatusType = (s) => ({ 0: 'info', 1: 'warning', 2: 'danger', 3: 'success' }[s] || 'info')
+const verStatusText = (s) => VERSION_STATUS[s] || '未知'
+const verStatusType = (s) => VERSION_STATUS_TYPE[s] || 'info'
 
 // 查看输入输出
 const viewSchemaVisible = ref(false)
@@ -173,17 +170,10 @@ async function handleViewSchema(row) {
   viewInputSchema.value = ''
   viewOutputSchema.value = ''
   try {
-    let verData = null
-    if (row.currentVersion && row.currentVersion > 0) {
-      const res = await interfaceApi.getVersion(row.transno, row.currentVersion)
-      verData = res.data
-    } else {
-      const res = await interfaceApi.versions(row.transno, { pageNum: 1, pageSize: 1 })
-      verData = res.data?.records?.[0]
-    }
-    if (verData) {
-      viewInputSchema.value = formatJson(verData.inputSchema)
-      viewOutputSchema.value = formatJson(verData.outputSchema)
+    const res = await interfaceApi.getLatestVersion(row.transno)
+    if (res.data) {
+      viewInputSchema.value = formatJson(res.data.inputSchema)
+      viewOutputSchema.value = formatJson(res.data.outputSchema)
     }
   } catch { /* 无版本 */ }
   viewSchemaVisible.value = true
@@ -191,18 +181,16 @@ async function handleViewSchema(row) {
 
 async function handleDelete(row) {
   await ElMessageBox.confirm(`确认删除接口 ${row.transno}？删除将提交审批`, '删除确认', { type: 'warning' })
-  // 删除走审批：先保存一个标记删除的版本，再提交审批
   try {
-    await interfaceApi.saveSchema(row.transno, {
+    const schemaRes = await interfaceApi.saveSchema(row.transno, {
       inputSchema: '',
       outputSchema: '',
       changeLog: '申请删除接口',
-      operator: 'admin'
+      operator: authStore.username
     })
-    const verListRes = await interfaceApi.versions(row.transno, { pageNum: 1, pageSize: 1 })
-    const latestVer = verListRes.data?.records?.[0]
-    if (latestVer) {
-      await interfaceApi.submitApproval(row.transno, latestVer.versionNo, { operator: 'admin' })
+    const versionNo = schemaRes.data?.versionNo
+    if (versionNo) {
+      await interfaceApi.submitApproval(row.transno, versionNo, { operator: authStore.username })
       ElMessage.success('删除申请已提交审批')
       loadData()
     }
@@ -214,13 +202,9 @@ async function handleDelete(row) {
 async function handleWithdraw(row) {
   await ElMessageBox.confirm(`确认撤销接口 ${row.transno} 的审批？`, '撤销确认')
   try {
-    const verListRes = await interfaceApi.versions(row.transno, { pageNum: 1, pageSize: 1 })
-    const latestVer = verListRes.data?.records?.[0]
-    if (latestVer) {
-      await interfaceApi.withdraw(row.transno)
-      ElMessage.success('已撤销审批')
-      loadData()
-    }
+    await interfaceApi.withdraw(row.transno)
+    ElMessage.success('已撤销审批')
+    loadData()
   } catch {
     ElMessage.error('撤销失败')
   }

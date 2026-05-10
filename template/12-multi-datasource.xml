@@ -71,9 +71,9 @@
 
     <!-- 汇总响应: mapTo 引用各 resultMap 的 id -->
     <responseData>
-        <field name="merchant" mapTo="merchantMap" />
-        <field name="tradeStats" mapTo="tradeStatsMap" />
-        <field name="configs" mapTo="configMap" />
+        <field name="merchant" mapTo="merchantMap" as="map" />
+        <field name="tradeStats" mapTo="tradeStatsMap" as="map" />
+        <field name="configs" mapTo="configMap" as="list" />
     </responseData>
 
 </interface>

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fintechervision.dsp.common.model.ApiResponse;
 import com.fintechervision.dsp.engine.XmlEngine;
+import com.fintechervision.dsp.enums.InterfaceStatus;
 import com.fintechervision.dsp.entity.ApprovalRecord;
 import com.fintechervision.dsp.entity.InterfaceDatasource;
 import com.fintechervision.dsp.entity.InterfaceInfo;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -32,14 +34,21 @@ public class InterfaceAdminController {
     private final InterfaceDatasourceService interfaceDatasourceService;
     private final XmlEngine xmlEngine;
 
+    private String getCurrentUser(HttpServletRequest request) {
+        Object user = request.getAttribute("adminUser");
+        return user != null ? user.toString() : "anonymous";
+    }
+
     @GetMapping("/list")
     public ApiResponse<Page<InterfaceInfo>> list(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String transno,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) Integer status) {
+            @RequestParam(required = false) Integer status,
+            HttpServletRequest request) {
 
+        String currentUser = getCurrentUser(request);
         Page<InterfaceInfo> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<InterfaceInfo> wrapper = new LambdaQueryWrapper<>();
         if (transno != null && !transno.isEmpty()) {
@@ -51,6 +60,10 @@ public class InterfaceAdminController {
         if (status != null) {
             wrapper.eq(InterfaceInfo::getStatus, status);
         }
+        // 草稿只对创建人可见：status != 0 OR created_by = currentUser
+        wrapper.and(w -> w.ne(InterfaceInfo::getStatus, InterfaceStatus.DRAFT.getCode())
+                .or(sub -> sub.eq(InterfaceInfo::getStatus, InterfaceStatus.DRAFT.getCode())
+                        .eq(InterfaceInfo::getCreatedBy, currentUser)));
         wrapper.orderByDesc(InterfaceInfo::getUpdatedTime);
 
         return ApiResponse.success("INTERFACE_LIST", "", interfaceInfoService.page(page, wrapper));
@@ -62,9 +75,10 @@ public class InterfaceAdminController {
     }
 
     @PostMapping
-    public ApiResponse<InterfaceInfo> create(@RequestBody InterfaceInfo info) {
-        info.setStatus(0);
+    public ApiResponse<InterfaceInfo> create(@RequestBody InterfaceInfo info, HttpServletRequest request) {
+        info.setStatus(InterfaceStatus.DRAFT.getCode());
         info.setCurrentVersion(0);
+        info.setCreatedBy(getCurrentUser(request));
         info.setCreatedTime(LocalDateTime.now());
         info.setUpdatedTime(LocalDateTime.now());
         interfaceInfoService.save(info);
@@ -88,10 +102,12 @@ public class InterfaceAdminController {
     @PostMapping("/{transno}/version")
     public ApiResponse<InterfaceVersion> saveSchema(
             @PathVariable String transno,
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
+        String operator = body.getOrDefault("operator", getCurrentUser(request));
         InterfaceVersion version = interfaceVersionService.saveSchema(
                 transno, body.get("inputSchema"), body.get("outputSchema"),
-                body.get("changeLog"), body.get("operator"));
+                body.get("changeLog"), operator);
         return ApiResponse.success("VERSION_SAVE", "", version);
     }
 
@@ -112,40 +128,51 @@ public class InterfaceAdminController {
                 interfaceVersionService.getVersion(transno, versionNo));
     }
 
+    @GetMapping("/{transno}/version/latest")
+    public ApiResponse<InterfaceVersion> getLatestVisibleVersion(
+            @PathVariable String transno,
+            HttpServletRequest request) {
+        return ApiResponse.success("VERSION_LATEST", "",
+                interfaceVersionService.getLatestVisibleVersion(transno, getCurrentUser(request)));
+    }
+
     @PostMapping("/{transno}/version/{versionNo}/submit")
     public ApiResponse<Void> submitApproval(
             @PathVariable String transno,
             @PathVariable Integer versionNo,
-            @RequestBody Map<String, String> body) {
-        interfaceVersionService.submitApproval(transno, versionNo, body.get("operator"));
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
+        String operator = body.getOrDefault("operator", getCurrentUser(request));
+        interfaceVersionService.submitApproval(transno, versionNo, operator);
         return ApiResponse.success("APPROVAL_SUBMIT", "", null);
     }
 
     @PostMapping("/{transno}/approve")
     public ApiResponse<Void> approveAndPublish(
             @PathVariable String transno,
-            @RequestBody Map<String, String> body) {
-        interfaceVersionService.approveAndPublish(transno, body.get("approver"));
+            HttpServletRequest request) {
+        interfaceVersionService.approveAndPublish(transno, getCurrentUser(request));
         return ApiResponse.success("APPROVAL_PASS", "", null);
     }
 
     @PostMapping("/{transno}/reject")
     public ApiResponse<Void> rejectApproval(
             @PathVariable String transno,
-            @RequestBody Map<String, String> body) {
-        interfaceVersionService.rejectApproval(transno, body.get("reason"));
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
+        interfaceVersionService.rejectApproval(transno, body.get("reason"), getCurrentUser(request));
         return ApiResponse.success("APPROVAL_REJECT", "", null);
     }
 
     @PostMapping("/{transno}/offline")
-    public ApiResponse<Void> offline(@PathVariable String transno) {
-        interfaceVersionService.offline(transno);
+    public ApiResponse<Void> offline(@PathVariable String transno, HttpServletRequest request) {
+        interfaceVersionService.offline(transno, getCurrentUser(request));
         return ApiResponse.success("INTERFACE_OFFLINE", "", null);
     }
 
     @PostMapping("/{transno}/withdraw")
-    public ApiResponse<Void> withdrawApproval(@PathVariable String transno) {
-        interfaceVersionService.withdrawApproval(transno);
+    public ApiResponse<Void> withdrawApproval(@PathVariable String transno, HttpServletRequest request) {
+        interfaceVersionService.withdrawApproval(transno, getCurrentUser(request));
         return ApiResponse.success("APPROVAL_WITHDRAW", "", null);
     }
 

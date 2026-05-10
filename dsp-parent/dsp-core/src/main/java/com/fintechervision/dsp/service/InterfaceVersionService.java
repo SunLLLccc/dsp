@@ -16,9 +16,11 @@ public interface InterfaceVersionService extends IService<InterfaceVersion> {
 
     void approveAndPublish(String transno, String approver);
 
-    void rejectApproval(String transno, String reason);
+    void rejectApproval(String transno, String reason, String operator);
 
-    void offline(String transno);
+    void offline(String transno, String operator);
 
-    void withdrawApproval(String transno);
+    void withdrawApproval(String transno, String operator);
+
+    InterfaceVersion getLatestVisibleVersion(String transno, String currentUser);
 }

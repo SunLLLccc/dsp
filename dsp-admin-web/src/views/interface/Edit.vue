@@ -131,12 +131,14 @@
 import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { interfaceApi, datasourceApi, interfaceDatasourceApi } from '../../api'
+import { useAuthStore } from '../../stores/auth'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SchemaTreeNode from '../../components/SchemaTreeNode.vue'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const isEdit = computed(() => !!route.params.id)
 
 const form = ref({ transno: '', name: '', systemName: '', description: '' })
@@ -338,20 +340,12 @@ async function loadDetail() {
   const res = await interfaceApi.detail(route.params.id)
   if (res.data) {
     form.value = res.data
-    // 加载最新版本的 Schema
+    // 通过新接口获取当前用户可见的最新版本
     try {
-      let verData = null
-      if (res.data.currentVersion && res.data.currentVersion > 0) {
-        const verRes = await interfaceApi.getVersion(res.data.transno, res.data.currentVersion)
-        verData = verRes.data
-      } else {
-        // 无正式版本，尝试获取最新一条
-        const verListRes = await interfaceApi.versions(res.data.transno, { pageNum: 1, pageSize: 1 })
-        verData = verListRes.data?.records?.[0]
-      }
-      if (verData) {
-        inputSchema.value = verData.inputSchema || ''
-        outputSchema.value = verData.outputSchema || ''
+      const verRes = await interfaceApi.getLatestVersion(res.data.transno)
+      if (verRes.data) {
+        inputSchema.value = verRes.data.inputSchema || ''
+        outputSchema.value = verRes.data.outputSchema || ''
       }
     } catch {
       // 无版本信息
@@ -412,7 +406,7 @@ async function handleSave() {
       inputSchema: inputSchema.value,
       outputSchema: outputSchema.value,
       changeLog: changeLog.value,
-      operator: 'admin'
+      operator: authStore.username
     })
   }
   ElMessage.success('保存成功')
@@ -425,19 +419,19 @@ async function handleSubmitApproval() {
     return
   }
   try {
-    // 先保存
+    // 先保存基础信息
     await interfaceApi.update(route.params.id, form.value)
-    await interfaceApi.saveSchema(form.value.transno, {
+    // 保存 Schema 版本（返回完整版本对象）
+    const schemaRes = await interfaceApi.saveSchema(form.value.transno, {
       inputSchema: inputSchema.value,
       outputSchema: outputSchema.value,
       changeLog: changeLog.value || '提交审批',
-      operator: 'admin'
+      operator: authStore.username
     })
-    // 获取最新版本号
-    const verListRes = await interfaceApi.versions(form.value.transno, { pageNum: 1, pageSize: 1 })
-    const latestVer = verListRes.data?.records?.[0]
-    if (latestVer) {
-      await interfaceApi.submitApproval(form.value.transno, latestVer.versionNo, { operator: 'admin' })
+    // 用返回的版本号提交审批
+    const versionNo = schemaRes.data?.versionNo
+    if (versionNo) {
+      await interfaceApi.submitApproval(form.value.transno, versionNo, { operator: authStore.username })
       ElMessage.success('已提交审批')
       router.back()
     }

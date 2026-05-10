@@ -91,6 +91,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { approvalApi } from '../../api'
+import { APPROVAL_STATUS, APPROVAL_STATUS_TYPE } from '../../constants/status'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const tableData = ref([])
@@ -107,8 +108,8 @@ const recordsData = ref([])
 const recordTotal = ref(0)
 const recordPage = ref({ pageNum: 1, pageSize: 10 })
 
-const statusText = (s) => ({ 0: '待审批', 1: '已通过', 2: '已驳回' }[s] || '未知')
-const statusType = (s) => ({ 0: 'warning', 1: 'success', 2: 'danger' }[s] || 'info')
+const statusText = (s) => APPROVAL_STATUS[s] || '未知'
+const statusType = (s) => APPROVAL_STATUS_TYPE[s] || 'info'
 
 async function loadData() {
   // 待审批列表（status=0），或全部审批记录
@@ -133,7 +134,7 @@ function resetSearch() {
 
 async function handleApprove(row) {
   await ElMessageBox.confirm(`确认通过接口 ${row.transno} V${row.versionNo} 的审批？`, '审批确认')
-  await approvalApi.approve(row.transno, { approver: 'admin' })
+  await approvalApi.approve(row.transno)
   ElMessage.success('审批通过')
   loadData()
 }

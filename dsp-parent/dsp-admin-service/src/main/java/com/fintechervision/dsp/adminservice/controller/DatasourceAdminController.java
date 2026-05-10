@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fintechervision.dsp.common.model.ApiResponse;
 import com.fintechervision.dsp.common.util.PasswordEncryptor;
 import com.fintechervision.dsp.entity.DatasourceConfig;
+import com.fintechervision.dsp.enums.CommonStatus;
 import com.fintechervision.dsp.service.DatasourceManagerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,7 @@ public class DatasourceAdminController {
     @PostMapping
     public ApiResponse<DatasourceConfig> create(@RequestBody DatasourceConfig config) {
         config.setPassword(passwordEncryptor.encrypt(config.getPassword()));
-        config.setStatus(1);
+        config.setStatus(CommonStatus.ENABLED.getCode());
         config.setCreatedTime(LocalDateTime.now());
         config.setUpdatedTime(LocalDateTime.now());
         datasourceManagerService.save(config);

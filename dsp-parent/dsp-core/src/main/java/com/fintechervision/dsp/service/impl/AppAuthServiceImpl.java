@@ -6,6 +6,7 @@ import com.fintechervision.dsp.common.enums.ErrorCode;
 import com.fintechervision.dsp.common.exception.BusinessException;
 import com.fintechervision.dsp.common.util.JwtUtil;
 import com.fintechervision.dsp.entity.AppAuth;
+import com.fintechervision.dsp.enums.CommonStatus;
 import com.fintechervision.dsp.mapper.AppAuthMapper;
 import com.fintechervision.dsp.service.AppAuthService;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,7 @@ public class AppAuthServiceImpl extends ServiceImpl<AppAuthMapper, AppAuth> impl
     @Override
     public Map<String, Object> generateToken(String appId) {
         LambdaQueryWrapper<AppAuth> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AppAuth::getAppId, appId).eq(AppAuth::getStatus, 1);
+        wrapper.eq(AppAuth::getAppId, appId).eq(AppAuth::getStatus, CommonStatus.ENABLED.getCode());
         AppAuth app = getOne(wrapper);
         if (app == null) throw new BusinessException(ErrorCode.APP_NOT_FOUND);
         List<String> allowedTransnos;

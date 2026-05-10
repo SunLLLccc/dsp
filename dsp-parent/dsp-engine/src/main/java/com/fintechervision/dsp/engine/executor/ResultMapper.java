@@ -59,6 +59,7 @@ public class ResultMapper {
             if (field.getFunction() != null && !field.getFunction().isEmpty()) {
                 value = applyFunction(field.getFunction(), value);
             }
+            value = applyAs(field, value);
             response.put(field.getName(), value);
         }
 
@@ -127,5 +128,29 @@ public class ResultMapper {
             log.warn("函数执行失败: function={}, value={}", function, value, e);
         }
         return value;
+    }
+
+    /**
+     * 根据 as 属性控制返回类型：
+     * - 空或 "list" → 保持 List<Map> 不变
+     * - "map" → 取第一条作为单对象返回
+     */
+    @SuppressWarnings("unchecked")
+    private Object applyAs(ResponseFieldConfig field, Object data) {
+        if (data == null) return null;
+        String as = field.getAs();
+        boolean wantMap = "map".equalsIgnoreCase(as);
+        boolean wantList = as == null || as.isEmpty() || "list".equalsIgnoreCase(as);
+
+        if (wantMap && data instanceof List) {
+            List<Map<String, Object>> list = (List<Map<String, Object>>) data;
+            return list.isEmpty() ? null : list.get(0);
+        }
+        if (wantList && data instanceof Map) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            list.add((Map<String, Object>) data);
+            return list;
+        }
+        return data;
     }
 }

@@ -117,10 +117,10 @@
 
     <!-- ====== 响应组装 ====== -->
     <responseData>
-        <field name="trade" mapTo="tradeMap" />
-        <field name="riskInfo" mapTo="riskMap" />
-        <field name="customerInfo" mapTo="customerMap" />
-        <field name="operationLogs" mapTo="logMap" />
+        <field name="trade" mapTo="tradeMap" as="map" />
+        <field name="riskInfo" mapTo="riskMap" as="map" />
+        <field name="customerInfo" mapTo="customerMap" as="map" />
+        <field name="operationLogs" mapTo="logMap" as="list" />
     </responseData>
 
 </interface>

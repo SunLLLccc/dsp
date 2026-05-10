@@ -16,7 +16,8 @@ export const interfaceApi = {
   versions: (transno, params) => request.get(`/interface/${transno}/versions`, { params }),
   getVersion: (transno, versionNo) => request.get(`/interface/${transno}/version/${versionNo}`),
   submitApproval: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/submit`, data),
-  approve: (transno, data) => request.post(`/interface/${transno}/approve`, data),
+  getLatestVersion: (transno) => request.get(`/interface/${transno}/version/latest`),
+  approve: (transno) => request.post(`/interface/${transno}/approve`),
   reject: (transno, data) => request.post(`/interface/${transno}/reject`, data),
   offline: (transno) => request.post(`/interface/${transno}/offline`),
   withdraw: (transno) => request.post(`/interface/${transno}/withdraw`),
@@ -68,7 +69,7 @@ export const approvalApi = {
   pending: (params) => request.get('/interface/approval-pending', { params }),
   records: (transno, params) => request.get(`/interface/${transno}/approval-records`, { params }),
   submit: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/submit`, data),
-  approve: (transno, data) => request.post(`/interface/${transno}/approve`, data),
+  approve: (transno) => request.post(`/interface/${transno}/approve`),
   reject: (transno, data) => request.post(`/interface/${transno}/reject`, data)
 }
 

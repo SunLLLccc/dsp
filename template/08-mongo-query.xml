@@ -42,7 +42,7 @@
     </resultMap>
 
     <responseData resultMap="logMap">
-        <field name="list" />
+        <field name="list" as="list" />
     </responseData>
 
 </interface>
