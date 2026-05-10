@@ -6,8 +6,10 @@ services:
       args:
         JAR_FILE: jars/dsp-data-service.jar
         PORT: "8080"
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file: .env
     restart: unless-stopped
 
@@ -18,8 +20,10 @@ services:
       args:
         JAR_FILE: jars/dsp-admin-service.jar
         PORT: "8082"
-    ports:
-      - "8082:8082"
+    expose:
+      - "8082"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file: .env
     restart: unless-stopped
 
@@ -30,8 +34,10 @@ services:
       args:
         JAR_FILE: jars/dsp-offline-service.jar
         PORT: "8081"
-    ports:
-      - "8081:8081"
+    expose:
+      - "8081"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file: .env
     restart: unless-stopped
 
@@ -41,6 +47,8 @@ services:
       dockerfile: Dockerfile.nginx
     ports:
       - "80:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - admin-service
       - data-service
