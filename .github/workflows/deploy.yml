@@ -34,11 +34,12 @@ jobs:
 
       - name: Prepare deploy directory
         run: |
-          mkdir -p staging/jars staging/web/dist staging/nginx
+          mkdir -p staging/jars staging/web/dist staging/nginx staging/jdk
           cp dsp-parent/dsp-data-service/target/dsp-data-service-1.0.0.jar staging/jars/dsp-data-service.jar
           cp dsp-parent/dsp-offline-service/target/dsp-offline-service-1.0.0.jar staging/jars/dsp-offline-service.jar
           cp dsp-parent/dsp-admin-service/target/dsp-admin-service-1.0.0.jar staging/jars/dsp-admin-service.jar
           cp -r dsp-admin-web/dist/* staging/web/dist/
+          cp -r $JAVA_HOME/* staging/jdk/
           cp deploy/Dockerfile.java staging/
           cp deploy/Dockerfile.nginx staging/
           cp deploy/docker-compose.yml staging/
