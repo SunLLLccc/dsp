@@ -79,10 +79,10 @@
 
     <!-- 组装响应: mapTo 引用 resultMap 的 id -->
     <responseData>
-        <field name="user" mapTo="userMap" />
-        <field name="department" mapTo="deptMap" />
-        <field name="permissions" mapTo="permMap" />
-        <field name="manager" mapTo="managerMap" />
+        <field name="user" mapTo="userMap" as="map" />
+        <field name="department" mapTo="deptMap" as="map" />
+        <field name="permissions" mapTo="permMap" as="list" />
+        <field name="manager" mapTo="managerMap" as="map" />
     </responseData>
 
 </interface>

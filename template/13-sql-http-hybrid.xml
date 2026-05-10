@@ -50,8 +50,8 @@
 
     <!-- 组装响应: mapTo 引用各 resultMap 的 id -->
     <responseData>
-        <field name="localInfo" mapTo="localMap" />
-        <field name="externalInfo" mapTo="extMap" />
+        <field name="localInfo" mapTo="localMap" as="map" />
+        <field name="externalInfo" mapTo="extMap" as="map" />
     </responseData>
 
 </interface>

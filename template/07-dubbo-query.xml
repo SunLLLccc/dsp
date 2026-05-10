@@ -41,7 +41,7 @@
     </resultMap>
 
     <responseData resultMap="profileMap">
-        <field name="profile" />
+        <field name="profile" as="map" />
     </responseData>
 
 </interface>

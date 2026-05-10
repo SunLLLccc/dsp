@@ -56,8 +56,8 @@
 
     <!-- 组装响应: mapTo 引用各 resultMap 的 id -->
     <responseData>
-        <field name="loanInfo" mapTo="loanMap" />
-        <field name="riskResult" mapTo="riskMap" />
+        <field name="loanInfo" mapTo="loanMap" as="map" />
+        <field name="riskResult" mapTo="riskMap" as="map" />
     </responseData>
 
 </interface>

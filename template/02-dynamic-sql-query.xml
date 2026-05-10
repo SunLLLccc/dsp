@@ -53,7 +53,7 @@
     </resultMap>
 
     <responseData resultMap="userListMap">
-        <field name="list" />
+        <field name="list" as="list" />
     </responseData>
 
 </interface>

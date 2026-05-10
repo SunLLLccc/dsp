@@ -39,7 +39,7 @@
 
     <!-- 响应组装: resultMap 指定默认结果映射, field name 作为输出键 -->
     <responseData resultMap="userMap">
-        <field name="user" />
+        <field name="user" as="map" />
     </responseData>
 
 </interface>
