@@ -7,7 +7,7 @@
 ## 需求摘要
 
 - **CI 平台**：GitHub Actions（项目托管于 GitHub）
-- **部署方式**：Docker 容器化部署（docker-compose 编排）
+- **部署方式**：Docker 容器化部署（docker compose 编排）
 - **镜像分发**：无法推送到镜像仓库，采用服务器端构建
 - **部署触发**：PR 合并到 main 自动 CI，部署由 GitHub Actions 自动执行
 - **部署范围**：全部服务 — data-service、admin-service、offline-service、admin-web
@@ -25,7 +25,7 @@ PR 合并到 main → GitHub Actions CD（自动）
   ├── 构建后端 jar (mvn package -DskipTests)
   ├── 构建前端 (npm run build)
   ├── SCP 传输构建产物到服务器
-  └── SSH 执行部署脚本 (docker-compose up -d)
+  └── SSH 执行部署脚本 (docker compose up -d)
 ```
 
 ## GitHub Actions 工作流
@@ -68,13 +68,13 @@ PR 合并到 main → GitHub Actions CD（自动）
   6. SCP 传输产物到服务器 `/opt/dsp/`
      - jar 包 → `/opt/dsp/jars/`
      - 前端 dist → `/opt/dsp/web/dist/`
-     - Dockerfile、docker-compose.yml、nginx 配置（首次或有变更时）
+     - Dockerfile、docker compose.yml、nginx 配置（首次或有变更时）
   7. SSH 执行远程部署脚本：
      ```bash
      cd /opt/dsp
-     docker-compose down
-     docker-compose build
-     docker-compose up -d
+     docker compose down
+     docker compose build
+     docker compose up -d
      ```
 
 ## Docker 配置
@@ -91,7 +91,7 @@ EXPOSE ${PORT}
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
-每个后端服务使用同一个 Dockerfile，通过 docker-compose 的 build args 传入不同的 jar 和端口。
+每个后端服务使用同一个 Dockerfile，通过 docker compose 的 build args 传入不同的 jar 和端口。
 
 ### Dockerfile.nginx（前端）
 
@@ -128,7 +128,7 @@ server {
 }
 ```
 
-### docker-compose.yml
+### docker compose.yml
 
 ```yaml
 version: '3.8'
@@ -186,7 +186,7 @@ services:
 
 ```
 /opt/dsp/
-├── docker-compose.yml
+├── docker compose.yml
 ├── Dockerfile.java
 ├── Dockerfile.nginx
 ├── .env                    # 环境变量（不提交到 git）
@@ -229,7 +229,7 @@ services:
 .github/workflows/deploy.yml       # CD 工作流
 deploy/Dockerfile.java             # 后端 Dockerfile
 deploy/Dockerfile.nginx            # 前端 Dockerfile
-deploy/docker-compose.yml          # 编排配置
+deploy/docker compose.yml          # 编排配置
 deploy/nginx/default.conf          # Nginx 配置
 deploy/deploy.sh                   # 远程部署脚本
 ```
@@ -244,24 +244,24 @@ DEPLOY_PATH=${SERVER_DEPLOY_PATH:-/opt/dsp}
 cd "$DEPLOY_PATH"
 
 echo "=== 停止旧容器 ==="
-docker-compose down
+docker compose down
 
 echo "=== 重新构建镜像 ==="
-docker-compose build
+docker compose build
 
 echo "=== 启动服务 ==="
-docker-compose up -d
+docker compose up -d
 
 echo "=== 清理悬空镜像 ==="
 docker image prune -f
 
 echo "=== 部署完成 ==="
-docker-compose ps
+docker compose ps
 ```
 
 ## 依赖与前置条件
 
-1. 服务器已安装 Docker + docker-compose
+1. 服务器已安装 Docker + docker compose
 2. 服务器已安装 Java 8、Maven、Node.js（构建环境）
 3. GitHub 仓库配置好 Secrets
 4. 服务器创建好 `/opt/dsp/` 目录
