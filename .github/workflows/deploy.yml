@@ -1,0 +1,66 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build backend JARs
+        run: mvn clean package -DskipTests -f dsp-parent/pom.xml
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build frontend
+        working-directory: dsp-admin-web
+        run: npm install && npm run build
+
+      - name: Prepare deploy directory
+        run: |
+          mkdir -p staging/jars staging/web/dist staging/nginx
+          cp dsp-parent/dsp-data-service/target/dsp-data-service-1.0.0.jar staging/jars/
+          cp dsp-parent/dsp-offline-service/target/dsp-offline-service-1.0.0.jar staging/jars/
+          cp dsp-parent/dsp-admin-service/target/dsp-admin-service-1.0.0.jar staging/jars/
+          cp -r dsp-admin-web/dist/* staging/web/dist/
+          cp deploy/Dockerfile.java staging/
+          cp deploy/Dockerfile.nginx staging/
+          cp deploy/docker-compose.yml staging/
+          cp deploy/nginx/default.conf staging/nginx/
+          cp deploy/deploy.sh staging/
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "staging/*"
+          target: ${{ secrets.SERVER_DEPLOY_PATH || '/opt/dsp' }}
+          strip_components: 1
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            chmod +x ${{ secrets.SERVER_DEPLOY_PATH || '/opt/dsp' }}/deploy.sh
+            bash ${{ secrets.SERVER_DEPLOY_PATH || '/opt/dsp' }}/deploy.sh ${{ secrets.SERVER_DEPLOY_PATH || '/opt/dsp' }}
