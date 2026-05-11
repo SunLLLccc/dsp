@@ -59,5 +59,12 @@ export function diffLines(oldStr, newStr) {
   while (left.length < maxLen) left.push({ text: '', type: 'placeholder' })
   while (right.length < maxLen) right.push({ text: '', type: 'placeholder' })
 
+  // 添加行号（基于实际内容行，跳过 placeholder）
+  let leftNo = 0, rightNo = 0
+  for (let i = 0; i < maxLen; i++) {
+    left[i].lineNo = left[i].type !== 'placeholder' ? ++leftNo : 0
+    right[i].lineNo = right[i].type !== 'placeholder' ? ++rightNo : 0
+  }
+
   return { left, right }
 }
