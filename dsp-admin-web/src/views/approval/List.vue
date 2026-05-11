@@ -208,11 +208,18 @@ async function viewDiff(row) {
     diffAfterInput.value = ''
     diffAfterOutput.value = ''
   }
-  // 变更前：当前最新已发布版本的 schema
+  // 变更前：最新已发布版本的 schema（versions 接口只返回已发布版本，取第一条即最新）
   try {
-    const beforeRes = await interfaceApi.getLatestVersion(row.transno)
-    diffBeforeInput.value = beforeRes.data?.inputSchema || ''
-    diffBeforeOutput.value = beforeRes.data?.outputSchema || ''
+    const verRes = await interfaceApi.versions(row.transno, { pageNum: 1, pageSize: 1 })
+    const latestPublished = verRes.data?.records?.[0]
+    if (latestPublished) {
+      const beforeRes = await interfaceApi.getVersion(row.transno, latestPublished.versionNo)
+      diffBeforeInput.value = beforeRes.data?.inputSchema || ''
+      diffBeforeOutput.value = beforeRes.data?.outputSchema || ''
+    } else {
+      diffBeforeInput.value = ''
+      diffBeforeOutput.value = ''
+    }
   } catch {
     diffBeforeInput.value = ''
     diffBeforeOutput.value = ''
