@@ -4,7 +4,7 @@
     <el-card class="mb-16">
       <el-form :inline="true" :model="searchForm">
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
+          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width:160px">
             <el-option label="待审批" :value="0" />
             <el-option label="已通过" :value="1" />
             <el-option label="已驳回" :value="2" />
@@ -23,21 +23,22 @@
         <el-table-column prop="transno" label="接口编码" width="200" />
         <el-table-column prop="versionNo" label="版本号" width="100" />
         <el-table-column prop="applicant" label="申请人" width="120" />
-        <el-table-column prop="applyTime" label="申请时间" width="180" />
+        <el-table-column prop="applyTime" label="申请时间" width="180" :formatter="fmtTimeCol" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="approver" label="审批人" width="120" />
-        <el-table-column prop="approveTime" label="审批时间" width="180" />
+        <el-table-column prop="approveTime" label="审批时间" width="180" :formatter="fmtTimeCol" />
         <el-table-column prop="rejectReason" label="驳回原因" show-overflow-tooltip />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <template v-if="row.status === 0">
               <el-button size="small" type="success" @click="handleApprove(row)">通过</el-button>
               <el-button size="small" type="danger" @click="showRejectDialog(row)">驳回</el-button>
             </template>
+            <el-button size="small" type="primary" @click="viewDiff(row)">查看差异</el-button>
             <el-button size="small" @click="viewRecords(row)">审批记录</el-button>
           </template>
         </el-table-column>
@@ -74,9 +75,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="applicant" label="申请人" width="100" />
-        <el-table-column prop="applyTime" label="申请时间" width="170" />
+        <el-table-column prop="applyTime" label="申请时间" width="170" :formatter="fmtTimeCol" />
         <el-table-column prop="approver" label="审批人" width="100" />
-        <el-table-column prop="approveTime" label="审批时间" width="170" />
+        <el-table-column prop="approveTime" label="审批时间" width="170" :formatter="fmtTimeCol" />
         <el-table-column prop="rejectReason" label="驳回原因" show-overflow-tooltip />
       </el-table>
       <div class="mt-16" style="display:flex;justify-content:flex-end">
@@ -85,14 +86,28 @@
           @size-change="loadRecords" @current-change="loadRecords" />
       </div>
     </el-dialog>
+
+    <!-- 审批差异对比弹窗 -->
+    <SchemaCompareDialog
+      v-model="diffVisible"
+      :title="`审批差异 - ${diffTransno} V${diffVersionNo}`"
+      left-label="变更前（当前版本）"
+      :left-input="diffBeforeInput"
+      :left-output="diffBeforeOutput"
+      right-label="变更后（待审批版本）"
+      :right-input="diffAfterInput"
+      :right-output="diffAfterOutput"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { approvalApi } from '../../api'
+import { approvalApi, interfaceApi } from '../../api'
 import { APPROVAL_STATUS, APPROVAL_STATUS_TYPE } from '../../constants/status'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { fmtTime } from '../../utils/format'
+import SchemaCompareDialog from '../../components/SchemaCompareDialog.vue'
 
 const tableData = ref([])
 const total = ref(0)
@@ -110,6 +125,17 @@ const recordPage = ref({ pageNum: 1, pageSize: 10 })
 
 const statusText = (s) => APPROVAL_STATUS[s] || '未知'
 const statusType = (s) => APPROVAL_STATUS_TYPE[s] || 'info'
+
+function fmtTimeCol(_row, _col, val) { return fmtTime(val) }
+
+// 差异对比
+const diffVisible = ref(false)
+const diffTransno = ref('')
+const diffVersionNo = ref('')
+const diffBeforeInput = ref('')
+const diffBeforeOutput = ref('')
+const diffAfterInput = ref('')
+const diffAfterOutput = ref('')
 
 async function loadData() {
   // 待审批列表（status=0），或全部审批记录
@@ -168,6 +194,30 @@ async function loadRecords() {
   const res = await approvalApi.records(currentTransno.value, recordPage.value)
   recordsData.value = res.data?.records || []
   recordTotal.value = res.data?.total || 0
+}
+
+async function viewDiff(row) {
+  diffTransno.value = row.transno
+  diffVersionNo.value = row.versionNo
+  // 变更后：待审批版本的 schema
+  try {
+    const afterRes = await interfaceApi.getVersion(row.transno, row.versionNo)
+    diffAfterInput.value = afterRes.data?.inputSchema || ''
+    diffAfterOutput.value = afterRes.data?.outputSchema || ''
+  } catch {
+    diffAfterInput.value = ''
+    diffAfterOutput.value = ''
+  }
+  // 变更前：当前最新已发布版本的 schema
+  try {
+    const beforeRes = await interfaceApi.getLatestVersion(row.transno)
+    diffBeforeInput.value = beforeRes.data?.inputSchema || ''
+    diffBeforeOutput.value = beforeRes.data?.outputSchema || ''
+  } catch {
+    diffBeforeInput.value = ''
+    diffBeforeOutput.value = ''
+  }
+  diffVisible.value = true
 }
 
 onMounted(() => loadData())

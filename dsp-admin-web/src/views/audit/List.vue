@@ -45,7 +45,7 @@
         <el-table-column prop="costTime" label="耗时(ms)" width="100" />
         <el-table-column prop="operator" label="操作人" width="100" />
         <el-table-column prop="ip" label="IP" width="130" show-overflow-tooltip />
-        <el-table-column prop="createdTime" label="时间" width="170" />
+        <el-table-column prop="createdTime" label="时间" width="170" :formatter="fmtTimeCol" />
         <el-table-column prop="requestData" label="请求参数" min-width="200" show-overflow-tooltip />
       </el-table>
 
@@ -67,6 +67,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { auditApi } from '../../api'
+import { fmtTime } from '../../utils/format'
 
 const tableData = ref([])
 const loading = ref(false)
@@ -74,6 +75,8 @@ const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const filters = ref({ transno: '', operation: '' })
+
+function fmtTimeCol(_row, _col, val) { return fmtTime(val) }
 
 async function loadData() {
   loading.value = true
