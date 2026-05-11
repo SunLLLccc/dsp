@@ -50,6 +50,12 @@ public class JwtAuthAspect {
             throw new BusinessException(ErrorCode.TOKEN_MISSING);
         }
 
+        // token 为 "base" 时跳过鉴权（调试/测试用）
+        if ("base".equals(token)) {
+            log.debug("JWT鉴权跳过(base模式): transno={}", transno);
+            return;
+        }
+
         if (timestamp != null && !timestamp.isEmpty()) {
             validateTimestamp(timestamp);
         }
