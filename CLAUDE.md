@@ -31,7 +31,7 @@ npm run build     # 生产构建
 
 ## 3. 模块架构与依赖
 
-包名统一为 `com.fintechervision.dsp`，由 `dsp-parent/pom.xml` 管理六个子模块。
+包名统一为 `com.sunlc.dsp`，由 `dsp-parent/pom.xml` 管理六个子模块。
 
 **模块依赖关系：**
 

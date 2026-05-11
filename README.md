@@ -8,7 +8,7 @@ DSP（数据服务平台）是数据服务基础设施平台，通过 XML 配置
 |------|------|
 | 后端 | Java 8 + Spring Boot 2.7.18 + MyBatis-Plus + Dynamic-DS + Druid + DOM4J + EasyExcel + Dubbo 3.2 + MongoDB + JWT |
 | 前端 | Vue 3.5 + Element Plus + Pinia + Vue Router 4 + Vite 8 + Axios |
-| 包名 | com.fintechervision.dsp |
+| 包名 | com.sunlc.dsp |
 
 ## 项目结构
 
