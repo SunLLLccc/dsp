@@ -83,4 +83,4 @@ dsp:
 
 logging:
   level:
-    com.fintechervision.dsp: debug
+    com.sunlc.dsp: debug
