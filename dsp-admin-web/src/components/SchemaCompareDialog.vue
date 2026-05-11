@@ -9,6 +9,7 @@
             <div class="compare-code">
               <template v-for="(line, idx) in inputDiff.left" :key="idx">
                 <div v-if="!diffOnly || line.type !== 'common'" :class="['diff-line', line.type]">
+                  <span class="line-no">{{ line.lineNo || '' }}</span>
                   <span class="line-prefix">{{ line.type === 'removed' ? '-' : line.type === 'common' ? ' ' : '' }}</span>
                   <span>{{ line.text }}</span>
                 </div>
@@ -21,6 +22,7 @@
             <div class="compare-code">
               <template v-for="(line, idx) in inputDiff.right" :key="idx">
                 <div v-if="!diffOnly || line.type !== 'common'" :class="['diff-line', line.type]">
+                  <span class="line-no">{{ line.lineNo || '' }}</span>
                   <span class="line-prefix">{{ line.type === 'added' ? '+' : line.type === 'common' ? ' ' : '' }}</span>
                   <span>{{ line.text }}</span>
                 </div>
@@ -36,6 +38,7 @@
             <div class="compare-code">
               <template v-for="(line, idx) in outputDiff.left" :key="idx">
                 <div v-if="!diffOnly || line.type !== 'common'" :class="['diff-line', line.type]">
+                  <span class="line-no">{{ line.lineNo || '' }}</span>
                   <span class="line-prefix">{{ line.type === 'removed' ? '-' : line.type === 'common' ? ' ' : '' }}</span>
                   <span>{{ line.text }}</span>
                 </div>
@@ -48,6 +51,7 @@
             <div class="compare-code">
               <template v-for="(line, idx) in outputDiff.right" :key="idx">
                 <div v-if="!diffOnly || line.type !== 'common'" :class="['diff-line', line.type]">
+                  <span class="line-no">{{ line.lineNo || '' }}</span>
                   <span class="line-prefix">{{ line.type === 'added' ? '+' : line.type === 'common' ? ' ' : '' }}</span>
                   <span>{{ line.text }}</span>
                 </div>
@@ -124,6 +128,16 @@ watch(() => props.modelValue, (v) => { if (v) { activeTab.value = 'input'; diffO
 .diff-line.removed { background: #fde2e2; color: #c45656; }
 .diff-line.added { background: #e1f3d8; color: #4a8f3f; }
 .diff-line.placeholder { background: #f5f5f5; }
+.line-no {
+  display: inline-block;
+  width: 32px;
+  text-align: right;
+  color: #b0b0b0;
+  user-select: none;
+  padding-right: 6px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
 .line-prefix {
   display: inline-block;
   width: 20px;

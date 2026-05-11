@@ -133,7 +133,10 @@
 
     <!-- XML 查看弹窗 -->
     <el-dialog v-model="viewDialogVisible" :title="`XML配置 - ${viewTransno}`" width="800px">
-      <el-input type="textarea" :rows="22" :model-value="viewXmlContent" readonly style="font-family:monospace" />
+      <div class="code-view">
+        <div class="code-lines"><span v-for="n in viewXmlLineCount" :key="n" class="code-ln">{{ n }}</span></div>
+        <pre class="code-text">{{ viewXmlContent }}</pre>
+      </div>
     </el-dialog>
 
     <!-- 历史版本弹窗 -->
@@ -184,6 +187,7 @@ const editDialogTitle = computed(() => isEditMode.value ? '修改XML模板' : '�
 const viewDialogVisible = ref(false)
 const viewXmlContent = ref('')
 const viewTransno = ref('')
+const viewXmlLineCount = computed(() => (viewXmlContent.value || '').split('\n').length)
 
 // 历史弹窗
 const historyDialogVisible = ref(false)
@@ -349,4 +353,40 @@ onMounted(() => loadData())
 <style scoped>
 .mb-16 { margin-bottom: 16px; }
 .mt-16 { margin-top: 16px; }
+.code-view {
+  display: flex;
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  background: #fafafa;
+}
+.code-lines {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  background: #f5f5f5;
+  border-right: 1px solid #ebeef5;
+  text-align: right;
+  user-select: none;
+  flex-shrink: 0;
+}
+.code-ln {
+  display: block;
+  padding: 0 8px;
+  line-height: 1.5;
+  font-size: 13px;
+  color: #b0b0b0;
+  font-family: Consolas, Monaco, monospace;
+}
+.code-text {
+  margin: 0;
+  padding: 8px 12px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre;
+  flex: 1;
+  min-width: 0;
+}
 </style>
