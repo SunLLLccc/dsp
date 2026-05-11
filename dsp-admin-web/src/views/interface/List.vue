@@ -13,7 +13,7 @@
           <el-input v-model="searchForm.systemName" placeholder="请输入所属系统" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
+          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width:160px">
             <el-option label="草稿" :value="0" />
             <el-option label="待审批" :value="1" />
             <el-option label="已驳回" :value="2" />
@@ -45,7 +45,7 @@
             <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="updatedTime" label="更新时间" width="180" />
+        <el-table-column prop="updatedTime" label="更新时间" width="180" :formatter="fmtTime" />
         <el-table-column label="操作" fixed="right" width="360">
           <template #default="{ row }">
             <el-button size="small" @click="handleViewSchema(row)">查看</el-button>
@@ -84,10 +84,11 @@
         </el-table-column>
         <el-table-column prop="changeLog" label="变更说明" show-overflow-tooltip />
         <el-table-column prop="createdBy" label="创建人" width="100" />
-        <el-table-column prop="createdTime" label="创建时间" width="170" />
-        <el-table-column label="操作" width="120">
+        <el-table-column prop="createdTime" label="创建时间" width="170" :formatter="fmtTime" />
+        <el-table-column label="操作" width="200">
           <template #default="{ row }">
-            <el-button size="small" @click="viewSchema(row)">查看Schema</el-button>
+            <el-button size="small" @click="viewSchema(row)">查看</el-button>
+            <el-button size="small" type="primary" @click="compareWithCurrent(row)">对比当前</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -105,6 +106,18 @@
       :input-schema="inputSchema"
       :output-schema="outputSchema"
     />
+
+    <!-- Schema 对比弹窗 -->
+    <SchemaCompareDialog
+      v-model="compareVisible"
+      :title="`Schema 对比 - V${compareVersionNo} vs 当前版本`"
+      :left-label="`V${compareVersionNo}`"
+      right-label="当前版本"
+      :left-input="compareLeftInput"
+      :left-output="compareLeftOutput"
+      :right-input="compareRightInput"
+      :right-output="compareRightOutput"
+    />
   </div>
 </template>
 
@@ -116,6 +129,7 @@ import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE, VERSION_STATUS, VERSION_STATUS
 import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SchemaViewDialog from '../../components/SchemaViewDialog.vue'
+import SchemaCompareDialog from '../../components/SchemaCompareDialog.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -145,6 +159,14 @@ const schemaDialogVisible = ref(false)
 const inputSchema = ref('')
 const outputSchema = ref('')
 const schemaVersionNo = ref('')
+
+// 对比
+const compareVisible = ref(false)
+const compareVersionNo = ref('')
+const compareLeftInput = ref('')
+const compareLeftOutput = ref('')
+const compareRightInput = ref('')
+const compareRightOutput = ref('')
 
 async function loadData() {
   const res = await interfaceApi.list(searchForm.value)
@@ -231,6 +253,24 @@ async function viewSchema(row) {
   schemaDialogVisible.value = true
 }
 
+async function compareWithCurrent(row) {
+  // 左侧：历史版本
+  const histRes = await interfaceApi.getVersion(versionTransno.value, row.versionNo)
+  compareLeftInput.value = histRes.data?.inputSchema || ''
+  compareLeftOutput.value = histRes.data?.outputSchema || ''
+  // 右侧：当前最新版本
+  try {
+    const curRes = await interfaceApi.getLatestVersion(versionTransno.value)
+    compareRightInput.value = curRes.data?.inputSchema || ''
+    compareRightOutput.value = curRes.data?.outputSchema || ''
+  } catch {
+    compareRightInput.value = ''
+    compareRightOutput.value = ''
+  }
+  compareVersionNo.value = row.versionNo
+  compareVisible.value = true
+}
+
 function formatJson(str) {
   if (!str) return ''
   try {
@@ -238,6 +278,11 @@ function formatJson(str) {
   } catch {
     return str
   }
+}
+
+function fmtTime(_row, _col, val) {
+  if (!val) return ''
+  return String(val).replace('T', ' ').substring(0, 19)
 }
 
 onMounted(() => loadData())
