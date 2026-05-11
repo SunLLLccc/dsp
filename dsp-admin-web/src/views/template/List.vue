@@ -10,7 +10,7 @@
           <el-input v-model="searchForm.systemName" placeholder="请输入所属系统" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
+          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width:160px">
             <el-option label="草稿" :value="0" />
             <el-option label="待审批" :value="1" />
             <el-option label="已驳回" :value="2" />
@@ -42,7 +42,7 @@
             <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="updatedTime" label="更新时间" width="180" />
+        <el-table-column prop="updatedTime" label="更新时间" width="180" :formatter="fmtTimeCol" />
         <el-table-column label="操作" fixed="right" width="320">
           <template #default="{ row }">
             <el-button size="small" @click="viewXml(row)">查看</el-button>
@@ -142,7 +142,7 @@
         <el-table-column prop="versionNo" label="版本号" width="80" />
         <el-table-column prop="changeLog" label="变更说明" show-overflow-tooltip />
         <el-table-column prop="createdBy" label="创建人" width="100" />
-        <el-table-column prop="createdTime" label="创建时间" width="170" />
+        <el-table-column prop="createdTime" label="创建时间" width="170" :formatter="fmtTimeCol" />
         <el-table-column label="操作" width="100">
           <template #default="{ row }">
             <el-button size="small" @click="viewHistoryXml(row)">查看XML</el-button>
@@ -158,6 +158,7 @@ import { ref, computed, onMounted } from 'vue'
 import { templateApi, interfaceApi } from '../../api'
 import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE } from '../../constants/status'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { fmtTime } from '../../utils/format'
 
 // 列表
 const tableData = ref([])
@@ -166,6 +167,8 @@ const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', systemName: '', 
 
 const statusText = (s) => INTERFACE_STATUS[s] || '未知'
 const statusType = (s) => INTERFACE_STATUS_TYPE[s] || 'info'
+
+function fmtTimeCol(_row, _col, val) { return fmtTime(val) }
 
 // 编辑弹窗
 const editDialogVisible = ref(false)

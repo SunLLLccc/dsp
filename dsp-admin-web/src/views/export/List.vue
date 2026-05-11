@@ -27,7 +27,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="errorMsg" label="错误信息" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="createdTime" label="创建时间" width="180" />
+        <el-table-column prop="createdTime" label="创建时间" width="180" :formatter="fmtTimeCol" />
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" @click="handleDownload(row)" v-if="row.status === 2">下载</el-button>
@@ -54,6 +54,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { exportApi } from '../../api'
+import { fmtTime } from '../../utils/format'
 
 const tableData = ref([])
 const loading = ref(false)
@@ -63,6 +64,8 @@ const total = ref(0)
 
 const taskStatusText = (s) => ({ 0: '待处理', 1: '处理中', 2: '已完成', 3: '失败' }[s] || '未知')
 const taskStatusType = (s) => ({ 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }[s] || 'info')
+
+function fmtTimeCol(_row, _col, val) { return fmtTime(val) }
 
 async function loadData() {
   loading.value = true

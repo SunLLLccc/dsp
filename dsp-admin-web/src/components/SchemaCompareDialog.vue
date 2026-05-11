@@ -1,16 +1,26 @@
 <template>
-  <el-dialog v-model="visible" :title="title" width="1100px" top="5vh" destroy-on-close @close="$emit('update:modelValue', false)">
+  <el-dialog v-model="visible" :title="title" width="1150px" top="5vh" destroy-on-close @close="$emit('update:modelValue', false)">
     <el-tabs v-model="activeTab">
       <el-tab-pane label="输入报文" name="input">
         <div class="compare-container">
           <div class="compare-side">
             <div class="compare-header">{{ leftLabel }}</div>
-            <el-input :model-value="formatJson(leftInput)" type="textarea" :rows="20" readonly style="font-family:monospace" />
+            <div class="compare-code">
+              <div v-for="(line, idx) in inputDiff.left" :key="idx" :class="['diff-line', line.type]">
+                <span class="line-prefix">{{ line.type === 'removed' ? '-' : line.type === 'common' ? ' ' : '' }}</span>
+                <span>{{ line.text }}</span>
+              </div>
+            </div>
           </div>
           <div class="compare-divider" />
           <div class="compare-side">
             <div class="compare-header">{{ rightLabel }}</div>
-            <el-input :model-value="formatJson(rightInput)" type="textarea" :rows="20" readonly style="font-family:monospace" />
+            <div class="compare-code">
+              <div v-for="(line, idx) in inputDiff.right" :key="idx" :class="['diff-line', line.type]">
+                <span class="line-prefix">{{ line.type === 'added' ? '+' : line.type === 'common' ? ' ' : '' }}</span>
+                <span>{{ line.text }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </el-tab-pane>
@@ -18,12 +28,22 @@
         <div class="compare-container">
           <div class="compare-side">
             <div class="compare-header">{{ leftLabel }}</div>
-            <el-input :model-value="formatJson(leftOutput)" type="textarea" :rows="20" readonly style="font-family:monospace" />
+            <div class="compare-code">
+              <div v-for="(line, idx) in outputDiff.left" :key="idx" :class="['diff-line', line.type]">
+                <span class="line-prefix">{{ line.type === 'removed' ? '-' : line.type === 'common' ? ' ' : '' }}</span>
+                <span>{{ line.text }}</span>
+              </div>
+            </div>
           </div>
           <div class="compare-divider" />
           <div class="compare-side">
             <div class="compare-header">{{ rightLabel }}</div>
-            <el-input :model-value="formatJson(rightOutput)" type="textarea" :rows="20" readonly style="font-family:monospace" />
+            <div class="compare-code">
+              <div v-for="(line, idx) in outputDiff.right" :key="idx" :class="['diff-line', line.type]">
+                <span class="line-prefix">{{ line.type === 'added' ? '+' : line.type === 'common' ? ' ' : '' }}</span>
+                <span>{{ line.text }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </el-tab-pane>
@@ -33,6 +53,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { formatJson, diffLines } from '../utils/format'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -52,10 +73,8 @@ const visible = computed({
 })
 const activeTab = ref('input')
 
-function formatJson(str) {
-  if (!str) return ''
-  try { return JSON.stringify(JSON.parse(str), null, 2) } catch { return str }
-}
+const inputDiff = computed(() => diffLines(formatJson(props.leftInput), formatJson(props.rightInput)))
+const outputDiff = computed(() => diffLines(formatJson(props.leftOutput), formatJson(props.rightOutput)))
 
 watch(() => props.modelValue, (v) => { if (v) activeTab.value = 'input' })
 </script>
@@ -69,7 +88,36 @@ watch(() => props.modelValue, (v) => { if (v) activeTab.value = 'input' })
   font-size: 14px;
   color: #303133;
   border-bottom: 1px solid #ebeef5;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .compare-divider { width: 6px; background: #e4e7ed; margin: 0 6px; border-radius: 3px; flex-shrink: 0; }
+.compare-code {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  max-height: 480px;
+  overflow-y: auto;
+  background: #fafafa;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+.diff-line {
+  padding: 0 8px 0 0;
+  white-space: pre;
+  min-height: 20px;
+}
+.diff-line.common { background: transparent; }
+.diff-line.removed { background: #fde2e2; color: #c45656; }
+.diff-line.added { background: #e1f3d8; color: #4a8f3f; }
+.diff-line.placeholder { background: #f5f5f5; }
+.line-prefix {
+  display: inline-block;
+  width: 20px;
+  text-align: center;
+  color: #999;
+  user-select: none;
+  font-weight: 600;
+}
+.diff-line.removed .line-prefix { color: #c45656; }
+.diff-line.added .line-prefix { color: #4a8f3f; }
 </style>

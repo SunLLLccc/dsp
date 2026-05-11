@@ -45,7 +45,7 @@
             <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="updatedTime" label="更新时间" width="180" :formatter="fmtTime" />
+        <el-table-column prop="updatedTime" label="更新时间" width="180" :formatter="fmtTimeCol" />
         <el-table-column label="操作" fixed="right" width="360">
           <template #default="{ row }">
             <el-button size="small" @click="handleViewSchema(row)">查看</el-button>
@@ -84,7 +84,7 @@
         </el-table-column>
         <el-table-column prop="changeLog" label="变更说明" show-overflow-tooltip />
         <el-table-column prop="createdBy" label="创建人" width="100" />
-        <el-table-column prop="createdTime" label="创建时间" width="170" :formatter="fmtTime" />
+        <el-table-column prop="createdTime" label="创建时间" width="170" :formatter="fmtTimeCol" />
         <el-table-column label="操作" width="200">
           <template #default="{ row }">
             <el-button size="small" @click="viewSchema(row)">查看</el-button>
@@ -128,6 +128,7 @@ import { interfaceApi } from '../../api'
 import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE, VERSION_STATUS, VERSION_STATUS_TYPE } from '../../constants/status'
 import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { fmtTime, formatJson } from '../../utils/format'
 import SchemaViewDialog from '../../components/SchemaViewDialog.vue'
 import SchemaCompareDialog from '../../components/SchemaCompareDialog.vue'
 
@@ -271,18 +272,8 @@ async function compareWithCurrent(row) {
   compareVisible.value = true
 }
 
-function formatJson(str) {
-  if (!str) return ''
-  try {
-    return JSON.stringify(JSON.parse(str), null, 2)
-  } catch {
-    return str
-  }
-}
-
-function fmtTime(_row, _col, val) {
-  if (!val) return ''
-  return String(val).replace('T', ' ').substring(0, 19)
+function fmtTimeCol(_row, _col, val) {
+  return fmtTime(val)
 }
 
 onMounted(() => loadData())
