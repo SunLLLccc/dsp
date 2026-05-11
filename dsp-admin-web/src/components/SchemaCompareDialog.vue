@@ -1,9 +1,7 @@
 <template>
   <el-dialog v-model="visible" :title="title" width="1150px" top="5vh" destroy-on-close @close="$emit('update:modelValue', false)">
-    <div class="compare-toolbar">
-      <el-switch v-model="diffOnly" active-text="仅看差异" inactive-text="全部" />
-    </div>
-    <el-tabs v-model="activeTab">
+    <div class="compare-tabs-wrap">
+      <el-tabs v-model="activeTab">
       <el-tab-pane label="输入报文" name="input">
         <div class="compare-container">
           <div class="compare-side">
@@ -59,6 +57,8 @@
         </div>
       </el-tab-pane>
     </el-tabs>
+    <el-switch v-model="diffOnly" active-text="仅看差异" inactive-text="全部" class="compare-switch" />
+    </div>
   </el-dialog>
 </template>
 
@@ -103,7 +103,8 @@ watch(() => props.modelValue, (v) => { if (v) { activeTab.value = 'input'; diffO
   margin-bottom: 4px;
 }
 .compare-divider { width: 6px; background: #e4e7ed; margin: 0 6px; border-radius: 3px; flex-shrink: 0; }
-.compare-toolbar { margin-bottom: 10px; display: flex; align-items: center; }
+.compare-tabs-wrap { position: relative; }
+.compare-switch { position: absolute; top: 0; right: 0; z-index: 1; }
 .compare-code {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 13px;
