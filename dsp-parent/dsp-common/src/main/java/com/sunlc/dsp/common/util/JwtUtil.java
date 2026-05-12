@@ -1,6 +1,7 @@
 package com.sunlc.dsp.common.util;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -23,10 +24,10 @@ import java.util.Map;
 public class JwtUtil {
 
     @Value("${dsp.jwt.secret:dsp-default-secret-key-must-be-at-least-32-chars-long}")
-    private String secret;
+    String secret;
 
     @Value("${dsp.jwt.expiration-hours:24}")
-    private int expirationHours;
+    int expirationHours;
 
     private SecretKey key;
 
@@ -37,17 +38,30 @@ public class JwtUtil {
     }
 
     public String generateToken(String appId, List<String> allowedTransnos) {
+        return generateToken(appId, allowedTransnos, null, null, null);
+    }
+
+    public String generateToken(String appId, List<String> allowedTransnos,
+                                Long userId, List<String> roles, Long deptId) {
         long now = System.currentTimeMillis();
         Date issuedAt = new Date(now);
         Date expiration = new Date(now + expirationHours * 3600 * 1000L);
 
-        return Jwts.builder()
+        JwtBuilder builder = Jwts.builder()
                 .setIssuedAt(issuedAt)
                 .setExpiration(expiration)
                 .claim("appId", appId)
-                .claim("allowedTransnos", allowedTransnos)
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
+                .claim("allowedTransnos", allowedTransnos);
+        if (userId != null) {
+            builder.claim("userId", userId);
+        }
+        if (roles != null) {
+            builder.claim("roles", roles);
+        }
+        if (deptId != null) {
+            builder.claim("deptId", deptId);
+        }
+        return builder.signWith(key, SignatureAlgorithm.HS256).compact();
     }
 
     @SuppressWarnings("unchecked")

@@ -36,6 +36,20 @@
           <el-icon><Monitor /></el-icon>
           <span>接口调试</span>
         </el-menu-item>
+        <el-sub-menu index="system">
+          <template #title>
+            <el-icon><Setting /></el-icon>
+            <span>系统管理</span>
+          </template>
+          <el-menu-item index="/system/user">
+            <el-icon><User /></el-icon>
+            <span>用户管理</span>
+          </el-menu-item>
+          <el-menu-item index="/system/dept">
+            <el-icon><OfficeBuilding /></el-icon>
+            <span>部门管理</span>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </el-aside>
 
@@ -44,7 +58,7 @@
       <el-header class="layout-header">
         <span class="header-title">DSP 管理后台</span>
         <div class="header-right">
-          <span class="header-user">{{ authStore.username }}</span>
+          <span class="header-user">{{ authStore.realName || authStore.username }}</span>
           <el-button text @click="handleLogout">退出登录</el-button>
         </div>
       </el-header>
@@ -59,7 +73,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { Document, Coin, Key, Download, Monitor, Notebook, Stamp, Files } from '@element-plus/icons-vue'
+import { Document, Coin, Key, Download, Monitor, Notebook, Stamp, Files, Setting, User, OfficeBuilding } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

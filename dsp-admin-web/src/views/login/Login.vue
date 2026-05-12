@@ -45,7 +45,7 @@ async function handleLogin() {
   loading.value = true
   try {
     const res = await authApi.login(form)
-    authStore.setLogin(res.data.token, res.data.username)
+    authStore.setLogin(res.data)
     ElMessage.success('登录成功')
     router.push('/')
   } catch (e) {

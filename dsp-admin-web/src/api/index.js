@@ -78,3 +78,28 @@ export const auditApi = {
   list: (params) => request.get('/audit/list', { params })
 }
 
+// 用户管理API
+export const userApi = {
+  list: (params) => request.get('/user/list', { params }),
+  detail: (id) => request.get(`/user/${id}`),
+  create: (data) => request.post('/user', data),
+  update: (id, data) => request.put(`/user/${id}`, data),
+  resetPassword: (id, password) => request.put(`/user/${id}/password`, { password }),
+  updateStatus: (id, status) => request.put(`/user/${id}/status`, { status }),
+  delete: (id) => request.delete(`/user/${id}`),
+  assignRoles: (id, roleIds) => request.post(`/user/${id}/roles`, { roleIds })
+}
+
+// 部门管理API
+export const deptApi = {
+  tree: () => request.get('/dept/tree'),
+  create: (data) => request.post('/dept', data),
+  update: (id, data) => request.put(`/dept/${id}`, data),
+  delete: (id) => request.delete(`/dept/${id}`)
+}
+
+// 角色管理API
+export const roleApi = {
+  list: () => request.get('/role/list')
+}
+

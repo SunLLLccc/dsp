@@ -10,6 +10,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -52,6 +53,17 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
 
         // 将管理员信息存入 request，供后续使用
         request.setAttribute("adminUser", adminUser);
+        if (claims.get("userId") != null) {
+            request.setAttribute("adminUserId", claims.get("userId"));
+        }
+        if (claims.get("roles") != null) {
+            @SuppressWarnings("unchecked")
+            List<String> roles = (List<String>) claims.get("roles");
+            request.setAttribute("adminRoles", roles);
+        }
+        if (claims.get("deptId") != null) {
+            request.setAttribute("adminDeptId", claims.get("deptId"));
+        }
         log.debug("管理端鉴权通过: adminUser={}", adminUser);
         return true;
     }
