@@ -28,7 +28,7 @@
     <!-- 操作栏 -->
     <el-card>
       <div class="mb-16">
-        <el-button type="primary" @click="openCreateDialog">新增XML模板</el-button>
+        <el-button type="primary" @click="openCreateDialog" v-role="'USER'">新增XML模板</el-button>
       </div>
 
       <!-- 表格 -->
@@ -46,10 +46,10 @@
         <el-table-column label="操作" fixed="right" width="320">
           <template #default="{ row }">
             <el-button size="small" @click="viewXml(row)">查看</el-button>
-            <el-button size="small" type="primary" @click="openEditDialog(row)">修改</el-button>
+            <el-button size="small" type="primary" @click="openEditDialog(row)" v-role="'USER'">修改</el-button>
             <el-button size="small" @click="showHistory(row)">历史</el-button>
-            <el-button size="small" type="success" @click="handlePublish(row)" v-if="row.status === 0">发布</el-button>
-            <el-button size="small" type="warning" @click="handleOffline(row)" v-if="row.status === 3">下线</el-button>
+            <el-button size="small" type="success" @click="handlePublish(row)" v-if="row.status === 0" v-role="'DEPT_MANAGER'">发布</el-button>
+            <el-button size="small" type="warning" @click="handleOffline(row)" v-if="row.status === 3" v-role="'DEPT_MANAGER'">下线</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -174,6 +174,7 @@ import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE } from '../../constants/status'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fmtTime } from '../../utils/format'
 import XmlCompareDialog from '../../components/XmlCompareDialog.vue'
+import { hasAnyRole } from '../../directives/role'
 
 // 列表
 const tableData = ref([])

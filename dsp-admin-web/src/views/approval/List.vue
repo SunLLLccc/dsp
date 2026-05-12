@@ -35,8 +35,8 @@
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <template v-if="row.status === 0">
-              <el-button size="small" type="success" @click="handleApprove(row)">通过</el-button>
-              <el-button size="small" type="danger" @click="showRejectDialog(row)">驳回</el-button>
+              <el-button size="small" type="success" @click="handleApprove(row)" v-role="'DEPT_MANAGER'">通过</el-button>
+              <el-button size="small" type="danger" @click="showRejectDialog(row)" v-role="'DEPT_MANAGER'">驳回</el-button>
             </template>
             <el-button size="small" type="primary" @click="viewDiff(row)">查看差异</el-button>
             <el-button size="small" @click="viewRecords(row)">审批记录</el-button>
@@ -108,6 +108,7 @@ import { APPROVAL_STATUS, APPROVAL_STATUS_TYPE } from '../../constants/status'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fmtTime } from '../../utils/format'
 import SchemaCompareDialog from '../../components/SchemaCompareDialog.vue'
+import { hasAnyRole } from '../../directives/role'
 
 const tableData = ref([])
 const total = ref(0)

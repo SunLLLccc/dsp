@@ -2,6 +2,7 @@ package com.sunlc.dsp.adminservice.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.sunlc.dsp.adminservice.annotation.RequireRole;
 import com.sunlc.dsp.common.model.ApiResponse;
 import com.sunlc.dsp.engine.XmlEngine;
 import com.sunlc.dsp.enums.InterfaceStatus;
@@ -72,6 +73,7 @@ public class InterfaceAdminController {
     }
 
     @PostMapping
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<InterfaceInfo> create(@RequestBody InterfaceInfo info, HttpServletRequest request) {
         info.setStatus(InterfaceStatus.DRAFT.getCode());
         info.setCurrentVersion(0);
@@ -83,6 +85,7 @@ public class InterfaceAdminController {
     }
 
     @PutMapping("/{id}")
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody InterfaceInfo info) {
         info.setId(id);
         info.setUpdatedTime(LocalDateTime.now());
@@ -91,6 +94,7 @@ public class InterfaceAdminController {
     }
 
     @DeleteMapping("/{id}")
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<Void> delete(@PathVariable Long id) {
         interfaceInfoService.removeById(id);
         return ApiResponse.success("INTERFACE_DELETE", "", null);
@@ -145,6 +149,7 @@ public class InterfaceAdminController {
     }
 
     @PostMapping("/{transno}/approve")
+    @RequireRole({"DEPT_MANAGER"})
     public ApiResponse<Void> approveAndPublish(
             @PathVariable String transno,
             HttpServletRequest request) {
@@ -153,6 +158,7 @@ public class InterfaceAdminController {
     }
 
     @PostMapping("/{transno}/reject")
+    @RequireRole({"DEPT_MANAGER"})
     public ApiResponse<Void> rejectApproval(
             @PathVariable String transno,
             @RequestBody Map<String, String> body,
@@ -162,6 +168,7 @@ public class InterfaceAdminController {
     }
 
     @PostMapping("/{transno}/offline")
+    @RequireRole({"DEPT_MANAGER"})
     public ApiResponse<Void> offline(@PathVariable String transno, HttpServletRequest request) {
         interfaceVersionService.offline(transno, getCurrentUser(request));
         return ApiResponse.success("INTERFACE_OFFLINE", "", null);

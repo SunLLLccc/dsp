@@ -2,6 +2,7 @@ package com.sunlc.dsp.adminservice.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.sunlc.dsp.common.model.ApiResponse;
+import com.sunlc.dsp.adminservice.annotation.RequireRole;
 import com.sunlc.dsp.entity.InterfaceTemplate;
 import com.sunlc.dsp.entity.InterfaceTemplateHistory;
 import com.sunlc.dsp.service.InterfaceTemplateService;
@@ -37,6 +38,7 @@ public class InterfaceTemplateController {
     }
 
     @PostMapping
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<InterfaceTemplate> create(@RequestBody Map<String, String> body) {
         InterfaceTemplate template = interfaceTemplateService.createTemplate(
                 body.get("transno"), body.get("xmlContent"),
@@ -45,6 +47,7 @@ public class InterfaceTemplateController {
     }
 
     @PutMapping("/{id}")
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<InterfaceTemplate> update(@PathVariable Long id, @RequestBody Map<String, String> body) {
         InterfaceTemplate template = interfaceTemplateService.updateTemplate(
                 id, body.get("xmlContent"), body.get("changeLog"), body.get("operator"));
@@ -52,18 +55,21 @@ public class InterfaceTemplateController {
     }
 
     @DeleteMapping("/{id}")
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<Void> delete(@PathVariable Long id) {
         interfaceTemplateService.removeById(id);
         return ApiResponse.success("TEMPLATE_DELETE", "", null);
     }
 
     @PostMapping("/{id}/publish")
+    @RequireRole({"DEPT_MANAGER"})
     public ApiResponse<Void> publish(@PathVariable Long id, @RequestBody Map<String, String> body) {
         interfaceTemplateService.publishTemplate(id, body.get("operator"));
         return ApiResponse.success("TEMPLATE_PUBLISH", "", null);
     }
 
     @PostMapping("/{id}/offline")
+    @RequireRole({"DEPT_MANAGER"})
     public ApiResponse<Void> offline(@PathVariable Long id) {
         interfaceTemplateService.offlineTemplate(id);
         return ApiResponse.success("TEMPLATE_OFFLINE", "", null);

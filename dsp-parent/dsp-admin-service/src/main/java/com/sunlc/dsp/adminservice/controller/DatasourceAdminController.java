@@ -2,6 +2,7 @@ package com.sunlc.dsp.adminservice.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.sunlc.dsp.adminservice.annotation.RequireRole;
 import com.sunlc.dsp.common.model.ApiResponse;
 import com.sunlc.dsp.common.util.PasswordEncryptor;
 import com.sunlc.dsp.entity.DatasourceConfig;
@@ -48,6 +49,7 @@ public class DatasourceAdminController {
     }
 
     @PostMapping
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<DatasourceConfig> create(@RequestBody DatasourceConfig config) {
         config.setPassword(passwordEncryptor.encrypt(config.getPassword()));
         config.setStatus(CommonStatus.ENABLED.getCode());
@@ -65,6 +67,7 @@ public class DatasourceAdminController {
     }
 
     @PutMapping("/{id}")
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody DatasourceConfig config) {
         config.setId(id);
         // 如果密码被修改（不是 ENC() 格式），则加密
@@ -86,6 +89,7 @@ public class DatasourceAdminController {
     }
 
     @DeleteMapping("/{id}")
+    @RequireRole({"DEPT_MANAGER"})
     public ApiResponse<Void> delete(@PathVariable Long id) {
         DatasourceConfig config = datasourceManagerService.getById(id);
         if (config != null) {

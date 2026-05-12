@@ -1,5 +1,6 @@
 package com.sunlc.dsp.adminservice.controller;
 
+import com.sunlc.dsp.adminservice.annotation.RequireRole;
 import com.sunlc.dsp.common.model.ApiResponse;
 import com.sunlc.dsp.entity.AppAuth;
 import com.sunlc.dsp.enums.CommonStatus;
@@ -31,6 +32,7 @@ public class AppAuthAdminController {
     }
 
     @PostMapping
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<AppAuth> create(@RequestBody AppAuth appAuth) {
         appAuth.setStatus(CommonStatus.ENABLED.getCode());
         appAuth.setCreatedTime(LocalDateTime.now());
@@ -43,6 +45,7 @@ public class AppAuthAdminController {
     }
 
     @PutMapping("/{id}")
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody AppAuth appAuth) {
         appAuth.setId(id);
         appAuth.setUpdatedTime(LocalDateTime.now());
@@ -51,6 +54,7 @@ public class AppAuthAdminController {
     }
 
     @DeleteMapping("/{id}")
+    @RequireRole({"DEPT_MANAGER"})
     public ApiResponse<Void> delete(@PathVariable Long id) {
         appAuthService.removeById(id);
         return ApiResponse.success("APP_DELETE", "", null);
