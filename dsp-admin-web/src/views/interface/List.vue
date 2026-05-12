@@ -31,7 +31,7 @@
     <!-- 操作栏 -->
     <el-card>
       <div class="mb-16">
-        <el-button type="primary" @click="handleCreate">新增接口</el-button>
+        <el-button type="primary" @click="handleCreate" v-role="'USER'">新增接口</el-button>
       </div>
 
       <!-- 表格 -->
@@ -49,10 +49,10 @@
         <el-table-column label="操作" fixed="right" width="360">
           <template #default="{ row }">
             <el-button size="small" @click="handleViewSchema(row)">查看</el-button>
-            <el-button size="small" @click="handleEdit(row)" :disabled="row.status === 1">编辑</el-button>
+            <el-button size="small" @click="handleEdit(row)" :disabled="row.status === 1" v-role="'USER'">编辑</el-button>
             <el-button size="small" @click="showVersionHistory(row)">版本</el-button>
-            <el-button size="small" type="warning" @click="handleWithdraw(row)" v-if="row.status === 1">撤销审批</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)" :disabled="row.status === 1">删除</el-button>
+            <el-button size="small" type="warning" @click="handleWithdraw(row)" v-if="row.status === 1" v-role="'USER'">撤销审批</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)" :disabled="row.status === 1" v-role="'USER'">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -131,6 +131,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { fmtTime, formatJson } from '../../utils/format'
 import SchemaViewDialog from '../../components/SchemaViewDialog.vue'
 import SchemaCompareDialog from '../../components/SchemaCompareDialog.vue'
+import { hasAnyRole } from '../../directives/role'
 
 const router = useRouter()
 const authStore = useAuthStore()

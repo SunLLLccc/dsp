@@ -36,7 +36,7 @@
           <el-icon><Monitor /></el-icon>
           <span>接口调试</span>
         </el-menu-item>
-        <el-sub-menu index="system">
+        <el-sub-menu index="system" v-role="'ADMIN'">
           <template #title>
             <el-icon><Setting /></el-icon>
             <span>系统管理</span>
@@ -74,6 +74,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { Document, Coin, Key, Download, Monitor, Notebook, Stamp, Files, Setting, User, OfficeBuilding } from '@element-plus/icons-vue'
+import { hasAnyRole } from '../directives/role'
 
 const route = useRoute()
 const router = useRouter()

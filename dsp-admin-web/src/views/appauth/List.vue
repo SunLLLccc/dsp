@@ -2,7 +2,7 @@
   <div>
     <el-card>
       <div class="mb-16">
-        <el-button type="primary" @click="showDialog(null)">新增应用</el-button>
+        <el-button type="primary" @click="showDialog(null)" v-role="'USER'">新增应用</el-button>
       </div>
 
       <el-table :data="tableData" border stripe>
@@ -17,9 +17,9 @@
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="showDialog(row)">编辑</el-button>
+            <el-button size="small" @click="showDialog(row)" v-role="'USER'">编辑</el-button>
             <el-button size="small" type="warning" @click="handleGenToken(row)">签发Token</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)" v-role="'DEPT_MANAGER'">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -60,6 +60,7 @@
 import { ref, onMounted } from 'vue'
 import { appAuthApi } from '../../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { hasAnyRole } from '../../directives/role'
 
 const tableData = ref([])
 const dialogVisible = ref(false)
