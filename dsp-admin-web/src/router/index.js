@@ -56,6 +56,16 @@ const routes = [
         path: 'approval',
         name: '审批管理',
         component: () => import('../views/approval/List.vue')
+      },
+      {
+        path: 'system/user',
+        name: '用户管理',
+        component: () => import('../views/system/UserList.vue')
+      },
+      {
+        path: 'system/dept',
+        name: '部门管理',
+        component: () => import('../views/system/DeptList.vue')
       }
     ]
   }
