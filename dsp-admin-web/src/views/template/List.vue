@@ -146,13 +146,24 @@
         <el-table-column prop="changeLog" label="变更说明" show-overflow-tooltip />
         <el-table-column prop="createdBy" label="创建人" width="100" />
         <el-table-column prop="createdTime" label="创建时间" width="170" :formatter="fmtTimeCol" />
-        <el-table-column label="操作" width="100">
+        <el-table-column label="操作" width="180">
           <template #default="{ row }">
-            <el-button size="small" @click="viewHistoryXml(row)">查看XML</el-button>
+            <el-button size="small" @click="viewHistoryXml(row)">查看</el-button>
+            <el-button size="small" type="primary" @click="compareWithCurrent(row)">对比当前</el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-dialog>
+
+    <!-- XML 版本对比弹窗 -->
+    <XmlCompareDialog
+      v-model="xmlCompareVisible"
+      :title="`XML 对比 - V${compareVersionNo} vs 当前版本`"
+      :left-label="`V${compareVersionNo}`"
+      right-label="当前版本"
+      :left-xml="compareLeftXml"
+      :right-xml="compareRightXml"
+    />
   </div>
 </template>
 
@@ -162,6 +173,7 @@ import { templateApi, interfaceApi } from '../../api'
 import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE } from '../../constants/status'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fmtTime } from '../../utils/format'
+import XmlCompareDialog from '../../components/XmlCompareDialog.vue'
 
 // 列表
 const tableData = ref([])
@@ -193,6 +205,13 @@ const viewXmlLineCount = computed(() => (viewXmlContent.value || '').split('\n')
 const historyDialogVisible = ref(false)
 const historyTransno = ref('')
 const historyData = ref([])
+
+// XML 对比
+const xmlCompareVisible = ref(false)
+const compareVersionNo = ref('')
+const compareLeftXml = ref('')
+const compareRightXml = ref('')
+const currentTemplateId = ref(null)
 
 async function loadData() {
   const res = await templateApi.list(searchForm.value)
@@ -332,6 +351,7 @@ async function handleOffline(row) {
 
 async function showHistory(row) {
   historyTransno.value = row.transno
+  currentTemplateId.value = row.id
   try {
     const res = await templateApi.historyByTransno(row.transno)
     historyData.value = res.data || []
@@ -345,6 +365,18 @@ function viewHistoryXml(row) {
   viewXmlContent.value = row.xmlContent || ''
   viewTransno.value = `${historyTransno.value} V${row.versionNo}`
   viewDialogVisible.value = true
+}
+
+async function compareWithCurrent(row) {
+  compareVersionNo.value = row.versionNo
+  compareLeftXml.value = row.xmlContent || ''
+  try {
+    const res = await templateApi.detail(currentTemplateId.value)
+    compareRightXml.value = res.data?.xmlContent || ''
+  } catch {
+    compareRightXml.value = ''
+  }
+  xmlCompareVisible.value = true
 }
 
 onMounted(() => loadData())
