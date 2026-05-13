@@ -7,11 +7,20 @@ import { useAuthStore } from '../stores/auth'
  */
 export const roleDirective = {
   mounted(el, binding) {
-    const authStore = useAuthStore()
-    const required = Array.isArray(binding.value) ? binding.value : [binding.value]
-    if (!checkRole(authStore.roles, required)) {
-      el.parentNode?.removeChild(el)
-    }
+    applyRole(el, binding.value)
+  },
+  updated(el, binding) {
+    applyRole(el, binding.value)
+  }
+}
+
+function applyRole(el, value) {
+  const authStore = useAuthStore()
+  const required = Array.isArray(value) ? value : [value]
+  if (!checkRole(authStore.roles, required)) {
+    el.style.display = 'none'
+  } else {
+    el.style.display = ''
   }
 }
 
