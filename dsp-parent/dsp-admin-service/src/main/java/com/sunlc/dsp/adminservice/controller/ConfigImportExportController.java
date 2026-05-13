@@ -47,6 +47,7 @@ public class ConfigImportExportController {
         infoMap.put("transno", info.getTransno());
         infoMap.put("name", info.getName());
         infoMap.put("systemName", info.getSystemName());
+        infoMap.put("systemId", info.getSystemId());
         infoMap.put("description", info.getDescription());
         result.put("interfaceInfo", infoMap);
 
@@ -142,6 +143,10 @@ public class ConfigImportExportController {
             newInfo.setTransno(transno);
             newInfo.setName((String) infoMap.get("name"));
             newInfo.setSystemName((String) infoMap.get("systemName"));
+            Object systemIdVal = infoMap.get("systemId");
+            if (systemIdVal instanceof Number) {
+                newInfo.setSystemId(((Number) systemIdVal).longValue());
+            }
             newInfo.setDescription((String) infoMap.get("description"));
             newInfo.setStatus(0);
             newInfo.setCurrentVersion(0);
