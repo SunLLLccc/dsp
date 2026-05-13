@@ -10,7 +10,7 @@
           <el-input v-model="searchForm.systemName" placeholder="请输入所属系统" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable>
+          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width:160px">
             <el-option label="草稿" :value="0" />
             <el-option label="待审批" :value="1" />
             <el-option label="已驳回" :value="2" />
@@ -28,7 +28,7 @@
     <!-- 操作栏 -->
     <el-card>
       <div class="mb-16">
-        <el-button type="primary" @click="openCreateDialog">新增XML模板</el-button>
+        <el-button type="primary" @click="openCreateDialog" v-role="'USER'">新增XML模板</el-button>
       </div>
 
       <!-- 表格 -->
@@ -42,14 +42,14 @@
             <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="updatedTime" label="更新时间" width="180" />
+        <el-table-column prop="updatedTime" label="更新时间" width="180" :formatter="fmtTimeCol" />
         <el-table-column label="操作" fixed="right" width="320">
           <template #default="{ row }">
             <el-button size="small" @click="viewXml(row)">查看</el-button>
-            <el-button size="small" type="primary" @click="openEditDialog(row)">修改</el-button>
+            <el-button size="small" type="primary" @click="openEditDialog(row)" v-role="'USER'">修改</el-button>
             <el-button size="small" @click="showHistory(row)">历史</el-button>
-            <el-button size="small" type="success" @click="handlePublish(row)" v-if="row.status === 0">发布</el-button>
-            <el-button size="small" type="warning" @click="handleOffline(row)" v-if="row.status === 3">下线</el-button>
+            <el-button size="small" type="success" @click="handlePublish(row)" v-if="row.status === 0" v-role="'DEPT_MANAGER'">发布</el-button>
+            <el-button size="small" type="warning" @click="handleOffline(row)" v-if="row.status === 3" v-role="'DEPT_MANAGER'">下线</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -133,7 +133,10 @@
 
     <!-- XML 查看弹窗 -->
     <el-dialog v-model="viewDialogVisible" :title="`XML配置 - ${viewTransno}`" width="800px">
-      <el-input type="textarea" :rows="22" :model-value="viewXmlContent" readonly style="font-family:monospace" />
+      <div class="code-view">
+        <div class="code-lines"><span v-for="n in viewXmlLineCount" :key="n" class="code-ln">{{ n }}</span></div>
+        <pre class="code-text">{{ viewXmlContent }}</pre>
+      </div>
     </el-dialog>
 
     <!-- 历史版本弹窗 -->
@@ -142,14 +145,25 @@
         <el-table-column prop="versionNo" label="版本号" width="80" />
         <el-table-column prop="changeLog" label="变更说明" show-overflow-tooltip />
         <el-table-column prop="createdBy" label="创建人" width="100" />
-        <el-table-column prop="createdTime" label="创建时间" width="170" />
-        <el-table-column label="操作" width="100">
+        <el-table-column prop="createdTime" label="创建时间" width="170" :formatter="fmtTimeCol" />
+        <el-table-column label="操作" width="180">
           <template #default="{ row }">
-            <el-button size="small" @click="viewHistoryXml(row)">查看XML</el-button>
+            <el-button size="small" @click="viewHistoryXml(row)">查看</el-button>
+            <el-button size="small" type="primary" @click="compareWithCurrent(row)">对比当前</el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-dialog>
+
+    <!-- XML 版本对比弹窗 -->
+    <XmlCompareDialog
+      v-model="xmlCompareVisible"
+      :title="`XML 对比 - V${compareVersionNo} vs 当前版本`"
+      :left-label="`V${compareVersionNo}`"
+      right-label="当前版本"
+      :left-xml="compareLeftXml"
+      :right-xml="compareRightXml"
+    />
   </div>
 </template>
 
@@ -158,6 +172,9 @@ import { ref, computed, onMounted } from 'vue'
 import { templateApi, interfaceApi } from '../../api'
 import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE } from '../../constants/status'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { fmtTime } from '../../utils/format'
+import XmlCompareDialog from '../../components/XmlCompareDialog.vue'
+import { hasAnyRole } from '../../directives/role'
 
 // 列表
 const tableData = ref([])
@@ -166,6 +183,8 @@ const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', systemName: '', 
 
 const statusText = (s) => INTERFACE_STATUS[s] || '未知'
 const statusType = (s) => INTERFACE_STATUS_TYPE[s] || 'info'
+
+function fmtTimeCol(_row, _col, val) { return fmtTime(val) }
 
 // 编辑弹窗
 const editDialogVisible = ref(false)
@@ -181,11 +200,19 @@ const editDialogTitle = computed(() => isEditMode.value ? '修改XML模板' : '�
 const viewDialogVisible = ref(false)
 const viewXmlContent = ref('')
 const viewTransno = ref('')
+const viewXmlLineCount = computed(() => (viewXmlContent.value || '').split('\n').length)
 
 // 历史弹窗
 const historyDialogVisible = ref(false)
 const historyTransno = ref('')
 const historyData = ref([])
+
+// XML 对比
+const xmlCompareVisible = ref(false)
+const compareVersionNo = ref('')
+const compareLeftXml = ref('')
+const compareRightXml = ref('')
+const currentTemplateId = ref(null)
 
 async function loadData() {
   const res = await templateApi.list(searchForm.value)
@@ -325,6 +352,7 @@ async function handleOffline(row) {
 
 async function showHistory(row) {
   historyTransno.value = row.transno
+  currentTemplateId.value = row.id
   try {
     const res = await templateApi.historyByTransno(row.transno)
     historyData.value = res.data || []
@@ -340,10 +368,58 @@ function viewHistoryXml(row) {
   viewDialogVisible.value = true
 }
 
+async function compareWithCurrent(row) {
+  compareVersionNo.value = row.versionNo
+  compareLeftXml.value = row.xmlContent || ''
+  try {
+    const res = await templateApi.detail(currentTemplateId.value)
+    compareRightXml.value = res.data?.xmlContent || ''
+  } catch {
+    compareRightXml.value = ''
+  }
+  xmlCompareVisible.value = true
+}
+
 onMounted(() => loadData())
 </script>
 
 <style scoped>
 .mb-16 { margin-bottom: 16px; }
 .mt-16 { margin-top: 16px; }
+.code-view {
+  display: flex;
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  background: #fafafa;
+}
+.code-lines {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  background: #f5f5f5;
+  border-right: 1px solid #ebeef5;
+  text-align: right;
+  user-select: none;
+  flex-shrink: 0;
+}
+.code-ln {
+  display: block;
+  padding: 0 8px;
+  line-height: 1.5;
+  font-size: 13px;
+  color: #b0b0b0;
+  font-family: Consolas, Monaco, monospace;
+}
+.code-text {
+  margin: 0;
+  padding: 8px 12px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre;
+  flex: 1;
+  min-width: 0;
+}
 </style>

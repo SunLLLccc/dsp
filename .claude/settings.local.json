@@ -11,7 +11,12 @@
       "Bash(git config *)",
       "Bash(git merge *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(mvn compile *)",
+      "Bash(rm -rf target/classes target/test-classes target/maven-status)",
+      "Bash(ls target/)",
+      "Bash(npx vite *)"
     ]
   }
 }

@@ -78,3 +78,53 @@ export const auditApi = {
   list: (params) => request.get('/audit/list', { params })
 }
 
+// 用户管理API
+export const userApi = {
+  list: (params) => request.get('/user/list', { params }),
+  detail: (id) => request.get(`/user/${id}`),
+  create: (data) => request.post('/user', data),
+  update: (id, data) => request.put(`/user/${id}`, data),
+  resetPassword: (id, password) => request.put(`/user/${id}/password`, { password }),
+  updateStatus: (id, status) => request.put(`/user/${id}/status`, { status }),
+  delete: (id) => request.delete(`/user/${id}`),
+  assignRoles: (id, roleIds) => request.post(`/user/${id}/roles`, { roleIds })
+}
+
+// 部门管理API
+export const deptApi = {
+  tree: () => request.get('/dept/tree'),
+  create: (data) => request.post('/dept', data),
+  update: (id, data) => request.put(`/dept/${id}`, data),
+  delete: (id) => request.delete(`/dept/${id}`)
+}
+
+// 角色管理API
+export const roleApi = {
+  list: () => request.get('/role/list')
+}
+
+// 系统管理API
+export const systemApi = {
+  list: (params) => request.get('/system/list', { params }),
+  create: (data) => request.post('/system', data),
+  update: (id, data) => request.put(`/system/${id}`, data),
+  delete: (id) => request.delete(`/system/${id}`)
+}
+
+// 配置导入导出API
+export const configApi = {
+  exportSingle: (transno) => request.get('/config/export', { params: { transno } }),
+  exportBatch: (transnos) => request.post('/config/export/batch', { transnos }),
+  importConfig: (data) => request.post('/config/import', data)
+}
+
+// 接口申请API
+export const applicationApi = {
+  submit: (data) => request.post('/approval/application', data),
+  myList: (params) => request.get('/approval/my-applications', { params }),
+  pendingApproval: (params) => request.get('/approval/pending-approval', { params }),
+  approvedList: (params) => request.get('/approval/approved-list', { params }),
+  approve: (id) => request.post(`/approval/application/${id}/approve`),
+  reject: (id, data) => request.post(`/approval/application/${id}/reject`, data)
+}
+

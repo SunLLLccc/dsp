@@ -1,0 +1,156 @@
+package com.sunlc.dsp.engine.executor;
+
+import com.sunlc.dsp.engine.function.FunctionRegistry;
+import com.sunlc.dsp.engine.model.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+
+@Slf4j
+@Component
+public class ResultMapper {
+
+    public Object mapResult(List<Map<String, Object>> queryResult, ResultMapConfig resultMap) {
+        if (queryResult == null || queryResult.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        if (resultMap.getFields().isEmpty()) {
+            if (queryResult.size() == 1) {
+                return queryResult.get(0);
+            }
+            return queryResult;
+        }
+
+        List<Map<String, Object>> mappedList = new ArrayList<>();
+        for (Map<String, Object> row : queryResult) {
+            Map<String, Object> mappedRow = new LinkedHashMap<>();
+            for (ResultMapConfig.FieldMapping field : resultMap.getFields()) {
+                Object value = row.get(field.getColumn());
+                if (field.getFunction() != null && !field.getFunction().isEmpty()) {
+                    value = applyFunction(field.getFunction(), value);
+                }
+                mappedRow.put(field.getName(), value);
+            }
+            mappedList.add(mappedRow);
+        }
+
+        if (mappedList.size() == 1) {
+            return mappedList.get(0);
+        }
+        return mappedList;
+    }
+
+    @SuppressWarnings("unchecked")
+    public Object buildResponse(ResponseDataConfig config, Map<String, Object> mappedResults) {
+        if (config == null) {
+            return mappedResults;
+        }
+
+        if (config.getFields().isEmpty() && config.getResultMap() != null) {
+            Object data = mappedResults.get(config.getResultMap());
+            return data != null ? data : Collections.emptyMap();
+        }
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        for (ResponseFieldConfig field : config.getFields()) {
+            Object value = resolveFieldValue(field, config.getResultMap(), mappedResults);
+            if (field.getFunction() != null && !field.getFunction().isEmpty()) {
+                value = applyFunction(field.getFunction(), value);
+            }
+            value = applyAs(field, value);
+            response.put(field.getName(), value);
+        }
+
+        return response;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object resolveFieldValue(ResponseFieldConfig field, String defaultResultMap,
+                                      Map<String, Object> mappedResults) {
+        Object data;
+
+        // 优先将 mapTo 视为 resultMap ID 引用（从 mappedResults 中获取整个 resultMap 的数据）
+        if (field.getMapTo() != null && !field.getMapTo().isEmpty() && mappedResults.containsKey(field.getMapTo())) {
+            data = mappedResults.get(field.getMapTo());
+        } else if (defaultResultMap != null) {
+            data = mappedResults.get(defaultResultMap);
+        } else {
+            return null;
+        }
+
+        if (data == null) {
+            return null;
+        }
+
+        // 当 mapTo 不是 resultMap ID 时，视为从默认 resultMap 数据中按键提取子字段
+        if (field.getMapTo() != null && !field.getMapTo().isEmpty() && !mappedResults.containsKey(field.getMapTo())) {
+            if (data instanceof Map) {
+                return ((Map<String, Object>) data).get(field.getMapTo());
+            } else if (data instanceof List) {
+                List<Object> extracted = new ArrayList<>();
+                for (Map<String, Object> item : (List<Map<String, Object>>) data) {
+                    extracted.add(item.get(field.getMapTo()));
+                }
+                return extracted;
+            }
+        }
+
+        return data;
+    }
+
+    private Object applyFunction(String function, Object value) {
+        try {
+            if (function.startsWith("fn:")) {
+                String funcExpr = function.substring(3);
+                // 解析函数名和参数，格式: fn:FUNC_NAME 或 fn:FUNC_NAME,arg1,arg2,...
+                String[] parts = funcExpr.split(",");
+                String funcName = parts[0].trim();
+
+                if (!FunctionRegistry.exists(funcName)) {
+                    log.warn("函数不存在: {}, 原值保留: {}", funcName, value);
+                    return value;
+                }
+
+                // 组装参数：第一个参数为行数据值，后续为配置中的额外参数
+                Object[] params = new Object[parts.length];
+                params[0] = value;
+                for (int i = 1; i < parts.length; i++) {
+                    params[i] = parts[i].trim();
+                }
+
+                Object result = FunctionRegistry.invoke(funcName, params);
+                log.debug("函数调用成功: {}, 参数: {}, 结果: {}", funcName, Arrays.toString(params), result);
+                return result;
+            }
+        } catch (Exception e) {
+            log.warn("函数执行失败: function={}, value={}", function, value, e);
+        }
+        return value;
+    }
+
+    /**
+     * 根据 as 属性控制返回类型：
+     * - 空或 "list" → 保持 List<Map> 不变
+     * - "map" → 取第一条作为单对象返回
+     */
+    @SuppressWarnings("unchecked")
+    private Object applyAs(ResponseFieldConfig field, Object data) {
+        if (data == null) return null;
+        String as = field.getAs();
+        boolean wantMap = "map".equalsIgnoreCase(as);
+        boolean wantList = as == null || as.isEmpty() || "list".equalsIgnoreCase(as);
+
+        if (wantMap && data instanceof List) {
+            List<Map<String, Object>> list = (List<Map<String, Object>>) data;
+            return list.isEmpty() ? null : list.get(0);
+        }
+        if (wantList && data instanceof Map) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            list.add((Map<String, Object>) data);
+            return list;
+        }
+        return data;
+    }
+}

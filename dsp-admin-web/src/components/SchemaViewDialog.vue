@@ -5,13 +5,10 @@
         <div class="schema-editor-container" ref="editorContainer">
           <div class="schema-left" :style="{ width: leftWidth + 'px' }">
             <div class="schema-panel-header">JSON</div>
-            <el-input
-              :model-value="formatJson(inputSchema)"
-              type="textarea"
-              :rows="18"
-              readonly
-              style="font-family:monospace"
-            />
+            <div class="code-view">
+              <div class="code-lines"><span v-for="n in inputLineCount" :key="n" class="code-ln">{{ n }}</span></div>
+              <pre class="code-text">{{ formatJson(inputSchema) }}</pre>
+            </div>
           </div>
           <div class="schema-divider" @mousedown="startDrag" />
           <div class="schema-right" :style="{ width: rightWidth + 'px' }">
@@ -32,13 +29,10 @@
         <div class="schema-editor-container">
           <div class="schema-left" :style="{ width: leftWidth + 'px' }">
             <div class="schema-panel-header">JSON</div>
-            <el-input
-              :model-value="formatJson(outputSchema)"
-              type="textarea"
-              :rows="18"
-              readonly
-              style="font-family:monospace"
-            />
+            <div class="code-view">
+              <div class="code-lines"><span v-for="n in outputLineCount" :key="n" class="code-ln">{{ n }}</span></div>
+              <pre class="code-text">{{ formatJson(outputSchema) }}</pre>
+            </div>
           </div>
           <div class="schema-divider" @mousedown="startDrag" />
           <div class="schema-right" :style="{ width: rightWidth + 'px' }">
@@ -115,6 +109,8 @@ onBeforeUnmount(stopDrag)
 // JSON → 字段结构
 const inputFields = computed(() => parseFields(props.inputSchema))
 const outputFields = computed(() => parseFields(props.outputSchema))
+const inputLineCount = computed(() => (formatJson(props.inputSchema) || '').split('\n').length)
+const outputLineCount = computed(() => (formatJson(props.outputSchema) || '').split('\n').length)
 
 function parseFields(schemaStr) {
   if (!schemaStr) return []
@@ -213,6 +209,42 @@ watch(() => props.modelValue, (v) => {
 .schema-tree {
   flex: 1;
   overflow-y: auto;
+}
+.code-view {
+  display: flex;
+  max-height: 430px;
+  overflow: auto;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  background: #fafafa;
+}
+.code-lines {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  background: #f5f5f5;
+  border-right: 1px solid #ebeef5;
+  text-align: right;
+  user-select: none;
+  flex-shrink: 0;
+}
+.code-ln {
+  display: block;
+  padding: 0 8px;
+  line-height: 1.5;
+  font-size: 13px;
+  color: #b0b0b0;
+  font-family: Consolas, Monaco, monospace;
+}
+.code-text {
+  margin: 0;
+  padding: 8px 12px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre;
+  flex: 1;
+  min-width: 0;
 }
 .schema-empty {
   text-align: center;
