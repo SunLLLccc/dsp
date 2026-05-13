@@ -7,7 +7,7 @@
           <el-input v-model="searchForm.dsName" placeholder="请输入数据源名称" clearable />
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="searchForm.dsType" placeholder="全部" clearable>
+          <el-select v-model="searchForm.dsType" placeholder="全部" clearable style="width:110px">
             <el-option label="MySQL" value="MYSQL" />
             <el-option label="Doris" value="DORIS" />
             <el-option label="MongoDB" value="MONGODB" />
