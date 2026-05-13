@@ -66,14 +66,21 @@ jobs:
         run: |
           nohup java -jar dsp-parent/dsp-data-service/target/dsp-data-service-1.0.0.jar > /tmp/dsp.log 2>&1 &
           echo "Waiting for port 8080..."
+          READY=0
           for i in $(seq 1 60); do
             if nc -z localhost 8080 2>/dev/null; then
-              echo "Service ready"
+              READY=1
+              echo "Service ready after ${i}s"
               sleep 3
               break
             fi
             sleep 1
           done
+          if [ "$READY" -eq 0 ]; then
+            echo "::error::Service failed to start within 60s"
+            tail -100 /tmp/dsp.log
+            exit 1
+          fi
         env:
           DSP_DB_HOST: localhost
           DSP_DB_PORT: 3306
