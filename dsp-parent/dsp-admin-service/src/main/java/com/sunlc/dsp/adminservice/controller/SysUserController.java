@@ -41,6 +41,8 @@ public class SysUserController {
         Page<SysUser> result = sysUserService.page(page, wrapper);
         // 清除密码字段
         result.getRecords().forEach(u -> u.setPassword(null));
+        // 批量填充角色
+        sysUserService.fillUserRoles(result.getRecords());
         return ApiResponse.success("USER", "LIST", result);
     }
 
@@ -49,6 +51,7 @@ public class SysUserController {
         SysUser user = sysUserService.getById(id);
         if (user != null) {
             user.setPassword(null);
+            sysUserService.fillUserRoles(java.util.Collections.singletonList(user));
         }
         return ApiResponse.success("USER", "DETAIL", user);
     }

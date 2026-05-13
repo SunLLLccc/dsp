@@ -46,6 +46,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '部门管理' })
+
 import { ref, onMounted } from 'vue'
 import { deptApi } from '../../api'
 import { ElMessage, ElMessageBox } from 'element-plus'

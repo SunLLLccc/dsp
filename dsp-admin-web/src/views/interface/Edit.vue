@@ -111,6 +111,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '接口编辑' })
+
 import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { interfaceApi, systemApi } from '../../api'

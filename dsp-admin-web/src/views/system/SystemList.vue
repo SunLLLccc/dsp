@@ -105,6 +105,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '系统管理' })
+
 import { ref, onMounted } from 'vue'
 import { systemApi, deptApi } from '../../api'
 import { ElMessage, ElMessageBox } from 'element-plus'

@@ -85,4 +85,31 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser>
         user.setPassword(passwordEncoder.encode(newPassword));
         updateById(user);
     }
+
+    @Override
+    public void fillUserRoles(List<SysUser> users) {
+        if (users == null || users.isEmpty()) return;
+
+        List<Long> userIds = users.stream().map(SysUser::getId).collect(Collectors.toList());
+        List<SysUserRole> userRoles = sysUserRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRole>().in(SysUserRole::getUserId, userIds));
+
+        if (userRoles.isEmpty()) return;
+
+        List<Long> roleIds = userRoles.stream().map(SysUserRole::getRoleId).distinct().collect(Collectors.toList());
+        List<SysRole> roles = sysRoleMapper.selectBatchIds(roleIds);
+        java.util.Map<Long, SysRole> roleMap = roles.stream().collect(Collectors.toMap(SysRole::getId, r -> r));
+
+        java.util.Map<Long, java.util.List<SysRole>> userRoleMap = new java.util.HashMap<>();
+        for (SysUserRole ur : userRoles) {
+            userRoleMap.computeIfAbsent(ur.getUserId(), k -> new java.util.ArrayList<>())
+                    .add(roleMap.get(ur.getRoleId()));
+        }
+
+        for (SysUser user : users) {
+            java.util.List<SysRole> userRolesList = userRoleMap.getOrDefault(user.getId(), java.util.Collections.emptyList());
+            user.setRoleNames(userRolesList.stream().map(SysRole::getRoleName).collect(Collectors.toList()));
+            user.setRoleIds(userRolesList.stream().map(SysRole::getId).collect(Collectors.toList()));
+        }
+    }
 }

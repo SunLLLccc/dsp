@@ -1,12 +1,14 @@
 package com.sunlc.dsp.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @TableName("sys_user")
@@ -22,4 +24,9 @@ public class SysUser {
     private LocalDateTime updatedTime;
     @TableLogic
     private Integer deleted;
+
+    @TableField(exist = false)
+    private List<String> roleNames;
+    @TableField(exist = false)
+    private List<Long> roleIds;
 }

@@ -102,6 +102,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '审批管理' })
+
 import { ref, onMounted } from 'vue'
 import { approvalApi, interfaceApi } from '../../api'
 import { APPROVAL_STATUS, APPROVAL_STATUS_TYPE } from '../../constants/status'

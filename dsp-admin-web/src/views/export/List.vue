@@ -51,6 +51,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '导出管理' })
+
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { exportApi } from '../../api'

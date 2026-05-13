@@ -64,6 +64,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '审计日志' })
+
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { auditApi } from '../../api'
