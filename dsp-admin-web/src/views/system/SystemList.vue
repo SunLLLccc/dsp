@@ -171,13 +171,20 @@ function handleClearDeptFilter() {
 
 // 加载系统列表
 async function loadData() {
-  const params = { pageNum: searchForm.value.pageNum, pageSize: searchForm.value.pageSize }
+  const params = {}
   if (searchForm.value.deptId) {
     params.deptId = searchForm.value.deptId
   }
   const res = await systemApi.list(params)
-  tableData.value = res.data?.records || []
-  total.value = res.data?.total || 0
+  const data = res.data
+  // 后端返回 List（非分页对象）
+  if (Array.isArray(data)) {
+    tableData.value = data
+    total.value = data.length
+  } else {
+    tableData.value = data?.records || []
+    total.value = data?.total || 0
+  }
 }
 
 // 新增弹窗
