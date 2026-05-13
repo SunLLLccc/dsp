@@ -93,6 +93,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '数据源管理' })
+
 import { ref, computed, onMounted } from 'vue'
 import { datasourceApi } from '../../api'
 import { ElMessage, ElMessageBox } from 'element-plus'

@@ -168,6 +168,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: 'XML模板管理' })
+
 import { ref, computed, onMounted } from 'vue'
 import { templateApi, interfaceApi } from '../../api'
 import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE } from '../../constants/status'

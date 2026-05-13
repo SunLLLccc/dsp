@@ -62,7 +62,7 @@ public class InterfaceTemplateController {
     }
 
     @PostMapping("/{id}/publish")
-    @RequireRole({"DEPT_MANAGER"})
+    @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<Void> publish(@PathVariable Long id, @RequestBody Map<String, String> body) {
         interfaceTemplateService.publishTemplate(id, body.get("operator"));
         return ApiResponse.success("TEMPLATE_PUBLISH", "", null);

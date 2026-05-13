@@ -168,6 +168,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '接口管理' })
+
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { interfaceApi, configApi, systemApi } from '../../api'

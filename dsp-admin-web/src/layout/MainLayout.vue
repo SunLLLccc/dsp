@@ -70,24 +70,42 @@
           <el-button text @click="handleLogout">退出登录</el-button>
         </div>
       </el-header>
+      <TabBar />
       <el-main>
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <keep-alive :include="tabStore.cachedNames" :max="15">
+            <component :is="Component" />
+          </keep-alive>
+        </router-view>
       </el-main>
     </el-container>
   </el-container>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useTabStore } from '../stores/tabs'
 import { Document, Coin, Key, Download, Monitor, Notebook, Stamp, Files, Setting, User, OfficeBuilding, Promotion } from '@element-plus/icons-vue'
-import { hasAnyRole } from '../directives/role'
+import TabBar from './TabBar.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const activeMenu = computed(() => route.path)
+const tabStore = useTabStore()
+
+const activeMenu = computed(() => {
+  if (route.path.startsWith('/interface/edit')) return '/interface'
+  if (route.path.startsWith('/system/')) return route.path
+  return route.path
+})
+
+watch(() => route.fullPath, () => {
+  if (route.name && route.path !== '/login') {
+    tabStore.addTab(route)
+  }
+}, { immediate: true })
 
 function handleLogout() {
   authStore.logout()
@@ -97,7 +115,7 @@ function handleLogout() {
 
 <style scoped>
 .layout-container { height: 100vh; }
-.layout-header { background: #fff; border-bottom: 1px solid #e6e6e6; display: flex; align-items: center; justify-content: space-between; }
+.layout-header { background: #fff; border-bottom: 1px solid #e6e6e6; display: flex; align-items: center; justify-content: space-between; height: 48px; }
 .header-title { font-size: 16px; font-weight: 600; color: #333; }
 .header-right { display: flex; align-items: center; gap: 12px; }
 .header-user { font-size: 14px; color: #666; }

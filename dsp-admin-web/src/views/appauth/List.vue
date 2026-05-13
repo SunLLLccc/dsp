@@ -57,6 +57,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '应用授权' })
+
 import { ref, onMounted } from 'vue'
 import { appAuthApi } from '../../api'
 import { ElMessage, ElMessageBox } from 'element-plus'

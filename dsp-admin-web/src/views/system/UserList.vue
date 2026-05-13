@@ -28,8 +28,8 @@
         </el-table-column>
         <el-table-column label="角色" min-width="200">
           <template #default="{ row }">
-            <el-tag v-for="r in userRoleMap[row.id] || []" :key="r" size="small" class="mr-4">{{ r }}</el-tag>
-            <span v-if="!userRoleMap[row.id]?.length">-</span>
+            <el-tag v-for="r in row.roleNames || []" :key="r" size="small" class="mr-4">{{ r }}</el-tag>
+            <span v-if="!row.roleNames?.length">-</span>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="80">
@@ -99,6 +99,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '用户管理' })
+
 import { ref, onMounted } from 'vue'
 import { userApi, deptApi, roleApi } from '../../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -109,7 +111,6 @@ const total = ref(0)
 const searchForm = ref({ pageNum: 1, pageSize: 10, username: '', realName: '' })
 const deptList = ref([])
 const deptNameMap = ref({})
-const userRoleMap = ref({})
 const allRoles = ref([])
 
 const editDialogVisible = ref(false)
@@ -128,15 +129,6 @@ async function loadData() {
   const res = await userApi.list(params)
   tableData.value = res.data?.records || []
   total.value = res.data?.total || 0
-  // 加载每个用户的角色
-  for (const u of tableData.value) {
-    if (u.id) {
-      const detail = await userApi.detail(u.id).catch(() => null)
-      if (detail?.data) {
-        // 从detail中获取角色（暂时只显示ids，后续可优化接口）
-      }
-    }
-  }
 }
 
 async function loadRoles() {
@@ -224,9 +216,7 @@ async function handleDelete(row) {
 
 async function openRoleDialog(row) {
   currentUserId.value = row.id
-  // 获取当前用户的角色（从detail接口或单独获取）
-  // 暂时先加载已有角色
-  selectedRoleIds.value = []
+  selectedRoleIds.value = row.roleIds ? [...row.roleIds] : []
   roleDialogVisible.value = true
 }
 

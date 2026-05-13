@@ -26,6 +26,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '接口调试' })
+
 import { ref } from 'vue'
 import { interfaceApi } from '../../api'
 import { ElMessage } from 'element-plus'

@@ -11,4 +11,5 @@ public interface SysUserService extends IService<SysUser> {
     void assignRoles(Long userId, List<Long> roleIds);
     void createUser(SysUser user);
     void resetPassword(Long userId, String newPassword);
+    void fillUserRoles(List<SysUser> users);
 }

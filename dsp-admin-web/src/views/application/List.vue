@@ -188,6 +188,8 @@
 </template>
 
 <script setup>
+defineOptions({ name: '接口申请' })
+
 import { ref, onMounted } from 'vue'
 import { interfaceApi, systemApi, applicationApi } from '../../api'
 import { useAuthStore } from '../../stores/auth'
