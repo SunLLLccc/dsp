@@ -32,10 +32,13 @@
     <el-card>
       <div class="mb-16">
         <el-button type="primary" @click="handleCreate" v-role="'USER'">新增接口</el-button>
+        <el-button type="success" @click="handleExportSelected" :disabled="!selectedRows.length">导出选中</el-button>
+        <el-button type="warning" @click="openImportDialog" v-role="'IMPORTER'">导入配置</el-button>
       </div>
 
       <!-- 表格 -->
-      <el-table :data="tableData" border stripe>
+      <el-table :data="tableData" border stripe @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="45" />
         <el-table-column prop="transno" label="接口编码" width="200" />
         <el-table-column prop="name" label="接口名称" width="180" />
         <el-table-column prop="systemName" label="所属系统" width="150" />
@@ -118,19 +121,61 @@
       :right-input="compareRightInput"
       :right-output="compareRightOutput"
     />
+
+    <!-- 导入配置弹窗 -->
+    <el-dialog v-model="importDialogVisible" title="导入配置" width="600px" destroy-on-close>
+      <el-alert type="info" :closable="false" class="mb-16">
+        请选择从测试环境导出的 JSON 文件。导入时接口信息、Schema和模板XML会创建新版本。
+      </el-alert>
+      <el-upload
+        ref="uploadRef"
+        :auto-upload="false"
+        :limit="1"
+        accept=".json"
+        :on-change="handleFileChange"
+        :on-remove="() => importFileData = null"
+        drag
+      >
+        <el-icon style="font-size:40px;color:#c0c4cc"><UploadFilled /></el-icon>
+        <div>拖拽文件到此处，或<em>点击上传</em></div>
+        <template #tip>
+          <div class="el-upload__tip">仅支持 .json 文件</div>
+        </template>
+      </el-upload>
+      <el-form class="mt-16" v-if="importPreview.length">
+        <el-form-item label="变更说明">
+          <el-input v-model="importChangeLog" placeholder="导入说明" />
+        </el-form-item>
+        <el-form-item label="待导入接口">
+          <div v-for="item in importPreview" :key="item.transno" class="import-preview-item">
+            <el-tag>{{ item.transno }}</el-tag>
+            <span class="ml-8">{{ item.name }}</span>
+            <el-tag v-if="item.exists" type="warning" size="small" class="ml-8">已存在(将创建新版本)</el-tag>
+            <el-tag v-else type="success" size="small" class="ml-8">新建</el-tag>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleImport" :disabled="!importFileData" :loading="importing">
+          确认导入
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { interfaceApi } from '../../api'
+import { interfaceApi, configApi } from '../../api'
 import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE, VERSION_STATUS, VERSION_STATUS_TYPE } from '../../constants/status'
 import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fmtTime, formatJson } from '../../utils/format'
 import SchemaViewDialog from '../../components/SchemaViewDialog.vue'
 import SchemaCompareDialog from '../../components/SchemaCompareDialog.vue'
+import { UploadFilled } from '@element-plus/icons-vue'
 import { hasAnyRole } from '../../directives/role'
 
 const router = useRouter()
@@ -277,10 +322,96 @@ function fmtTimeCol(_row, _col, val) {
   return fmtTime(val)
 }
 
+// 选择行
+const selectedRows = ref([])
+function handleSelectionChange(rows) {
+  selectedRows.value = rows
+}
+
+// 导出选中
+async function handleExportSelected() {
+  if (!selectedRows.value.length) {
+    ElMessage.warning('请先选择要导出的接口')
+    return
+  }
+  const transnos = selectedRows.value.map(r => r.transno)
+  try {
+    const res = await configApi.exportBatch(transnos)
+    const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `dsp-config-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success(`已导出 ${transnos.length} 个接口配置`)
+  } catch {
+    ElMessage.error('导出失败')
+  }
+}
+
+// 导入
+const importDialogVisible = ref(false)
+const importFileData = ref(null)
+const importPreview = ref([])
+const importChangeLog = ref('从测试环境导入')
+const importing = ref(false)
+const uploadRef = ref(null)
+
+function openImportDialog() {
+  importFileData.value = null
+  importPreview.value = []
+  importChangeLog.value = '从测试环境导入'
+  importDialogVisible.value = true
+}
+
+function handleFileChange(file) {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result)
+      // 支持单文件多配置
+      const configs = data.configs || [data]
+      importFileData.value = configs
+      importPreview.value = configs.map(c => ({
+        transno: c.interfaceInfo?.transno || '',
+        name: c.interfaceInfo?.name || '',
+        exists: tableData.value.some(t => t.transno === c.interfaceInfo?.transno)
+      }))
+    } catch {
+      ElMessage.error('JSON文件解析失败')
+      importFileData.value = null
+    }
+  }
+  reader.readAsText(file.raw)
+}
+
+async function handleImport() {
+  if (!importFileData.value) return
+  importing.value = true
+  let successCount = 0
+  let failCount = 0
+  for (const config of importFileData.value) {
+    try {
+      config.changeLog = importChangeLog.value
+      await configApi.importConfig(config)
+      successCount++
+    } catch {
+      failCount++
+    }
+  }
+  importing.value = false
+  importDialogVisible.value = false
+  ElMessage.success(`导入完成：成功 ${successCount} 个${failCount ? '，失败 ' + failCount + ' 个' : ''}`)
+  loadData()
+}
+
 onMounted(() => loadData())
 </script>
 
 <style scoped>
 .mb-16 { margin-bottom: 16px; }
 .mt-16 { margin-top: 16px; }
+.ml-8 { margin-left: 8px; }
+.import-preview-item { margin-bottom: 4px; display: flex; align-items: center; }
 </style>
