@@ -7,10 +7,7 @@ import com.sunlc.dsp.mapper.SysDeptMapper;
 import com.sunlc.dsp.service.SysDeptService;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept>
@@ -18,9 +15,8 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept>
 
     @Override
     public List<SysDept> getDeptTree() {
-        List<SysDept> all = list(new LambdaQueryWrapper<SysDept>()
+        return list(new LambdaQueryWrapper<SysDept>()
                 .orderByAsc(SysDept::getSortOrder));
-        return buildTree(all, 0L);
     }
 
     @Override
@@ -38,10 +34,4 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept>
         removeById(deptId);
     }
 
-    private List<SysDept> buildTree(List<SysDept> all, Long parentId) {
-        Map<Long, List<SysDept>> grouped = all.stream()
-                .collect(Collectors.groupingBy(SysDept::getParentId));
-        List<SysDept> roots = grouped.getOrDefault(parentId, new ArrayList<>());
-        return roots;
-    }
 }
