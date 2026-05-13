@@ -47,7 +47,6 @@ public class ConfigImportExportController {
         infoMap.put("transno", info.getTransno());
         infoMap.put("name", info.getName());
         infoMap.put("systemName", info.getSystemName());
-        infoMap.put("systemCode", info.getSystemCode());
         infoMap.put("description", info.getDescription());
         result.put("interfaceInfo", infoMap);
 
@@ -143,7 +142,6 @@ public class ConfigImportExportController {
             newInfo.setTransno(transno);
             newInfo.setName((String) infoMap.get("name"));
             newInfo.setSystemName((String) infoMap.get("systemName"));
-            newInfo.setSystemCode((String) infoMap.get("systemCode"));
             newInfo.setDescription((String) infoMap.get("description"));
             newInfo.setStatus(0);
             newInfo.setCurrentVersion(0);
@@ -192,7 +190,6 @@ public class ConfigImportExportController {
                 if (info != null) {
                     newTemplate.setInterfaceName(info.getName());
                     newTemplate.setSystemName(info.getSystemName());
-                    newTemplate.setSystemCode(info.getSystemCode());
                 }
                 interfaceTemplateService.save(newTemplate);
                 result.put("template", "新建模板成功");

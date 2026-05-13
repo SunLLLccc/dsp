@@ -10,8 +10,8 @@
           <el-input v-model="searchForm.name" placeholder="请输入接口名称" clearable />
         </el-form-item>
         <el-form-item label="所属系统">
-          <el-select v-model="searchForm.systemCode" placeholder="全部" clearable filterable style="width:160px">
-            <el-option v-for="sys in systemOptions" :key="sys.code" :label="sys.name" :value="sys.code" />
+          <el-select v-model="searchForm.systemName" placeholder="全部" clearable filterable style="width:160px">
+            <el-option v-for="sys in systemOptions" :key="sys.id" :label="sys.name" :value="sys.name" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
@@ -184,7 +184,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const tableData = ref([])
 const total = ref(0)
-const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', name: '', systemCode: '', status: null })
+const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', name: '', systemName: '', status: null })
 const systemOptions = ref([])
 
 const statusText = (s) => INTERFACE_STATUS[s] || '未知'
@@ -225,7 +225,7 @@ async function loadData() {
 }
 
 function resetSearch() {
-  searchForm.value = { pageNum: 1, pageSize: 10, transno: '', name: '', systemCode: '', status: null }
+  searchForm.value = { pageNum: 1, pageSize: 10, transno: '', name: '', systemName: '', status: null }
   loadData()
 }
 
