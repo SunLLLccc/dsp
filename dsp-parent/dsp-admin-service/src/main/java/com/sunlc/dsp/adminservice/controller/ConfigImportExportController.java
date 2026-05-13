@@ -3,18 +3,21 @@ package com.sunlc.dsp.adminservice.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.sunlc.dsp.adminservice.annotation.RequireRole;
 import com.sunlc.dsp.common.model.ApiResponse;
+import com.sunlc.dsp.common.service.XmlConfigCacheInvalidator;
 import com.sunlc.dsp.entity.*;
+import com.sunlc.dsp.enums.InterfaceStatus;
+import com.sunlc.dsp.enums.VersionStatus;
 import com.sunlc.dsp.service.InterfaceInfoService;
 import com.sunlc.dsp.service.InterfaceTemplateService;
 import com.sunlc.dsp.service.InterfaceVersionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -25,20 +28,17 @@ public class ConfigImportExportController {
     private final InterfaceInfoService interfaceInfoService;
     private final InterfaceVersionService interfaceVersionService;
     private final InterfaceTemplateService interfaceTemplateService;
+    private final XmlConfigCacheInvalidator xmlConfigCacheInvalidator;
 
     private String getCurrentUser(HttpServletRequest request) {
         Object user = request.getAttribute("adminUser");
         return user != null ? user.toString() : "anonymous";
     }
 
-    /**
-     * 导出指定接口的完整配置（接口信息 + 版本Schema + 模板XML）
-     */
     @GetMapping("/export")
     public ApiResponse<Map<String, Object>> exportConfig(@RequestParam String transno) {
         Map<String, Object> result = new LinkedHashMap<>();
 
-        // 接口基本信息
         InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(transno);
         if (info == null) {
             return ApiResponse.error("CONFIG", "EXPORT", "4004", "接口不存在: " + transno);
@@ -51,7 +51,6 @@ public class ConfigImportExportController {
         infoMap.put("description", info.getDescription());
         result.put("interfaceInfo", infoMap);
 
-        // 最新已发布版本的Schema
         List<InterfaceVersion> versions = interfaceVersionService.list(
                 new LambdaQueryWrapper<InterfaceVersion>()
                         .eq(InterfaceVersion::getTransno, transno)
@@ -67,7 +66,6 @@ public class ConfigImportExportController {
             result.put("schema", schemaMap);
         }
 
-        // 模板XML
         InterfaceTemplate template = interfaceTemplateService.getByTransno(transno);
         if (template != null) {
             Map<String, Object> templateMap = new LinkedHashMap<>();
@@ -82,9 +80,6 @@ public class ConfigImportExportController {
         return ApiResponse.success("CONFIG", "EXPORT", result);
     }
 
-    /**
-     * 批量导出多个接口配置
-     */
     @PostMapping("/export/batch")
     public ApiResponse<Map<String, Object>> exportBatch(@RequestBody Map<String, List<String>> body) {
         List<String> transnos = body.get("transnos");
@@ -108,16 +103,18 @@ public class ConfigImportExportController {
     }
 
     /**
-     * 导入配置（版本化导入）
+     * 导入配置 — 直接生效，不需要审批或发布
+     * 新建/覆盖接口，版本和模板直接设为已发布状态，维护历史记录
      */
     @PostMapping("/import")
     @RequireRole({"IMPORTER", "ADMIN"})
+    @Transactional
     public ApiResponse<Map<String, Object>> importConfig(
             @RequestBody Map<String, Object> configData,
             HttpServletRequest request) {
 
         String operator = getCurrentUser(request);
-        String changeLog = (String) configData.getOrDefault("changeLog", "从测试环境导入");
+        String changeLog = (String) configData.getOrDefault("changeLog", "配置导入");
 
         @SuppressWarnings("unchecked")
         Map<String, Object> infoMap = (Map<String, Object>) configData.get("interfaceInfo");
@@ -133,81 +130,95 @@ public class ConfigImportExportController {
         Map<String, Object> result = new LinkedHashMap<>();
         boolean isNew = false;
 
-        // 检查接口是否存在
-        InterfaceInfo existingInfo = interfaceInfoService.getByTransnoAnyStatus(transno);
+        // 1. 新建或更新接口基础信息
+        InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(transno);
 
-        if (existingInfo == null) {
-            // 新建接口
+        if (info == null) {
             isNew = true;
-            InterfaceInfo newInfo = new InterfaceInfo();
-            newInfo.setTransno(transno);
-            newInfo.setName((String) infoMap.get("name"));
-            newInfo.setSystemName((String) infoMap.get("systemName"));
+            info = new InterfaceInfo();
+            info.setTransno(transno);
+            info.setName((String) infoMap.get("name"));
+            info.setSystemName((String) infoMap.get("systemName"));
             Object systemIdVal = infoMap.get("systemId");
             if (systemIdVal instanceof Number) {
-                newInfo.setSystemId(((Number) systemIdVal).longValue());
+                info.setSystemId(((Number) systemIdVal).longValue());
             }
-            newInfo.setDescription((String) infoMap.get("description"));
-            newInfo.setStatus(0);
-            newInfo.setCurrentVersion(0);
-            newInfo.setCreatedBy(operator);
-            newInfo.setCreatedTime(LocalDateTime.now());
-            newInfo.setUpdatedTime(LocalDateTime.now());
-            interfaceInfoService.save(newInfo);
+            info.setDescription((String) infoMap.get("description"));
+            info.setStatus(InterfaceStatus.PUBLISHED.getCode());
+            info.setCurrentVersion(1);
+            info.setCreatedBy(operator);
+            info.setCreatedTime(LocalDateTime.now());
+            info.setUpdatedBy(operator);
+            info.setUpdatedTime(LocalDateTime.now());
+            interfaceInfoService.save(info);
             result.put("interface", "新建接口 " + transno);
         } else {
-            result.put("interface", "接口已存在: " + transno);
+            info.setName((String) infoMap.get("name"));
+            info.setSystemName((String) infoMap.get("systemName"));
+            Object systemIdVal = infoMap.get("systemId");
+            if (systemIdVal instanceof Number) {
+                info.setSystemId(((Number) systemIdVal).longValue());
+            }
+            info.setDescription((String) infoMap.get("description"));
+            info.setStatus(InterfaceStatus.PUBLISHED.getCode());
+            info.setUpdatedBy(operator);
+            info.setUpdatedTime(LocalDateTime.now());
+            interfaceInfoService.updateById(info);
+            result.put("interface", "覆盖接口 " + transno);
         }
 
-        // 导入Schema版本
+        // 2. 导入Schema版本 — 直接发布
         @SuppressWarnings("unchecked")
         Map<String, Object> schemaMap = (Map<String, Object>) configData.get("schema");
         if (schemaMap != null) {
-            InterfaceVersion version = new InterfaceVersion();
-            version.setTransno(transno);
-            version.setInputSchema((String) schemaMap.get("inputSchema"));
-            version.setOutputSchema((String) schemaMap.get("outputSchema"));
-            version.setChangeLog(changeLog);
-            version.setStatus(0);
-            version.setCreatedBy(operator);
-            version.setCreatedTime(LocalDateTime.now());
-            interfaceVersionService.saveSchema(transno, version.getInputSchema(), version.getOutputSchema(), changeLog, operator);
-            result.put("schema", "导入Schema版本成功");
+            InterfaceVersion version = interfaceVersionService.saveSchema(
+                    transno,
+                    (String) schemaMap.get("inputSchema"),
+                    (String) schemaMap.get("outputSchema"),
+                    changeLog,
+                    operator);
+            // 直接设为已发布状态
+            version.setStatus(VersionStatus.PUBLISHED.getCode());
+            version.setPublishedTime(LocalDateTime.now());
+            interfaceVersionService.updateById(version);
+
+            // 更新接口的当前生效版本号
+            info.setCurrentVersion(version.getVersionNo());
+            interfaceInfoService.updateById(info);
+
+            result.put("schema", "导入Schema V" + version.getVersionNo() + " 并直接发布");
         }
 
-        // 导入模板XML
+        // 3. 导入模板XML — 直接发布，维护历史记录
         @SuppressWarnings("unchecked")
         Map<String, Object> templateMap = (Map<String, Object>) configData.get("template");
         if (templateMap != null) {
-            InterfaceTemplate existingTemplate = interfaceTemplateService.getByTransno(transno);
             String xmlContent = (String) templateMap.get("xmlContent");
+            InterfaceTemplate existingTemplate = interfaceTemplateService.getByTransno(transno);
 
             if (existingTemplate == null) {
-                InterfaceTemplate newTemplate = new InterfaceTemplate();
-                newTemplate.setTransno(transno);
-                newTemplate.setXmlContent(xmlContent);
-                newTemplate.setVersionNo(1);
-                newTemplate.setStatus(0);
-                newTemplate.setCreatedBy(operator);
-                newTemplate.setCreatedTime(LocalDateTime.now());
-                newTemplate.setUpdatedTime(LocalDateTime.now());
-                InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(transno);
-                if (info != null) {
-                    newTemplate.setInterfaceName(info.getName());
-                    newTemplate.setSystemName(info.getSystemName());
-                }
-                interfaceTemplateService.save(newTemplate);
-                result.put("template", "新建模板成功");
+                // 新建模板 — 使用 service 方法（自动保存历史）
+                InterfaceTemplate created = interfaceTemplateService.createTemplate(
+                        transno, xmlContent, changeLog, operator);
+                // 直接发布
+                interfaceTemplateService.publishTemplate(created.getId(), operator);
+                result.put("template", "新建模板 V1 并直接发布");
             } else {
-                existingTemplate.setXmlContent(xmlContent);
-                existingTemplate.setUpdatedBy(operator);
-                existingTemplate.setUpdatedTime(LocalDateTime.now());
-                interfaceTemplateService.updateById(existingTemplate);
-                result.put("template", "更新模板成功，版本号: " + existingTemplate.getVersionNo());
+                // 覆盖模板 — updateTemplate 自动保存历史并递增版本号
+                InterfaceTemplate updated = interfaceTemplateService.updateTemplate(
+                        existingTemplate.getId(), xmlContent, changeLog, operator);
+                // 确保已发布状态
+                if (updated.getStatus() != InterfaceStatus.PUBLISHED.getCode()) {
+                    interfaceTemplateService.publishTemplate(updated.getId(), operator);
+                }
+                result.put("template", "更新模板 V" + updated.getVersionNo() + " 并直接发布");
             }
         }
 
-        log.info("配置导入完成: transno={}, operator={}, isNew={}", transno, operator, isNew);
+        // 4. 刷新缓存使配置立即生效
+        xmlConfigCacheInvalidator.invalidate(transno);
+
+        log.info("配置导入完成并生效: transno={}, operator={}, isNew={}", transno, operator, isNew);
         return ApiResponse.success("CONFIG", "IMPORT", result);
     }
 }
