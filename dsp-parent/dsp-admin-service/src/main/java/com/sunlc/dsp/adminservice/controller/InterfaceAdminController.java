@@ -41,8 +41,8 @@ public class InterfaceAdminController {
     }
 
     private void fillSystemName(InterfaceInfo info) {
-        if (info.getSystemId() != null) {
-            SysSystem sys = sysSystemService.getById(info.getSystemId());
+        if (info.getSystemCode() != null && !info.getSystemCode().isEmpty()) {
+            SysSystem sys = sysSystemService.getByCode(info.getSystemCode());
             if (sys != null) {
                 info.setSystemName(sys.getName());
             }
@@ -56,7 +56,7 @@ public class InterfaceAdminController {
             @RequestParam(required = false) String transno,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) Long systemId,
+            @RequestParam(required = false) String systemCode,
             HttpServletRequest request) {
 
         String currentUser = getCurrentUser(request);
@@ -71,8 +71,8 @@ public class InterfaceAdminController {
         if (status != null) {
             wrapper.eq(InterfaceInfo::getStatus, status);
         }
-        if (systemId != null) {
-            wrapper.eq(InterfaceInfo::getSystemId, systemId);
+        if (systemCode != null && !systemCode.isEmpty()) {
+            wrapper.eq(InterfaceInfo::getSystemCode, systemCode);
         }
         // 草稿只对创建人可见：status != 0 OR created_by = currentUser
         wrapper.and(w -> w.ne(InterfaceInfo::getStatus, InterfaceStatus.DRAFT.getCode())
