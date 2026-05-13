@@ -16,7 +16,7 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept>
     @Override
     public List<SysDept> getDeptTree() {
         return list(new LambdaQueryWrapper<SysDept>()
-                .orderByAsc(SysDept::getSortOrder));
+                .orderByAsc(SysDept::getName));
     }
 
     @Override
@@ -33,5 +33,4 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept>
     public void deleteDept(Long deptId) {
         removeById(deptId);
     }
-
 }

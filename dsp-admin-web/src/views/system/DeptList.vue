@@ -8,7 +8,6 @@
       <el-table :data="deptTree" border row-key="id" :tree-props="{ children: 'children', hasChildren: 'hasChildren' }">
         <el-table-column prop="name" label="部门名称" min-width="200" />
         <el-table-column prop="code" label="部门编码" width="150" />
-        <el-table-column prop="sortOrder" label="排序" width="80" />
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '正常' : '禁用' }}</el-tag>
@@ -32,10 +31,7 @@
           <el-input v-model="editForm.name" placeholder="请输入部门名称" />
         </el-form-item>
         <el-form-item label="部门编码" required>
-          <el-input v-model="editForm.code" placeholder="请输入部门编码" />
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="editForm.sortOrder" :min="0" />
+          <el-input v-model="editForm.code" placeholder="请输入部门编码" :disabled="!!editForm.id" />
         </el-form-item>
         <el-form-item label="上级部门" v-if="editForm.parentName">
           <el-input :model-value="editForm.parentName" disabled />
@@ -57,7 +53,7 @@ import { fmtTime } from '../../utils/format'
 
 const deptTree = ref([])
 const editDialogVisible = ref(false)
-const editForm = ref({ name: '', code: '', sortOrder: 0, parentId: 0, parentName: '' })
+const editForm = ref({ name: '', code: '', parentId: 0, parentName: '' })
 
 function fmtTimeCol(_row, _col, val) { return fmtTime(val) }
 
@@ -75,14 +71,13 @@ function buildTree(list, parentId) {
       const children = buildTree(list, d.id)
       return children.length > 0 ? { ...d, children } : d
     })
-    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh'))
 }
 
 function openCreateDialog(parent) {
   editForm.value = {
     name: '',
     code: '',
-    sortOrder: 0,
     parentId: parent ? parent.id : 0,
     parentName: parent ? parent.name : ''
   }
@@ -94,7 +89,6 @@ function openEditDialog(row) {
     id: row.id,
     name: row.name,
     code: row.code || '',
-    sortOrder: row.sortOrder,
     parentId: row.parentId,
     parentName: ''
   }
@@ -108,9 +102,9 @@ async function handleSave() {
   }
   try {
     if (editForm.value.id) {
-      await deptApi.update(editForm.value.id, { name: editForm.value.name, code: editForm.value.code, sortOrder: editForm.value.sortOrder })
+      await deptApi.update(editForm.value.id, { name: editForm.value.name, code: editForm.value.code })
     } else {
-      await deptApi.create({ name: editForm.value.name, code: editForm.value.code, sortOrder: editForm.value.sortOrder, parentId: editForm.value.parentId })
+      await deptApi.create({ name: editForm.value.name, code: editForm.value.code, parentId: editForm.value.parentId })
     }
     ElMessage.success('保存成功')
     editDialogVisible.value = false
