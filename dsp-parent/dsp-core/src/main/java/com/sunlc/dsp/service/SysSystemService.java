@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface SysSystemService extends IService<SysSystem> {
     List<SysSystem> listByDeptId(Long deptId);
+    SysSystem getByCode(String code);
 }

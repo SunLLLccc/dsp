@@ -64,6 +64,7 @@ public class InterfaceTemplateServiceImpl extends ServiceImpl<InterfaceTemplateM
         InterfaceTemplate template = new InterfaceTemplate();
         template.setTransno(transno);
         template.setSystemName(info.getSystemName());
+        template.setSystemCode(info.getSystemCode());
         template.setInterfaceName(info.getName());
         template.setXmlContent(xmlContent);
         template.setVersionNo(1);
@@ -99,6 +100,7 @@ public class InterfaceTemplateServiceImpl extends ServiceImpl<InterfaceTemplateM
         InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(template.getTransno());
         if (info != null) {
             template.setSystemName(info.getSystemName());
+            template.setSystemCode(info.getSystemCode());
             template.setInterfaceName(info.getName());
             updateById(template);
         }

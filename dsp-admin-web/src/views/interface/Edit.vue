@@ -25,9 +25,9 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="所属系统">
-              <el-select v-model="form.systemId" placeholder="请选择所属系统" clearable filterable style="width:100%"
+              <el-select v-model="form.systemCode" placeholder="请选择所属系统" clearable filterable style="width:100%"
                 @change="onSystemChange">
-                <el-option v-for="sys in systemOptions" :key="sys.id" :label="sys.name" :value="sys.id" />
+                <el-option v-for="sys in systemOptions" :key="sys.code" :label="sys.name" :value="sys.code" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -125,7 +125,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const isEdit = computed(() => !!route.params.id)
 
-const form = ref({ transno: '', name: '', systemId: null, systemName: '', description: '' })
+const form = ref({ transno: '', name: '', systemCode: '', systemName: '', description: '' })
 const inputSchema = ref('')
 const outputSchema = ref('')
 const changeLog = ref('')
@@ -346,7 +346,7 @@ async function loadSystems() {
 
 function onSystemChange(val) {
   if (val) {
-    const sys = systemOptions.value.find(s => s.id === val)
+    const sys = systemOptions.value.find(s => s.code === val)
     form.value.systemName = sys ? sys.name : ''
   } else {
     form.value.systemName = ''
