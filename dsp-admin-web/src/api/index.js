@@ -103,10 +103,28 @@ export const roleApi = {
   list: () => request.get('/role/list')
 }
 
+// 系统管理API
+export const systemApi = {
+  list: (params) => request.get('/system/list', { params }),
+  create: (data) => request.post('/system', data),
+  update: (id, data) => request.put(`/system/${id}`, data),
+  delete: (id) => request.delete(`/system/${id}`)
+}
+
 // 配置导入导出API
 export const configApi = {
   exportSingle: (transno) => request.get('/config/export', { params: { transno } }),
   exportBatch: (transnos) => request.post('/config/export/batch', { transnos }),
   importConfig: (data) => request.post('/config/import', data)
+}
+
+// 接口申请API
+export const applicationApi = {
+  submit: (data) => request.post('/approval/application', data),
+  myList: (params) => request.get('/approval/my-applications', { params }),
+  pendingApproval: (params) => request.get('/approval/pending-approval', { params }),
+  approvedList: (params) => request.get('/approval/approved-list', { params }),
+  approve: (id) => request.post(`/approval/application/${id}/approve`),
+  reject: (id, data) => request.post(`/approval/application/${id}/reject`, data)
 }
 

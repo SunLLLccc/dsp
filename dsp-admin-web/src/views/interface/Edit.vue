@@ -25,7 +25,10 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="所属系统">
-              <el-input v-model="form.systemName" placeholder="请输入所属系统名称" />
+              <el-select v-model="form.systemId" placeholder="请选择所属系统" clearable filterable style="width:100%"
+                @change="onSystemChange">
+                <el-option v-for="sys in systemOptions" :key="sys.id" :label="sys.name" :value="sys.id" />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -110,8 +113,9 @@
 <script setup>
 import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { interfaceApi } from '../../api'
+import { interfaceApi, systemApi } from '../../api'
 import { useAuthStore } from '../../stores/auth'
+import { hasAnyRole } from '../../directives/role'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import SchemaTreeNode from '../../components/SchemaTreeNode.vue'
@@ -121,10 +125,11 @@ const router = useRouter()
 const authStore = useAuthStore()
 const isEdit = computed(() => !!route.params.id)
 
-const form = ref({ transno: '', name: '', systemName: '', description: '' })
+const form = ref({ transno: '', name: '', systemId: null, systemName: '', description: '' })
 const inputSchema = ref('')
 const outputSchema = ref('')
 const changeLog = ref('')
+const systemOptions = ref([])
 
 // Schema 编辑弹窗
 const schemaDialogVisible = ref(false)
@@ -330,6 +335,26 @@ async function loadDetail() {
   }
 }
 
+async function loadSystems() {
+  const params = {}
+  if (!hasAnyRole(['ADMIN', 'IMPORTER']) && authStore.deptId) {
+    params.deptId = authStore.deptId
+  }
+  const res = await systemApi.list(params)
+  systemOptions.value = res.data || []
+}
+
+function onSystemChange(val) {
+  if (val) {
+    const sys = systemOptions.value.find(s => s.id === val)
+    form.value.systemName = sys ? sys.name : ''
+  } else {
+    form.value.systemName = ''
+  }
+}
+
+onMounted(() => { loadSystems(); loadDetail() })
+
 async function handleSave() {
   if (!form.value.transno || !form.value.name) {
     ElMessage.warning('请填写接口编码和名称')
@@ -380,8 +405,6 @@ async function handleSubmitApproval() {
     ElMessage.error('提交审批失败')
   }
 }
-
-onMounted(() => loadDetail())
 </script>
 
 <style scoped>

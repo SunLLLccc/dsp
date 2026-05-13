@@ -66,6 +66,16 @@ const routes = [
         path: 'system/dept',
         name: '部门管理',
         component: () => import('../views/system/DeptList.vue')
+      },
+      {
+        path: 'system/system',
+        name: '系统管理',
+        component: () => import('../views/system/SystemList.vue')
+      },
+      {
+        path: 'application',
+        name: '接口申请',
+        component: () => import('../views/application/List.vue')
       }
     ]
   }

@@ -8,10 +8,12 @@ import com.sunlc.dsp.engine.XmlEngine;
 import com.sunlc.dsp.enums.InterfaceStatus;
 import com.sunlc.dsp.entity.ApprovalRecord;
 import com.sunlc.dsp.entity.InterfaceInfo;
+import com.sunlc.dsp.entity.SysSystem;
 import com.sunlc.dsp.entity.InterfaceVersion;
 import com.sunlc.dsp.service.ApprovalRecordService;
 import com.sunlc.dsp.service.InterfaceInfoService;
 import com.sunlc.dsp.service.InterfaceVersionService;
+import com.sunlc.dsp.service.SysSystemService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -31,10 +33,20 @@ public class InterfaceAdminController {
     private final InterfaceVersionService interfaceVersionService;
     private final ApprovalRecordService approvalRecordService;
     private final XmlEngine xmlEngine;
+    private final SysSystemService sysSystemService;
 
     private String getCurrentUser(HttpServletRequest request) {
         Object user = request.getAttribute("adminUser");
         return user != null ? user.toString() : "anonymous";
+    }
+
+    private void fillSystemName(InterfaceInfo info) {
+        if (info.getSystemId() != null) {
+            SysSystem sys = sysSystemService.getById(info.getSystemId());
+            if (sys != null) {
+                info.setSystemName(sys.getName());
+            }
+        }
     }
 
     @GetMapping("/list")
@@ -44,6 +56,7 @@ public class InterfaceAdminController {
             @RequestParam(required = false) String transno,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Long systemId,
             HttpServletRequest request) {
 
         String currentUser = getCurrentUser(request);
@@ -57,6 +70,9 @@ public class InterfaceAdminController {
         }
         if (status != null) {
             wrapper.eq(InterfaceInfo::getStatus, status);
+        }
+        if (systemId != null) {
+            wrapper.eq(InterfaceInfo::getSystemId, systemId);
         }
         // 草稿只对创建人可见：status != 0 OR created_by = currentUser
         wrapper.and(w -> w.ne(InterfaceInfo::getStatus, InterfaceStatus.DRAFT.getCode())
@@ -75,6 +91,7 @@ public class InterfaceAdminController {
     @PostMapping
     @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<InterfaceInfo> create(@RequestBody InterfaceInfo info, HttpServletRequest request) {
+        fillSystemName(info);
         info.setStatus(InterfaceStatus.DRAFT.getCode());
         info.setCurrentVersion(0);
         info.setCreatedBy(getCurrentUser(request));
@@ -87,6 +104,7 @@ public class InterfaceAdminController {
     @PutMapping("/{id}")
     @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<Void> update(@PathVariable Long id, @RequestBody InterfaceInfo info) {
+        fillSystemName(info);
         info.setId(id);
         info.setUpdatedTime(LocalDateTime.now());
         interfaceInfoService.updateById(info);

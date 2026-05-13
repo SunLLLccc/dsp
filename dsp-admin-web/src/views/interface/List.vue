@@ -10,7 +10,9 @@
           <el-input v-model="searchForm.name" placeholder="请输入接口名称" clearable />
         </el-form-item>
         <el-form-item label="所属系统">
-          <el-input v-model="searchForm.systemName" placeholder="请输入所属系统" clearable />
+          <el-select v-model="searchForm.systemName" placeholder="全部" clearable filterable style="width:160px">
+            <el-option v-for="sys in systemOptions" :key="sys.id" :label="sys.name" :value="sys.name" />
+          </el-select>
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="searchForm.status" placeholder="全部" clearable style="width:160px">
@@ -168,7 +170,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { interfaceApi, configApi } from '../../api'
+import { interfaceApi, configApi, systemApi } from '../../api'
 import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE, VERSION_STATUS, VERSION_STATUS_TYPE } from '../../constants/status'
 import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -183,6 +185,7 @@ const authStore = useAuthStore()
 const tableData = ref([])
 const total = ref(0)
 const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', name: '', systemName: '', status: null })
+const systemOptions = ref([])
 
 const statusText = (s) => INTERFACE_STATUS[s] || '未知'
 const statusType = (s) => INTERFACE_STATUS_TYPE[s] || 'info'
@@ -406,7 +409,10 @@ async function handleImport() {
   loadData()
 }
 
-onMounted(() => loadData())
+onMounted(() => {
+  loadData()
+  systemApi.list().then(res => { systemOptions.value = res.data || [] })
+})
 </script>
 
 <style scoped>
