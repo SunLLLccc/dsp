@@ -147,7 +147,7 @@ function buildTree(list, parentId) {
       const children = buildTree(list, d.id)
       return children.length > 0 ? { ...d, children } : d
     })
-    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh'))
 }
 
 // 点击部门节点
