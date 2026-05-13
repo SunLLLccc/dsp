@@ -49,7 +49,15 @@
             <el-icon><OfficeBuilding /></el-icon>
             <span>部门管理</span>
           </el-menu-item>
+          <el-menu-item index="/system/system">
+            <el-icon><Monitor /></el-icon>
+            <span>系统管理</span>
+          </el-menu-item>
         </el-sub-menu>
+        <el-menu-item index="/application">
+          <el-icon><Promotion /></el-icon>
+          <span>接口申请</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -73,7 +81,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { Document, Coin, Key, Download, Monitor, Notebook, Stamp, Files, Setting, User, OfficeBuilding } from '@element-plus/icons-vue'
+import { Document, Coin, Key, Download, Monitor, Notebook, Stamp, Files, Setting, User, OfficeBuilding, Promotion } from '@element-plus/icons-vue'
 import { hasAnyRole } from '../directives/role'
 
 const route = useRoute()
