@@ -24,28 +24,28 @@
     <query id="q1_user" type="mysql" datasource="ds_main">
         SELECT id, user_name, department_id, level, email
         FROM users
-        WHERE id = #{requestData.userId}
+        WHERE id = #{$requestData['userId']}
     </query>
 
     <!-- 第二步: 根据用户所属部门查询部门信息（依赖q1，与q2_perms并行） -->
     <query id="q2_dept" type="mysql" datasource="ds_main" depends="q1_user">
         SELECT id, dept_name, manager_id, description
         FROM departments
-        WHERE id = #{q1_user.department_id}
+        WHERE id = #{$q1_user['department_id']}
     </query>
 
     <!-- 第二步(并行): 根据用户等级查询权限列表（依赖q1，与q2_dept并行） -->
     <query id="q2_perms" type="mysql" datasource="ds_main" depends="q1_user">
         SELECT permission_code, permission_name, resource_type
         FROM permissions
-        WHERE min_level &lt;= #{q1_user.level}
+        WHERE min_level &lt;= #{$q1_user['level']}
     </query>
 
     <!-- 第三步: 根据部门经理ID查询经理信息（依赖q2_dept） -->
     <query id="q3_manager" type="mysql" datasource="ds_main" depends="q2_dept">
         SELECT id, user_name, email, phone
         FROM users
-        WHERE id = #{q2_dept.manager_id}
+        WHERE id = #{$q2_dept['manager_id']}
     </query>
 
     <!-- 结果映射 -->

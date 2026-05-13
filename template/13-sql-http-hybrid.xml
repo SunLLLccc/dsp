@@ -6,8 +6,8 @@
 
   要点:
     - q2 依赖 q1（depends="q1_local"），q1 完成后才执行 q2
-    - q1 单行结果通过 #{q1_local.fieldName} 引用，引擎将单行结果存储为 Map
-    - HTTP查询中用 #{$q1_local.fieldName} 引用依赖查询结果（注意$前缀）
+    - q1 单行结果通过 #{$q1_local['fieldName']} 引用，引擎将单行结果存储为 Map
+    - HTTP查询中用 #{$q1_local['fieldName']} 引用依赖查询结果（注意$前缀）
 -->
 <interface transno="USER_WITH_EXT_INFO" name="用户信息聚合查询" description="先查本地用户数据，再调外部接口补充扩展信息">
 
@@ -23,14 +23,14 @@
     <query id="q1_local" type="mysql" datasource="ds_main">
         SELECT id, user_name, email, phone, ext_code, created_at
         FROM users
-        WHERE id = #{requestData.userId}
+        WHERE id = #{$requestData['userId']}
     </query>
 
     <!-- 第二步: 用q1查到的ext_code调用外部接口（依赖q1） -->
     <query id="q2_external" type="http" depends="q1_local">
-        <http url="https://external-api.com/user/profile/#{$q1_local.ext_code}"
+        <http url="https://external-api.com/user/profile/#{$q1_local['ext_code']}"
               method="GET"
-              headers='{"Authorization":"Bearer #{$requestData.token}"}'
+              headers='{"Authorization":"Bearer #{$requestData['token']}"}'
               responsePath="data" />
     </query>
 

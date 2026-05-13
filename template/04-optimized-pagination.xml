@@ -30,7 +30,7 @@
         SELECT id, report_name, report_type, generated_by, file_size, status, created_at
         FROM report_records
         WHERE 1=1
-        <if test="$requestData.reportType != null">AND report_type = #{requestData.reportType}</if>
+        <if test="$requestData['reportType'] != null">AND report_type = #{$requestData['reportType']}</if>
     </query>
 
     <resultMap id="reportMap" query="q1">

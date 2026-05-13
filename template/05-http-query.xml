@@ -16,9 +16,9 @@
 
     <!-- HTTP GET 请求示例 -->
     <query id="q1" type="http">
-        <http url="https://api.weather.com/v1/current?city=#{$requestData.cityCode}"
+        <http url="https://api.weather.com/v1/current?city=#{$requestData['cityCode']}"
               method="GET"
-              headers='{"Authorization":"Bearer #{$requestData.token}","X-Request-Id":"#{$requestData.cityCode}"}'
+              headers='{"Authorization":"Bearer #{$requestData['token']}","X-Request-Id":"#{$requestData['cityCode']}"}'
               responsePath="data.current" />
     </query>
 

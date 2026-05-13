@@ -29,7 +29,7 @@
         SELECT id, order_no, customer_name, amount, status, created_at
         FROM orders
         WHERE 1=1
-        <if test="$requestData.status != null">AND status = #{requestData.status}</if>
+        <if test="$requestData['status'] != null">AND status = #{$requestData['status']}</if>
     </query>
 
     <resultMap id="orderMap" query="q1">

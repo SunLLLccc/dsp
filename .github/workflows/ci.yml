@@ -6,6 +6,7 @@ on:
     paths:
       - 'dsp-parent/**'
       - 'dsp-admin-web/**'
+      - 'test/**'
       - '.github/workflows/ci.yml'
 
 concurrency:
@@ -57,6 +58,34 @@ jobs:
           DSP_DB_NAME: dsp_config
           DSP_DB_USERNAME: root
           DSP_DB_PASSWORD: root
+
+      - name: Package
+        run: mvn clean package -DskipTests -f dsp-parent/pom.xml
+
+      - name: Start dsp-data-service
+        run: |
+          export DSP_DB_HOST=localhost DSP_DB_PORT=3306 DSP_DB_NAME=dsp_config
+          export DSP_DB_USERNAME=root DSP_DB_PASSWORD=root
+          nohup java -jar dsp-parent/dsp-data-service/target/dsp-data-service-1.0.0.jar > /tmp/dsp.log 2>&1 &
+          echo "Waiting for port 8080..."
+          READY=0
+          for i in $(seq 1 90); do
+            if nc -z localhost 8080 2>/dev/null; then
+              READY=1
+              echo "Service ready after ${i}s"
+              sleep 3
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -eq 0 ]; then
+            echo "::error::Service failed to start within 90s"
+            tail -100 /tmp/dsp.log
+            exit 1
+          fi
+
+      - name: Run API integration tests
+        run: bash test/api-test.sh
 
   frontend:
     name: Frontend Build

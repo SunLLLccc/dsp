@@ -19,7 +19,7 @@
     <query id="q1" type="mysql" datasource="ds_main">
         SELECT dict_code, dict_label, dict_value, sort_order, remark
         FROM sys_dict
-        WHERE dict_type = #{requestData.dictType}
+        WHERE dict_type = #{$requestData['dictType']}
         ORDER BY sort_order
     </query>
 
