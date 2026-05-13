@@ -103,3 +103,10 @@ export const roleApi = {
   list: () => request.get('/role/list')
 }
 
+// 配置导入导出API
+export const configApi = {
+  exportSingle: (transno) => request.get('/config/export', { params: { transno } }),
+  exportBatch: (transnos) => request.post('/config/export/batch', { transnos }),
+  importConfig: (data) => request.post('/config/import', data)
+}
+
