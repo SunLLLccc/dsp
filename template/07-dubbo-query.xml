@@ -7,7 +7,7 @@
   要点:
     - datasource: 引用管理后台已配置的DUBBO类型数据源（extraConfig中配置注册中心地址）
     - <dubbo>标签: service(接口全限定名), method(方法名), version(默认1.0.0), group, timeout(默认3000ms)
-    - <param>: 方法参数, type=Java类型, value支持 #{$requestData.paramName} 参数替换
+    - <param>: 方法参数, type=Java类型, value支持 #{$requestData['paramName']} 参数替换
     - 引擎内部通过 DubboExecutor 获取 RegistryConfig 进行泛化调用
 -->
 <interface transno="CUSTOMER_PROFILE" name="客户画像查询" description="通过Dubbo调用客户服务获取客户画像信息">
@@ -26,8 +26,8 @@
                version="1.0.0"
                group="production"
                timeout="5000">
-            <param type="String" value="#{$requestData.customerId}" />
-            <param type="String" value="#{$requestData.sceneType}" />
+            <param type="String" value="#{$requestData['customerId']}" />
+            <param type="String" value="#{$requestData['sceneType']}" />
         </dubbo>
     </query>
 

@@ -8,7 +8,7 @@
     - datasource: 引用管理后台已配置的MONGO类型数据源（url格式 mongodb://host:port/database）
     - <mongo>标签: collection(集合名), 子元素 filter/projection/sort/limit/skip
     - filter中参数替换: #{paramName} — 引擎会替换为请求参数值
-      注意: MongoDB参数替换使用扁平参数名(如 #{userId})，不是 #{requestData.userId}
+      注意: MongoDB参数替换使用扁平参数名(如 #{userId})，不是 #{$requestData['userId']}
       因为 MongoExecutor 将 requestData 和 previousResults 合并为扁平Map
     - 需要引入 spring-boot-starter-data-mongodb 依赖
 -->

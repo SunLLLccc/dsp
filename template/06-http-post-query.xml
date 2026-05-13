@@ -4,7 +4,7 @@
   场景: 调用外部POST接口，携带请求体
   适用: 提交数据到外部系统、调用需要请求体的API
   说明: HTTP查询不需要 datasource 配置，直接在 <http> 标签中定义URL和请求参数
-       参数替换语法: #{$requestData.paramName} 用于URL/headers/body中的参数替换
+       参数替换语法: #{$requestData['paramName']} 用于URL/headers/body中的参数替换
 -->
 <interface transno="RISK_CHECK" name="风控检查" description="调用风控系统POST接口进行风险评估">
 
@@ -20,8 +20,8 @@
     <query id="q1" type="http">
         <http url="https://risk.internal.com/api/v1/evaluate"
               method="POST"
-              headers='{"Authorization":"Bearer #{$requestData.token}","Content-Type":"application/json"}'
-              body='{"userId":"#{$requestData.userId}","amount":"#{$requestData.amount}","scene":"TRADE"}'
+              headers='{"Authorization":"Bearer #{$requestData['token']}","Content-Type":"application/json"}'
+              body='{"userId":"#{$requestData['userId']}","amount":"#{$requestData['amount']}","scene":"TRADE"}'
               responsePath="data.riskResult" />
     </query>
 

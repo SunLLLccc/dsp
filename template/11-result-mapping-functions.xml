@@ -28,7 +28,7 @@
         SELECT id, user_name, email, phone, amount, rate, json_ext,
                created_at, birthday, status, remark, start_date, end_date
         FROM user_detail
-        WHERE id = #{requestData.userId}
+        WHERE id = #{$requestData['userId']}
     </query>
 
     <resultMap id="transformMap" query="q1">

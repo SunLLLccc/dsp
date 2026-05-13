@@ -47,8 +47,8 @@
         SELECT id, trade_no, customer_id, product_type, amount, status, channel, created_at
         FROM trades
         WHERE 1=1
-        <if test="$requestData.status != null">AND status = #{requestData.status}</if>
-        <if test="$requestData.productType != null">AND product_type = #{requestData.productType}</if>
+        <if test="$requestData['status'] != null">AND status = #{$requestData['status']}</if>
+        <if test="$requestData['productType'] != null">AND product_type = #{$requestData['productType']}</if>
         ORDER BY created_at DESC
     </query>
 
@@ -64,9 +64,9 @@
 
     <!-- 查询2: HTTP查询风控信息（依赖q1，用q1单行结果的字段） -->
     <query id="q2_risk" type="http" depends="q1_trades">
-        <http url="https://risk.internal.com/api/v1/trade/risk/#{$q1_trades.trade_no}"
+        <http url="https://risk.internal.com/api/v1/trade/risk/#{$q1_trades['trade_no']}"
               method="GET"
-              headers='{"Authorization":"Bearer #{$requestData.token}"}'
+              headers='{"Authorization":"Bearer #{$requestData['token']}"}'
               responsePath="data" />
     </query>
 
@@ -76,7 +76,7 @@
                method="getCustomerDetail"
                version="1.0.0"
                timeout="3000">
-            <param type="String" value="#{$q1_trades.customer_id}" />
+            <param type="String" value="#{$q1_trades['customer_id']}" />
         </dubbo>
     </query>
 

@@ -19,11 +19,11 @@
     <!-- 引用已配置的数据源（通过管理后台数据源管理页面添加，dsName 为唯一键） -->
     <datasource name="ds_main" />
 
-    <!-- SQL查询: 使用 #{requestData.paramName} 引用请求参数 -->
+    <!-- SQL查询: 使用 #{$requestData['paramName']} 引用请求参数（$前缀+SpEL括号语法） -->
     <query id="q1" type="mysql" datasource="ds_main">
         SELECT id, user_name, email, phone, status, created_at, updated_at
         FROM users
-        WHERE id = #{requestData.userId}
+        WHERE id = #{$requestData['userId']}
     </query>
 
     <!-- 结果映射: column=数据库字段, name=输出字段, function=fn:函数名,参数 -->
