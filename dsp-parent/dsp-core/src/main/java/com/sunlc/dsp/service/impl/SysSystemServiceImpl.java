@@ -20,10 +20,4 @@ public class SysSystemServiceImpl extends ServiceImpl<SysSystemMapper, SysSystem
                 .eq(SysSystem::getStatus, 1)
                 .orderByAsc(SysSystem::getId));
     }
-
-    @Override
-    public SysSystem getByCode(String code) {
-        return getOne(new LambdaQueryWrapper<SysSystem>()
-                .eq(SysSystem::getCode, code));
-    }
 }

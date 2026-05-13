@@ -329,13 +329,8 @@ async function handleProviderSystemChange(systemId) {
   interfaceOptions.value = []
   if (!systemId) return
 
-  // 通过 systemId 找到对应的 systemCode
-  const sys = allSystemList.value.find(s => s.id === systemId)
-  const systemCode = sys ? sys.code : null
-  if (!systemCode) return
-
   try {
-    const res = await interfaceApi.list({ systemCode, status: 3, pageNum: 1, pageSize: 200 })
+    const res = await interfaceApi.list({ systemId, status: 3, pageNum: 1, pageSize: 200 })
     interfaceOptions.value = res.data?.records || []
   } catch {
     interfaceOptions.value = []

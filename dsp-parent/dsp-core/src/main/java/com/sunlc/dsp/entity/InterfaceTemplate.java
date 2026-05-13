@@ -11,7 +11,7 @@ public class InterfaceTemplate {
     private Long id;
     private String transno;
     private String systemName;
-    private String systemCode;
+    private Long systemId;
     private String interfaceName;
     private String xmlContent;
     private Integer versionNo;

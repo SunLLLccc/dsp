@@ -12,7 +12,7 @@ public class InterfaceInfo {
     private String transno;
     private String name;
     private String systemName;
-    private String systemCode;
+    private Long systemId;
     private Integer status;
     private String description;
     private Integer currentVersion;
