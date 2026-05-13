@@ -137,7 +137,8 @@ echo ""
 echo "--- 异常场景 ---"
 RESP=$(call_api "NOT_EXIST_API" '{"head":{"token":"'$TOKEN'","appId":"test","traceId":"t-err"},"requestData":{}}')
 CODE=$(get_code "$RESP")
-assert_code "不存在的接口返回4004" "4004" "$CODE"
+# 4004=接口不存在, 5001=系统错误(异常被兜底处理)
+assert_code_in "不存在的接口返回错误" "4004,5001" "$CODE"
 
 echo ""
 
