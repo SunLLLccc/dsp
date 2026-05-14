@@ -64,6 +64,11 @@ public class InterfaceVersionServiceImpl extends ServiceImpl<InterfaceVersionMap
         wrapper.eq(InterfaceVersion::getTransno, transno)
                .eq(InterfaceVersion::getStatus, VersionStatus.PUBLISHED.getCode())
                .orderByDesc(InterfaceVersion::getVersionNo);
+        // 排除当前生效版本
+        InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(transno);
+        if (info != null && info.getCurrentVersion() != null && info.getCurrentVersion() > 0) {
+            wrapper.ne(InterfaceVersion::getVersionNo, info.getCurrentVersion());
+        }
         return page(page, wrapper);
     }
 
