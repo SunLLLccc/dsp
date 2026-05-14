@@ -186,6 +186,11 @@ public class InterfaceTemplateServiceImpl extends ServiceImpl<InterfaceTemplateM
         LambdaQueryWrapper<InterfaceTemplateHistory> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(InterfaceTemplateHistory::getTemplateId, templateId)
                .orderByDesc(InterfaceTemplateHistory::getVersionNo);
+        // 排除当前生效版本
+        InterfaceTemplate template = getById(templateId);
+        if (template != null && template.getVersionNo() != null) {
+            wrapper.ne(InterfaceTemplateHistory::getVersionNo, template.getVersionNo());
+        }
         return historyMapper.selectPage(page, wrapper);
     }
 
@@ -194,6 +199,11 @@ public class InterfaceTemplateServiceImpl extends ServiceImpl<InterfaceTemplateM
         LambdaQueryWrapper<InterfaceTemplateHistory> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(InterfaceTemplateHistory::getTransno, transno)
                .orderByDesc(InterfaceTemplateHistory::getVersionNo);
+        // 排除当前生效版本
+        InterfaceTemplate template = getByTransno(transno);
+        if (template != null && template.getVersionNo() != null) {
+            wrapper.ne(InterfaceTemplateHistory::getVersionNo, template.getVersionNo());
+        }
         return historyMapper.selectList(wrapper);
     }
 
