@@ -10,10 +10,7 @@
           </svg>
         </div>
         <transition name="logo-fade">
-          <div v-show="!collapsed" class="logo-text-group">
-            <span class="logo-text">DSP</span>
-            <span class="logo-subtitle">数据服务平台</span>
-          </div>
+          <span v-show="!collapsed" class="logo-text">DSP</span>
         </transition>
       </div>
       <el-menu
@@ -98,10 +95,7 @@
             <path d="M7 8h4v8H7V8zm6 0h4v8h-4V8z" fill="white"/>
           </svg>
         </div>
-        <div class="logo-text-group">
-          <span class="logo-text">DSP</span>
-          <span class="logo-subtitle">数据服务平台</span>
-        </div>
+        <span class="logo-text">DSP</span>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -177,8 +171,8 @@
           <el-icon class="hamburger-btn" @click="drawerVisible = true"><Expand /></el-icon>
           <span class="header-title">{{ currentTitle }}</span>
         </div>
+        <span class="header-center">数据服务平台</span>
         <div class="header-right">
-          <span class="header-brand">数据服务平台</span>
           <el-dropdown trigger="click" @command="handleUserCommand">
             <span class="user-info">
               <el-avatar :size="28" class="user-avatar">
@@ -321,28 +315,23 @@ onBeforeUnmount(() => {
   height: 32px;
 }
 
-.logo-text-group {
-  display: flex;
-  flex-direction: column;
-  white-space: nowrap;
-}
-
 .logo-text {
   font-size: 18px;
   font-weight: 700;
   color: #FFFFFF;
   letter-spacing: 3px;
-  line-height: 1.2;
-}
-
-.logo-subtitle {
-  font-size: 11px;
-  color: var(--sidebar-text);
-  letter-spacing: 1px;
-  margin-top: 2px;
+  white-space: nowrap;
 }
 
 .logo-fade-enter-active,
+.logo-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.logo-fade-enter-from,
+.logo-fade-leave-to {
+  opacity: 0;
+}
 .logo-fade-leave-active {
   transition: opacity 0.2s ease;
 }
@@ -405,14 +394,14 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-/* 顶栏 */
+/* 顶栏 — 三栏绝对居中 */
 .layout-header {
   height: var(--layout-header-height);
   background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  position: relative;
   padding: 0 20px;
   flex-shrink: 0;
 }
@@ -421,12 +410,15 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .header-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
+  line-height: 1;
 }
 
 .hamburger-btn {
@@ -443,16 +435,25 @@ onBeforeUnmount(() => {
   color: var(--el-color-primary);
 }
 
+.header-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .header-right {
   display: flex;
   align-items: center;
-  gap: 20px;
-}
-
-.header-brand {
-  font-size: 13px;
-  color: var(--text-secondary);
-  letter-spacing: 1px;
+  margin-left: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .user-info {
@@ -518,7 +519,7 @@ onBeforeUnmount(() => {
   .user-name {
     display: none;
   }
-  .header-brand {
+  .header-center {
     display: none;
   }
   .layout-main {
