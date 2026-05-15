@@ -3,12 +3,17 @@
     <!-- 桌面/平板侧边栏 -->
     <el-aside :width="sidebarWidth" class="sidebar-desktop">
       <div class="sidebar-logo">
-        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="2" width="20" height="20" rx="4" fill="var(--el-color-primary)"/>
-          <path d="M7 8h4v8H7V8zm6 0h4v8h-4V8z" fill="white"/>
-        </svg>
+        <div class="logo-icon-wrap">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="20" height="20" rx="4" fill="var(--el-color-primary)"/>
+            <path d="M7 8h4v8H7V8zm6 0h4v8h-4V8z" fill="white"/>
+          </svg>
+        </div>
         <transition name="logo-fade">
-          <span v-show="!collapsed" class="logo-text">DSP</span>
+          <div v-show="!collapsed" class="logo-text-group">
+            <span class="logo-text">DSP</span>
+            <span class="logo-subtitle">数据服务平台</span>
+          </div>
         </transition>
       </div>
       <el-menu
@@ -16,6 +21,9 @@
         router
         :collapse="collapsed"
         :collapse-transition="true"
+        background-color="transparent"
+        text-color="var(--sidebar-text)"
+        active-text-color="var(--sidebar-text-active)"
         class="sidebar-menu"
       >
         <el-menu-item index="/interface">
@@ -84,16 +92,24 @@
       class="sidebar-drawer"
     >
       <div class="sidebar-logo">
-        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="2" width="20" height="20" rx="4" fill="var(--el-color-primary)"/>
-          <path d="M7 8h4v8H7V8zm6 0h4v8h-4V8z" fill="white"/>
-        </svg>
-        <span class="logo-text">DSP</span>
+        <div class="logo-icon-wrap">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="20" height="20" rx="4" fill="var(--el-color-primary)"/>
+            <path d="M7 8h4v8H7V8zm6 0h4v8h-4V8z" fill="white"/>
+          </svg>
+        </div>
+        <div class="logo-text-group">
+          <span class="logo-text">DSP</span>
+          <span class="logo-subtitle">数据服务平台</span>
+        </div>
       </div>
       <el-menu
         :default-active="activeMenu"
         router
         :collapse="false"
+        background-color="transparent"
+        text-color="var(--sidebar-text)"
+        active-text-color="var(--sidebar-text-active)"
         class="sidebar-menu"
         @select="onMenuSelect"
       >
@@ -162,6 +178,7 @@
           <span class="header-title">{{ currentTitle }}</span>
         </div>
         <div class="header-right">
+          <span class="header-brand">数据服务平台</span>
           <el-dropdown trigger="click" @command="handleUserCommand">
             <span class="user-info">
               <el-avatar :size="28" class="user-avatar">
@@ -270,38 +287,59 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+/* 深色侧边栏 */
 .sidebar-desktop {
   background: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   transition: width var(--transition-slow);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
 }
 
 .sidebar-logo {
-  height: var(--layout-header-height);
+  height: 80px;
   display: flex;
   align-items: center;
   padding: 0 16px;
-  gap: 10px;
-  border-bottom: 1px solid var(--border-light);
+  gap: 12px;
+  background: var(--sidebar-logo-bg);
   flex-shrink: 0;
   overflow: hidden;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.logo-icon-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .logo-icon {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+}
+
+.logo-text-group {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
 }
 
 .logo-text {
   font-size: 18px;
   font-weight: 700;
-  color: var(--el-color-primary);
-  letter-spacing: 2px;
-  white-space: nowrap;
+  color: #FFFFFF;
+  letter-spacing: 3px;
+  line-height: 1.2;
+}
+
+.logo-subtitle {
+  font-size: 11px;
+  color: var(--sidebar-text);
+  letter-spacing: 1px;
+  margin-top: 2px;
 }
 
 .logo-fade-enter-active,
@@ -314,6 +352,7 @@ onBeforeUnmount(() => {
   opacity: 0;
 }
 
+/* 菜单 */
 .sidebar-menu {
   border-right: none;
   padding: 8px;
@@ -326,60 +365,47 @@ onBeforeUnmount(() => {
 }
 
 .sidebar-menu :deep(.el-menu-item) {
-  height: 40px;
-  line-height: 40px;
+  height: 42px;
+  line-height: 42px;
   border-radius: var(--radius-sm);
   margin-bottom: 2px;
-  color: var(--text-regular);
   transition: all var(--transition-fast);
 }
 
 .sidebar-menu :deep(.el-menu-item:hover) {
-  background: var(--bg-sidebar-hover);
-  color: var(--el-color-primary);
+  background: var(--bg-sidebar-hover) !important;
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active) {
-  background: var(--bg-sidebar-active);
-  color: var(--el-color-primary);
+  background: var(--bg-sidebar-active) !important;
+  color: var(--sidebar-text-active) !important;
   font-weight: 600;
-  position: relative;
-}
-
-.sidebar-menu :deep(.el-menu-item.is-active::before) {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  background: var(--el-color-primary);
-  border-radius: 0 2px 2px 0;
 }
 
 .sidebar-menu :deep(.el-sub-menu .el-sub-menu__title) {
-  height: 40px;
-  line-height: 40px;
+  height: 42px;
+  line-height: 42px;
   border-radius: var(--radius-sm);
-  color: var(--text-regular);
 }
 
 .sidebar-menu :deep(.el-sub-menu .el-sub-menu__title:hover) {
-  background: var(--bg-sidebar-hover);
-  color: var(--el-color-primary);
+  background: var(--bg-sidebar-hover) !important;
 }
 
+/* 手机端抽屉 */
 :deep(.sidebar-drawer .el-drawer__body) {
   padding: 0;
   background: var(--bg-sidebar);
 }
 
+/* 主容器 */
 .main-container {
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+/* 顶栏 */
 .layout-header {
   height: var(--layout-header-height);
   background: var(--bg-header);
@@ -420,6 +446,13 @@ onBeforeUnmount(() => {
 .header-right {
   display: flex;
   align-items: center;
+  gap: 20px;
+}
+
+.header-brand {
+  font-size: 13px;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
 }
 
 .user-info {
@@ -437,7 +470,7 @@ onBeforeUnmount(() => {
 }
 
 .user-avatar {
-  background: var(--el-color-primary-light-5);
+  background: var(--el-color-primary);
   color: white;
   font-size: 13px;
   font-weight: 600;
@@ -448,6 +481,7 @@ onBeforeUnmount(() => {
   color: var(--text-regular);
 }
 
+/* 内容区 */
 .layout-main {
   background: var(--bg-page);
   padding: 20px;
@@ -470,6 +504,7 @@ onBeforeUnmount(() => {
   .sidebar-logo {
     justify-content: center;
     padding: 0;
+    height: 64px;
   }
 }
 
@@ -481,6 +516,9 @@ onBeforeUnmount(() => {
     padding: 0 12px;
   }
   .user-name {
+    display: none;
+  }
+  .header-brand {
     display: none;
   }
   .layout-main {

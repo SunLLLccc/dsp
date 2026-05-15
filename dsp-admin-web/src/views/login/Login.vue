@@ -1,36 +1,66 @@
 <template>
   <div class="login-container">
+    <!-- 动态背景 -->
+    <div class="login-bg">
+      <div class="bg-shape shape-1"></div>
+      <div class="bg-shape shape-2"></div>
+      <div class="bg-shape shape-3"></div>
+    </div>
+
     <!-- 左侧品牌区 -->
     <div class="login-brand">
       <div class="brand-content">
-        <svg class="brand-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="2" width="44" height="44" rx="8" fill="rgba(255,255,255,0.2)"/>
-          <path d="M14 16h8v16h-8V16zm12 0h8v16h-8V16z" fill="white"/>
-        </svg>
-        <h1 class="brand-title">DSP 数据服务平台</h1>
-        <p class="brand-desc">统一数据查询、接口管理、审批发布的企业级数据服务中台</p>
+        <div class="brand-logo-wrap">
+          <svg class="brand-logo" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="52" height="52" rx="12" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+            <path d="M16 18h10v20H16V18zm14 0h10v20H30V18z" fill="white"/>
+          </svg>
+        </div>
+        <h1 class="brand-title">DSP</h1>
+        <div class="brand-divider"></div>
+        <h2 class="brand-subtitle">数据服务平台</h2>
+        <p class="brand-desc">统一数据查询 · 接口管理 · 审批发布</p>
+        <div class="brand-features">
+          <div class="feature-item">
+            <div class="feature-dot"></div>
+            <span>多数据源引擎</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot"></div>
+            <span>可视化调试</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot"></div>
+            <span>审批工作流</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- 右侧登录表单 -->
     <div class="login-form-wrap">
       <div class="login-card">
-        <h2 class="login-title">欢迎登录</h2>
-        <p class="login-subtitle">请输入您的账号信息</p>
+        <div class="login-welcome">
+          <h2 class="login-title">欢迎回来</h2>
+          <p class="login-subtitle">登录以继续访问管理后台</p>
+        </div>
         <el-form :model="form" :rules="rules" ref="formRef" @submit.prevent="handleLogin" class="login-form">
           <el-form-item prop="username">
-            <el-input v-model="form.username" placeholder="用户名" prefix-icon="User" size="large" />
+            <el-input v-model="form.username" placeholder="请输入用户名" prefix-icon="User" size="large" />
           </el-form-item>
           <el-form-item prop="password">
-            <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" size="large"
+            <el-input v-model="form.password" type="password" placeholder="请输入密码" prefix-icon="Lock" size="large"
               show-password @keyup.enter="handleLogin" />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" size="large" class="login-btn" :loading="loading" @click="handleLogin">
-              登 录
+              {{ loading ? '登录中...' : '登 录' }}
             </el-button>
           </el-form-item>
         </el-form>
+        <div class="login-footer">
+          <span>DSP Data Service Platform</span>
+        </div>
       </div>
     </div>
   </div>
@@ -76,64 +106,183 @@ async function handleLogin() {
 .login-container {
   min-height: 100vh;
   display: flex;
+  position: relative;
+  overflow: hidden;
 }
 
+/* 动态背景装饰 */
+.login-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  animation: float 20s ease-in-out infinite;
+}
+
+.shape-1 {
+  width: 600px;
+  height: 600px;
+  background: var(--el-color-primary-light-5);
+  top: -200px;
+  right: -100px;
+  animation-delay: 0s;
+}
+
+.shape-2 {
+  width: 400px;
+  height: 400px;
+  background: var(--el-color-primary-light-3);
+  bottom: -100px;
+  left: 20%;
+  animation-delay: -7s;
+}
+
+.shape-3 {
+  width: 300px;
+  height: 300px;
+  background: #A78BFA;
+  top: 40%;
+  right: 30%;
+  animation-delay: -14s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -30px) scale(1.05); }
+  50% { transform: translate(-20px, 20px) scale(0.95); }
+  75% { transform: translate(15px, 15px) scale(1.02); }
+}
+
+/* 左侧品牌区 */
 .login-brand {
   flex: 1;
-  background: linear-gradient(135deg, #4C6EF5 0%, #748FFC 50%, #91A7FF 100%);
+  background: linear-gradient(160deg, #3B5BDB 0%, #4C6EF5 40%, #5C7CFA 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 60px;
   position: relative;
-  overflow: hidden;
+  z-index: 1;
 }
 
 .login-brand::before {
   content: '';
   position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 40%);
+}
+
+.login-brand::after {
+  content: '';
+  position: absolute;
+  inset: 40px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  pointer-events: none;
 }
 
 .brand-content {
   text-align: center;
   color: white;
-  max-width: 400px;
+  max-width: 420px;
   position: relative;
-  z-index: 1;
+  z-index: 2;
+}
+
+.brand-logo-wrap {
+  margin-bottom: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .brand-logo {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 24px;
+  width: 72px;
+  height: 72px;
+  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.15));
 }
 
 .brand-title {
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 16px;
-  letter-spacing: 2px;
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  margin-bottom: 12px;
+  background: linear-gradient(180deg, #FFFFFF 0%, rgba(255,255,255,0.85) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.brand-divider {
+  width: 48px;
+  height: 2px;
+  background: rgba(255,255,255,0.4);
+  margin: 0 auto 16px;
+  border-radius: 1px;
+}
+
+.brand-subtitle {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  margin-bottom: 12px;
+  opacity: 0.95;
 }
 
 .brand-desc {
-  font-size: 15px;
-  line-height: 1.6;
-  opacity: 0.85;
+  font-size: 13px;
+  letter-spacing: 2px;
+  opacity: 0.6;
+  margin-bottom: 36px;
 }
 
+.brand-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0 auto;
+  width: fit-content;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  opacity: 0.7;
+  letter-spacing: 1px;
+}
+
+.feature-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  flex-shrink: 0;
+}
+
+/* 右侧表单区 */
 .login-form-wrap {
-  width: 480px;
+  width: 520px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
-  padding: 40px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  padding: 60px;
+  position: relative;
+  z-index: 1;
 }
 
 .login-card {
@@ -141,53 +290,72 @@ async function handleLogin() {
   max-width: 360px;
 }
 
+.login-welcome {
+  margin-bottom: 36px;
+}
+
 .login-title {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 8px;
+  letter-spacing: 1px;
 }
 
 .login-subtitle {
   font-size: 14px;
   color: var(--text-secondary);
-  margin-bottom: 32px;
+  line-height: 1.5;
 }
 
 .login-form .el-form-item {
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .login-btn {
   width: 100%;
-  height: 44px;
+  height: 46px;
   font-size: 15px;
+  font-weight: 600;
   border-radius: var(--radius-md);
+  letter-spacing: 2px;
 }
 
+.login-footer {
+  text-align: center;
+  margin-top: 32px;
+  font-size: 11px;
+  color: var(--text-placeholder);
+  letter-spacing: 1px;
+}
+
+/* 响应式 */
 @media (max-width: 767px) {
   .login-container {
     flex-direction: column;
   }
 
   .login-brand {
-    padding: 32px 24px;
+    padding: 40px 24px 32px;
     min-height: auto;
   }
 
   .brand-logo {
-    width: 40px;
-    height: 40px;
-    margin-bottom: 12px;
+    width: 48px;
+    height: 48px;
   }
 
   .brand-title {
-    font-size: 20px;
-    margin-bottom: 8px;
+    font-size: 28px;
+    letter-spacing: 4px;
   }
 
-  .brand-desc {
-    font-size: 13px;
+  .brand-subtitle {
+    font-size: 14px;
+  }
+
+  .brand-features {
+    display: none;
   }
 
   .login-form-wrap {

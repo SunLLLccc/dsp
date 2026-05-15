@@ -59,11 +59,17 @@
   /* 背景 */
   --bg-page: #F5F7FA;
   --bg-card: #FFFFFF;
-  --bg-sidebar: #FFFFFF;
   --bg-header: #FFFFFF;
   --bg-hover: #F0F4FF;
-  --bg-sidebar-hover: #F5F8FF;
-  --bg-sidebar-active: #EDF2FF;
+
+  /* 深色侧边栏 */
+  --bg-sidebar: #1E293B;
+  --bg-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --bg-sidebar-active: var(--el-color-primary);
+  --sidebar-text: #94A3B8;
+  --sidebar-text-active: #FFFFFF;
+  --sidebar-logo-bg: #162032;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
 
   /* 边框 */
   --border-color: #E8ECF0;
