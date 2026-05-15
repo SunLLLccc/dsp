@@ -188,13 +188,13 @@ watch(() => props.modelValue, (v) => {
 .schema-divider {
   width: 6px;
   cursor: col-resize;
-  background: #e4e7ed;
+  background: var(--border-color);
   margin: 0 3px;
   border-radius: 3px;
   flex-shrink: 0;
   transition: background 0.2s;
 }
-.schema-divider:hover { background: #409eff; }
+.schema-divider:hover { background: var(--el-color-primary); }
 .schema-panel-header {
   display: flex;
   justify-content: space-between;
@@ -202,8 +202,8 @@ watch(() => props.modelValue, (v) => {
   padding: 6px 0;
   font-weight: 600;
   font-size: 14px;
-  color: #303133;
-  border-bottom: 1px solid #ebeef5;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
   margin-bottom: 8px;
 }
 .schema-tree {
@@ -214,16 +214,16 @@ watch(() => props.modelValue, (v) => {
   display: flex;
   max-height: 430px;
   overflow: auto;
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--border-light);
   border-radius: 4px;
-  background: #fafafa;
+  background: var(--bg-page);
 }
 .code-lines {
   display: flex;
   flex-direction: column;
   padding: 8px 0;
-  background: #f5f5f5;
-  border-right: 1px solid #ebeef5;
+  background: var(--bg-page);
+  border-right: 1px solid var(--border-light);
   text-align: right;
   user-select: none;
   flex-shrink: 0;
@@ -233,13 +233,13 @@ watch(() => props.modelValue, (v) => {
   padding: 0 8px;
   line-height: 1.5;
   font-size: 13px;
-  color: #b0b0b0;
-  font-family: Consolas, Monaco, monospace;
+  color: var(--text-placeholder);
+  font-family: var(--font-mono);
 }
 .code-text {
   margin: 0;
   padding: 8px 12px;
-  font-family: Consolas, Monaco, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.5;
   white-space: pre;
@@ -248,7 +248,7 @@ watch(() => props.modelValue, (v) => {
 }
 .schema-empty {
   text-align: center;
-  color: #909399;
+  color: var(--text-secondary);
   padding: 40px 0;
   font-size: 14px;
 }

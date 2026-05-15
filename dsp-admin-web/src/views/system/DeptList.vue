@@ -1,7 +1,7 @@
 <template>
   <div>
     <el-card>
-      <div class="mb-16">
+      <div class="mb-md">
         <el-button type="primary" @click="openCreateDialog(null)">新增顶级部门</el-button>
       </div>
 
@@ -125,7 +125,3 @@ async function handleDelete(row) {
 
 onMounted(() => loadData())
 </script>
-
-<style scoped>
-.mb-16 { margin-bottom: 16px; }
-</style>

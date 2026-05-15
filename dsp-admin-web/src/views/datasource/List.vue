@@ -1,13 +1,13 @@
 <template>
   <div>
     <!-- 搜索栏 -->
-    <el-card class="mb-16">
+    <el-card shadow="never" class="card-search">
       <el-form :inline="true" :model="searchForm">
         <el-form-item label="数据源名称">
           <el-input v-model="searchForm.dsName" placeholder="请输入数据源名称" clearable />
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="searchForm.dsType" placeholder="全部" clearable style="width:110px">
+          <el-select v-model="searchForm.dsType" placeholder="全部" clearable class="filter-select">
             <el-option label="MySQL" value="MYSQL" />
             <el-option label="Doris" value="DORIS" />
             <el-option label="MongoDB" value="MONGODB" />
@@ -24,7 +24,7 @@
 
     <!-- 操作栏 + 表格 -->
     <el-card>
-      <div class="mb-16">
+      <div class="mb-md">
         <el-button type="primary" @click="showDialog(null)" v-role="'USER'">新增数据源</el-button>
       </div>
 
@@ -48,7 +48,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="mt-16" style="display:flex;justify-content:flex-end">
+      <div class="pagination-wrap">
         <el-pagination v-model:current-page="searchForm.pageNum" v-model:page-size="searchForm.pageSize"
           :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next"
           @size-change="loadData" @current-change="loadData" />
@@ -56,7 +56,7 @@
     </el-card>
 
     <!-- 新增/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="editForm.id ? '编辑数据源' : '新增数据源'" width="600px">
+    <el-dialog v-model="dialogVisible" :title="editForm.id ? '编辑数据源' : '新增数据源'" width="90%" style="max-width:600px">
       <el-form :model="editForm" label-width="100px">
         <el-form-item label="数据源名称" required>
           <el-input v-model="editForm.dsName" placeholder="如 mysql_main" />
@@ -81,7 +81,7 @@
         </el-form-item>
         <el-form-item label="扩展配置" v-if="!showJdbc">
           <el-input v-model="editForm.extraConfig" type="textarea" :rows="4"
-            placeholder='HTTP: {"url":"http://..."}\nDubbo: {"registry":"zookeeper://..."}' style="font-family:monospace" />
+            placeholder='HTTP: {"url":"http://..."}\nDubbo: {"registry":"zookeeper://..."}' style="font-family:var(--font-mono)" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -155,6 +155,5 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-.mb-16 { margin-bottom: 16px; }
-.mt-16 { margin-top: 16px; }
+.filter-select { width: 110px; }
 </style>

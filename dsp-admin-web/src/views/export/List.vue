@@ -2,7 +2,7 @@
   <div>
     <el-card>
       <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="card-header">
           <span>导出任务</span>
           <el-button type="primary" size="small" @click="loadData">刷新</el-button>
         </div>
@@ -36,16 +36,17 @@
         </el-table-column>
       </el-table>
 
-      <el-pagination
-        style="margin-top: 16px; justify-content: flex-end;"
-        v-model:current-page="pageNum"
-        v-model:page-size="pageSize"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next"
-        @size-change="loadData"
-        @current-change="loadData"
-      />
+      <div class="pagination-wrap">
+        <el-pagination
+          v-model:current-page="pageNum"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          @size-change="loadData"
+          @current-change="loadData"
+        />
+      </div>
     </el-card>
   </div>
 </template>
@@ -105,3 +106,7 @@ onMounted(() => {
   loadData()
 })
 </script>
+
+<style scoped>
+.card-header { display: flex; justify-content: space-between; align-items: center; }
+</style>

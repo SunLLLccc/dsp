@@ -67,19 +67,19 @@ watch(() => props.modelValue, (v) => { if (v) diffOnly.value = false })
   padding: 6px 0;
   font-weight: 600;
   font-size: 14px;
-  color: #303133;
-  border-bottom: 1px solid #ebeef5;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
   margin-bottom: 4px;
 }
-.compare-divider { width: 6px; background: #e4e7ed; margin: 0 6px; border-radius: 3px; flex-shrink: 0; }
+.compare-divider { width: 6px; background: var(--border-color); margin: 0 6px; border-radius: 3px; flex-shrink: 0; }
 .compare-code {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.5;
   max-height: 480px;
   overflow-y: auto;
-  background: #fafafa;
-  border: 1px solid #ebeef5;
+  background: var(--bg-page);
+  border: 1px solid var(--border-light);
   border-radius: 4px;
 }
 .diff-line {
@@ -91,12 +91,12 @@ watch(() => props.modelValue, (v) => { if (v) diffOnly.value = false })
 .diff-line.common { background: transparent; }
 .diff-line.removed { background: #fde2e2; color: #c45656; }
 .diff-line.added { background: #e1f3d8; color: #4a8f3f; }
-.diff-line.placeholder { background: #f5f5f5; }
+.diff-line.placeholder { background: var(--bg-page); }
 .line-no {
   display: inline-block;
   width: 32px;
   text-align: right;
-  color: #b0b0b0;
+  color: var(--text-placeholder);
   user-select: none;
   padding-right: 6px;
   font-size: 12px;
@@ -106,7 +106,7 @@ watch(() => props.modelValue, (v) => { if (v) diffOnly.value = false })
   display: inline-block;
   width: 20px;
   text-align: center;
-  color: #999;
+  color: var(--text-secondary);
   user-select: none;
   font-weight: 600;
 }

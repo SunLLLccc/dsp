@@ -104,10 +104,10 @@ function removeChild(idx) {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  color: #909399;
+  color: var(--text-secondary);
   border-radius: 2px;
 }
-.tree-toggle:hover { color: #409eff; background: #ecf5ff; }
+.tree-toggle:hover { color: var(--el-color-primary); background: var(--el-color-primary-light-9); }
 .tree-toggle-placeholder { width: 16px; flex-shrink: 0; }
 .tree-input-name { width: 110px; }
 .tree-input-title { width: 90px; }
@@ -116,18 +116,18 @@ function removeChild(idx) {
 .tree-action {
   cursor: pointer;
   font-size: 15px;
-  color: #409eff;
+  color: var(--el-color-primary);
   flex-shrink: 0;
   border-radius: 4px;
   padding: 2px;
 }
-.tree-action:hover { background: #ecf5ff; }
-.tree-action-danger { color: #f56c6c; }
-.tree-action-danger:hover { background: #fef0f0; }
+.tree-action:hover { background: var(--el-color-primary-light-9); }
+.tree-action-danger { color: var(--el-color-danger); }
+.tree-action-danger:hover { background: var(--el-color-danger-light-9); }
 
 .tree-children {
   margin-left: 20px;
-  border-left: 1.5px dashed #d9ecff;
+  border-left: 1.5px dashed var(--el-color-primary-light-7);
   padding-left: 6px;
 }
 </style>
