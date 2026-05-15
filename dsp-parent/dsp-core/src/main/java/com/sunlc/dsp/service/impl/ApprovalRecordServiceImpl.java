@@ -205,6 +205,7 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
         record.setRequirementDesc((String) params.get("reqDesc"));
         record.setApplyReason((String) params.get("applyReason"));
         record.setDownstreamInfo((String) params.get("downstreamInfo"));
+        record.setVersionNo(0);
         record.setApplyTime(LocalDateTime.now());
         record.setCreatedTime(LocalDateTime.now());
 
