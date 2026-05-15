@@ -1,7 +1,7 @@
 <template>
-  <div style="display:flex;gap:16px;height:calc(100vh - 140px)">
+  <div class="system-layout">
     <!-- 左侧部门树 -->
-    <el-card style="width:260px;flex-shrink:0;overflow:auto">
+    <el-card class="dept-panel">
       <template #header>
         <span>部门</span>
       </template>
@@ -19,16 +19,16 @@
           <span class="tree-node-label">{{ data.name }}</span>
         </template>
       </el-tree>
-      <div class="mt-16">
+      <div class="mt-md">
         <el-button size="small" @click="handleClearDeptFilter">显示全部</el-button>
       </div>
     </el-card>
 
     <!-- 右侧系统列表 -->
-    <div style="flex:1;overflow:auto">
+    <div class="system-main">
       <el-card>
-        <div class="mb-16" style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:16px;font-weight:600">
+        <div class="card-header">
+          <span class="section-title">
             {{ selectedDeptName ? `${selectedDeptName} - 系统列表` : '系统列表' }}
           </span>
           <el-button type="primary" @click="openCreateDialog">新增系统</el-button>
@@ -55,7 +55,7 @@
           </el-table-column>
         </el-table>
 
-        <div class="mt-16" style="display:flex;justify-content:flex-end">
+        <div class="pagination-wrap">
           <el-pagination
             v-model:current-page="searchForm.pageNum"
             v-model:page-size="searchForm.pageSize"
@@ -79,7 +79,7 @@
           <el-input v-model="editForm.code" placeholder="请输入系统编码" :disabled="!!editForm.id" />
         </el-form-item>
         <el-form-item label="所属部门" required>
-          <el-select v-model="editForm.deptId" placeholder="请选择部门" clearable style="width:100%">
+          <el-select v-model="editForm.deptId" placeholder="请选择部门" clearable class="full-width">
             <el-option v-for="d in flatDeptList" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </el-form-item>
@@ -261,7 +261,41 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.mb-16 { margin-bottom: 16px; }
-.mt-16 { margin-top: 16px; }
-.tree-node-label { font-size: 14px; }
+.system-layout {
+  display: flex;
+  gap: var(--space-md);
+  height: calc(100vh - 140px);
+}
+
+.dept-panel {
+  width: 260px;
+  flex-shrink: 0;
+  overflow: auto;
+}
+
+.system-main {
+  flex: 1;
+  overflow: auto;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tree-node-label {
+  font-size: 14px;
+  color: var(--text-regular);
+}
+
+.full-width {
+  width: 100%;
+}
 </style>

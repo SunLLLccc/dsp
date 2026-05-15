@@ -1,5 +1,5 @@
 <template>
-  <div class="tab-bar">
+  <div class="tab-bar" v-if="tabStore.tabs.length > 1">
     <div
       v-for="tab in tabStore.tabs"
       :key="tab.fullPath"
@@ -43,47 +43,79 @@ function closeTab(tab) {
 .tab-bar {
   display: flex;
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid #e6e6e6;
-  padding: 0 16px;
-  height: 36px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 20px;
+  height: var(--layout-tabbar-height);
   flex-shrink: 0;
   overflow-x: auto;
   white-space: nowrap;
+  gap: 6px;
 }
-.tab-bar::-webkit-scrollbar { height: 0; }
+
+.tab-bar::-webkit-scrollbar {
+  height: 0;
+}
+
 .tab-item {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 0 12px;
+  padding: 0 14px;
   height: 28px;
   font-size: 12px;
-  color: #666;
-  background: #f5f7fa;
-  border: 1px solid #e6e6e6;
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
+  color: var(--text-secondary);
+  background: var(--border-light);
+  border-radius: 14px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.15s;
-  margin-right: 4px;
+  transition: all 0.2s ease;
+  user-select: none;
 }
-.tab-item:hover { color: #409eff; }
+
+.tab-item:hover {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+
 .tab-item.active {
-  color: #409eff;
-  background: #fff;
-  border-color: #e6e6e6;
-  border-bottom: 1px solid #fff;
-  margin-bottom: -1px;
+  color: white;
+  background: var(--el-color-primary);
   font-weight: 500;
+  box-shadow: 0 2px 6px rgba(76, 110, 245, 0.3);
 }
-.tab-label { line-height: 1; }
+
+.tab-label {
+  line-height: 1;
+}
+
 .tab-close {
-  font-size: 12px;
+  font-size: 10px;
   border-radius: 50%;
-  padding: 1px;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.15s;
 }
-.tab-close:hover { background: #c0c4cc; color: #fff; }
+
+.tab-item:not(.active) .tab-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.tab-item.active .tab-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+@media (max-width: 767px) {
+  .tab-bar {
+    padding: 0 12px;
+  }
+  .tab-item {
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}
 </style>

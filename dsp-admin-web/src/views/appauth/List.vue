@@ -1,7 +1,7 @@
 <template>
   <div>
     <el-card>
-      <div class="mb-16">
+      <div class="mb-md">
         <el-button type="primary" @click="showDialog(null)" v-role="'USER'">新增应用</el-button>
       </div>
 
@@ -26,7 +26,7 @@
     </el-card>
 
     <!-- 新增/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="editForm.id ? '编辑应用' : '新增应用'" width="600px">
+    <el-dialog v-model="dialogVisible" :title="editForm.id ? '编辑应用' : '新增应用'" width="90%" style="max-width:600px">
       <el-form :model="editForm" label-width="100px">
         <el-form-item label="应用ID" required>
           <el-input v-model="editForm.appId" placeholder="如 biz-system-01" :disabled="!!editForm.id" />
@@ -49,9 +49,9 @@
     </el-dialog>
 
     <!-- Token展示对话框 -->
-    <el-dialog v-model="tokenDialogVisible" title="Token已签发" width="500px">
-      <el-alert type="warning" :closable="false" class="mb-16" description="请妥善保管Token，关闭后不会再次展示" />
-      <el-input v-model="tokenValue" type="textarea" :rows="6" readonly style="font-family:monospace" />
+    <el-dialog v-model="tokenDialogVisible" title="Token已签发" width="90%" style="max-width:500px">
+      <el-alert type="warning" :closable="false" class="mb-md" description="请妥善保管Token，关闭后不会再次展示" />
+      <el-input v-model="tokenValue" type="textarea" :rows="6" readonly style="font-family:var(--font-mono)" />
     </el-dialog>
   </div>
 </template>
@@ -112,6 +112,5 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-.mb-16 { margin-bottom: 16px; }
-.form-tip { font-size: 12px; color: #909399; margin-top: 4px; }
+.form-tip { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
 </style>

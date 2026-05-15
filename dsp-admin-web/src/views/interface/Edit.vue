@@ -2,14 +2,14 @@
   <div>
     <el-card>
       <template #header>
-        <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="card-header">
           <span>{{ isEdit ? '编辑接口' : '新增接口' }}</span>
           <el-button @click="$router.back()">返回</el-button>
         </div>
       </template>
 
       <!-- 基础信息 -->
-      <el-form :model="form" label-width="100px" class="mb-16">
+      <el-form :model="form" label-width="100px" class="mb-md">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="接口编码" required>
@@ -46,13 +46,13 @@
           <el-button type="primary" @click="openSchemaDialog('input')">
             {{ inputSchema ? '查看/编辑' : '点击定义' }}
           </el-button>
-          <span v-if="inputSchema" style="margin-left:12px;color:#67c23a">已定义</span>
+          <span v-if="inputSchema" class="ml-sm" style="color:var(--el-color-success)">已定义</span>
         </el-form-item>
         <el-form-item label="响应报文">
           <el-button type="primary" @click="openSchemaDialog('output')">
             {{ outputSchema ? '查看/编辑' : '点击定义' }}
           </el-button>
-          <span v-if="outputSchema" style="margin-left:12px;color:#67c23a">已定义</span>
+          <span v-if="outputSchema" class="ml-sm" style="color:var(--el-color-success)">已定义</span>
         </el-form-item>
         <el-form-item label="变更说明">
           <el-input v-model="changeLog" placeholder="本次修改说明" />
@@ -60,7 +60,7 @@
       </el-form>
 
       <!-- 操作按钮 -->
-      <div style="text-align:center;margin-top:16px">
+      <div class="mt-md" style="text-align:center">
         <el-button @click="$router.back()">取消</el-button>
         <el-button type="primary" @click="handleSave">保存</el-button>
         <el-button type="warning" @click="handleSubmitApproval" v-if="isEdit">提交审批</el-button>
@@ -68,7 +68,7 @@
     </el-card>
 
     <!-- JSON Schema 编辑弹窗 -->
-    <el-dialog v-model="schemaDialogVisible" :title="schemaDialogTitle" width="1100px" top="5vh" destroy-on-close>
+    <el-dialog v-model="schemaDialogVisible" :title="schemaDialogTitle" width="95%" style="max-width:1100px" top="5vh" destroy-on-close>
       <div class="schema-editor-container" ref="editorContainer">
         <!-- 左侧：JSON 编辑 -->
         <div class="schema-left" :style="{ width: leftWidth + 'px' }">
@@ -79,7 +79,7 @@
             :rows="22"
             :disabled="!schemaEditable"
             placeholder="请输入 JSON Schema"
-            style="font-family:monospace"
+            style="font-family:var(--font-mono)"
           />
         </div>
         <!-- 可拖拽分割线 -->
@@ -410,7 +410,11 @@ async function handleSubmitApproval() {
 </script>
 
 <style scoped>
-.mb-16 { margin-bottom: 16px; }
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
 .schema-editor-container {
   display: flex;
@@ -432,13 +436,13 @@ async function handleSubmitApproval() {
 .schema-divider {
   width: 6px;
   cursor: col-resize;
-  background: #e4e7ed;
+  background: var(--border-color);
   margin: 0 3px;
   border-radius: 3px;
   flex-shrink: 0;
   transition: background 0.2s;
 }
-.schema-divider:hover { background: #409eff; }
+.schema-divider:hover { background: var(--el-color-primary); }
 .schema-panel-header {
   display: flex;
   justify-content: space-between;
@@ -446,8 +450,8 @@ async function handleSubmitApproval() {
   padding: 8px 0;
   font-weight: 600;
   font-size: 14px;
-  color: #303133;
-  border-bottom: 1px solid #ebeef5;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
   margin-bottom: 8px;
 }
 .schema-tree {
@@ -456,16 +460,16 @@ async function handleSubmitApproval() {
 }
 .schema-empty {
   text-align: center;
-  color: #909399;
+  color: var(--text-secondary);
   padding: 40px 0;
   font-size: 14px;
 }
 .schema-add-root {
   cursor: pointer;
   font-size: 18px;
-  color: #409eff;
+  color: var(--el-color-primary);
   padding: 4px;
   border-radius: 4px;
 }
-.schema-add-root:hover { background: #ecf5ff; }
+.schema-add-root:hover { background: var(--el-color-primary-light-9); }
 </style>

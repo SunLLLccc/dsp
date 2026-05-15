@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- 搜索栏 -->
-    <el-card class="mb-16">
+    <el-card shadow="never" class="card-search">
       <el-form :inline="true" :model="searchForm">
         <el-form-item label="接口编码">
           <el-input v-model="searchForm.transno" placeholder="请输入接口编码" clearable />
@@ -10,7 +10,7 @@
           <el-input v-model="searchForm.systemName" placeholder="请输入所属系统" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width:160px">
+          <el-select v-model="searchForm.status" placeholder="全部" clearable class="select-fixed">
             <el-option label="草稿" :value="0" />
             <el-option label="待审批" :value="1" />
             <el-option label="已驳回" :value="2" />
@@ -27,7 +27,7 @@
 
     <!-- 操作栏 -->
     <el-card>
-      <div class="mb-16">
+      <div class="mb-md">
         <el-button type="primary" @click="openCreateDialog" v-role="'USER'">新增XML模板</el-button>
       </div>
 
@@ -55,7 +55,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="mt-16" style="display:flex;justify-content:flex-end">
+      <div class="pagination-wrap">
         <el-pagination v-model:current-page="searchForm.pageNum" v-model:page-size="searchForm.pageSize"
           :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next"
           @size-change="loadData" @current-change="loadData" />
@@ -63,8 +63,8 @@
     </el-card>
 
     <!-- 新增/编辑模板弹窗 -->
-    <el-dialog v-model="editDialogVisible" :title="editDialogTitle" width="900px" top="5vh" destroy-on-close>
-      <el-form label-width="100px" class="mb-16">
+    <el-dialog v-model="editDialogVisible" :title="editDialogTitle" width="90%" style="max-width:900px" top="5vh" destroy-on-close>
+      <el-form label-width="100px" class="mb-md">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="选择接口" required>
@@ -74,7 +74,7 @@
                 filterable
                 :disabled="isEditMode"
                 @change="handleInterfaceSelect"
-                style="width:100%"
+                class="select-full"
               >
                 <el-option
                   v-for="item in publishedInterfaces"
@@ -105,8 +105,8 @@
         </el-row>
       </el-form>
 
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-weight:600">XML 配置</span>
+      <div class="xml-section-header">
+        <span class="section-title">XML 配置</span>
         <div>
           <el-button size="small" type="primary" @click="handleGenerateXml" :disabled="!editForm.transno">
             根据Schema生成
@@ -121,7 +121,7 @@
         type="textarea"
         :rows="20"
         placeholder="请输入XML配置"
-        style="font-family:monospace"
+        style="font-family:var(--font-mono)"
       />
 
       <template #footer>
@@ -132,7 +132,7 @@
     </el-dialog>
 
     <!-- XML 查看弹窗 -->
-    <el-dialog v-model="viewDialogVisible" :title="`XML配置 - ${viewTransno}`" width="800px">
+    <el-dialog v-model="viewDialogVisible" :title="`XML配置 - ${viewTransno}`" width="90%" style="max-width:800px">
       <div class="code-view">
         <div class="code-lines"><span v-for="n in viewXmlLineCount" :key="n" class="code-ln">{{ n }}</span></div>
         <pre class="code-text">{{ viewXmlContent }}</pre>
@@ -140,7 +140,7 @@
     </el-dialog>
 
     <!-- 历史版本弹窗 -->
-    <el-dialog v-model="historyDialogVisible" :title="`历史版本 - ${historyTransno}`" width="900px">
+    <el-dialog v-model="historyDialogVisible" :title="`历史版本 - ${historyTransno}`" width="90%" style="max-width:900px">
       <el-table :data="historyData" border stripe>
         <el-table-column prop="versionNo" label="版本号" width="80" />
         <el-table-column prop="changeLog" label="变更说明" show-overflow-tooltip />
@@ -386,38 +386,50 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-.mb-16 { margin-bottom: 16px; }
-.mt-16 { margin-top: 16px; }
+.select-fixed { width: 160px; }
+.select-full { width: 100%; }
+
+.xml-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.section-title {
+  font-weight: 600;
+}
+
 .code-view {
   display: flex;
   max-height: 520px;
   overflow: auto;
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-  background: #fafafa;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-page);
 }
 .code-lines {
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
-  background: #f5f5f5;
-  border-right: 1px solid #ebeef5;
+  padding: var(--space-sm) 0;
+  background: var(--bg-sidebar-hover);
+  border-right: 1px solid var(--border-color);
   text-align: right;
   user-select: none;
   flex-shrink: 0;
 }
 .code-ln {
   display: block;
-  padding: 0 8px;
+  padding: 0 var(--space-sm);
   line-height: 1.5;
   font-size: 13px;
-  color: #b0b0b0;
-  font-family: Consolas, Monaco, monospace;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
 }
 .code-text {
   margin: 0;
-  padding: 8px 12px;
-  font-family: Consolas, Monaco, monospace;
+  padding: var(--space-sm) 12px;
+  font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.5;
   white-space: pre;

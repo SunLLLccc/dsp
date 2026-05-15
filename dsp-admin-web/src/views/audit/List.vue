@@ -2,14 +2,14 @@
   <div>
     <el-card>
       <template #header>
-        <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="card-header">
           <span>审计日志</span>
           <el-button type="primary" size="small" @click="loadData">刷新</el-button>
         </div>
       </template>
 
       <!-- 筛选条件 -->
-      <el-form :inline="true" style="margin-bottom:16px">
+      <el-form :inline="true" class="mb-md">
         <el-form-item label="接口编码">
           <el-input v-model="filters.transno" placeholder="模糊搜索" clearable />
         </el-form-item>
@@ -49,16 +49,17 @@
         <el-table-column prop="requestData" label="请求参数" min-width="200" show-overflow-tooltip />
       </el-table>
 
-      <el-pagination
-        style="margin-top:16px;justify-content:flex-end"
-        v-model:current-page="pageNum"
-        v-model:page-size="pageSize"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next"
-        @size-change="loadData"
-        @current-change="loadData"
-      />
+      <div class="pagination-wrap">
+        <el-pagination
+          v-model:current-page="pageNum"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          @size-change="loadData"
+          @current-change="loadData"
+        />
+      </div>
     </el-card>
   </div>
 </template>
@@ -100,3 +101,11 @@ async function loadData() {
 
 onMounted(() => loadData())
 </script>
+
+<style scoped>
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+</style>

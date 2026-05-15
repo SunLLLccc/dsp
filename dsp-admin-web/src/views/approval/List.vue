@@ -1,10 +1,10 @@
 <template>
   <div>
     <!-- 搜索栏 -->
-    <el-card class="mb-16">
+    <el-card shadow="never" class="card-search">
       <el-form :inline="true" :model="searchForm">
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width:160px">
+          <el-select v-model="searchForm.status" placeholder="全部" clearable class="select-fixed">
             <el-option label="待审批" :value="0" />
             <el-option label="已通过" :value="1" />
             <el-option label="已驳回" :value="2" />
@@ -45,7 +45,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="mt-16" style="display:flex;justify-content:flex-end">
+      <div class="pagination-wrap">
         <el-pagination v-model:current-page="searchForm.pageNum" v-model:page-size="searchForm.pageSize"
           :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next"
           @size-change="loadData" @current-change="loadData" />
@@ -80,7 +80,7 @@
         <el-table-column prop="approveTime" label="审批时间" width="170" :formatter="fmtTimeCol" />
         <el-table-column prop="rejectReason" label="驳回原因" show-overflow-tooltip />
       </el-table>
-      <div class="mt-16" style="display:flex;justify-content:flex-end">
+      <div class="pagination-wrap">
         <el-pagination v-model:current-page="recordPage.pageNum" v-model:page-size="recordPage.pageSize"
           :total="recordTotal" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next"
           @size-change="loadRecords" @current-change="loadRecords" />
@@ -234,6 +234,5 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
-.mb-16 { margin-bottom: 16px; }
-.mt-16 { margin-top: 16px; }
+.select-fixed { width: 160px; }
 </style>

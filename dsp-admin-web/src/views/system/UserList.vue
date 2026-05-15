@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-card class="mb-16">
+    <el-card shadow="never" class="card-search mb-md">
       <el-form :inline="true" :model="searchForm">
         <el-form-item label="用户名">
           <el-input v-model="searchForm.username" placeholder="请输入用户名" clearable />
@@ -16,7 +16,7 @@
     </el-card>
 
     <el-card>
-      <div class="mb-16">
+      <div class="mb-md">
         <el-button type="primary" @click="openCreateDialog">新增用户</el-button>
       </div>
 
@@ -28,7 +28,7 @@
         </el-table-column>
         <el-table-column label="角色" min-width="200">
           <template #default="{ row }">
-            <el-tag v-for="r in row.roleNames || []" :key="r" size="small" class="mr-4">{{ r }}</el-tag>
+            <el-tag v-for="r in row.roleNames || []" :key="r" size="small" class="mr-sm">{{ r }}</el-tag>
             <span v-if="!row.roleNames?.length">-</span>
           </template>
         </el-table-column>
@@ -51,7 +51,7 @@
         </el-table-column>
       </el-table>
 
-      <div class="mt-16" style="display:flex;justify-content:flex-end">
+      <div class="pagination-wrap">
         <el-pagination v-model:current-page="searchForm.pageNum" v-model:page-size="searchForm.pageSize"
           :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next"
           @size-change="loadData" @current-change="loadData" />
@@ -71,7 +71,7 @@
           <el-input v-model="editForm.realName" />
         </el-form-item>
         <el-form-item label="所属部门">
-          <el-select v-model="editForm.deptId" placeholder="请选择部门" clearable style="width:100%">
+          <el-select v-model="editForm.deptId" placeholder="请选择部门" clearable class="full-width">
             <el-option v-for="d in deptList" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </el-form-item>
@@ -235,7 +235,5 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.mb-16 { margin-bottom: 16px; }
-.mt-16 { margin-top: 16px; }
-.mr-4 { margin-right: 4px; }
+.full-width { width: 100%; }
 </style>

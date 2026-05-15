@@ -4,7 +4,7 @@
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <!-- 我的申请 -->
         <el-tab-pane label="我的申请" name="mine">
-          <div class="mb-16">
+          <div class="mb-md">
             <el-button type="primary" @click="openApplyDialog">新增申请</el-button>
           </div>
 
@@ -27,7 +27,7 @@
             </el-table-column>
           </el-table>
 
-          <div class="mt-16" style="display:flex;justify-content:flex-end">
+          <div class="pagination-wrap">
             <el-pagination
               v-model:current-page="minePage.pageNum"
               v-model:page-size="minePage.pageSize"
@@ -61,7 +61,7 @@
             </el-table-column>
           </el-table>
 
-          <div class="mt-16" style="display:flex;justify-content:flex-end">
+          <div class="pagination-wrap">
             <el-pagination
               v-model:current-page="pendingPage.pageNum"
               v-model:page-size="pendingPage.pageSize"
@@ -97,7 +97,7 @@
             </el-table-column>
           </el-table>
 
-          <div class="mt-16" style="display:flex;justify-content:flex-end">
+          <div class="pagination-wrap">
             <el-pagination
               v-model:current-page="donePage.pageNum"
               v-model:page-size="donePage.pageSize"
@@ -116,17 +116,17 @@
     <el-dialog v-model="applyDialogVisible" title="新增接口申请" width="650px" destroy-on-close>
       <el-form :model="applyForm" label-width="110px">
         <el-form-item label="请求方系统" required>
-          <el-select v-model="applyForm.reqSystemId" placeholder="请选择请求方系统" style="width:100%">
+          <el-select v-model="applyForm.reqSystemId" placeholder="请选择请求方系统" class="full-width">
             <el-option v-for="s in reqSystemList" :key="s.id" :label="s.name" :value="s.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="服务方系统" required>
-          <el-select v-model="applyForm.providerSystemId" placeholder="请选择服务方系统" style="width:100%" @change="handleProviderSystemChange">
+          <el-select v-model="applyForm.providerSystemId" placeholder="请选择服务方系统" class="full-width" @change="handleProviderSystemChange">
             <el-option v-for="s in allSystemList" :key="s.id" :label="s.name" :value="s.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="选择接口" required>
-          <el-select v-model="applyForm.interfaceId" placeholder="请先选择服务方系统" style="width:100%" :disabled="!applyForm.providerSystemId" filterable @change="onInterfaceChange">
+          <el-select v-model="applyForm.interfaceId" placeholder="请先选择服务方系统" class="full-width" :disabled="!applyForm.providerSystemId" filterable @change="onInterfaceChange">
             <el-option v-for="inf in interfaceOptions" :key="inf.id" :label="`${inf.transno} - ${inf.name}`" :value="inf.id" />
           </el-select>
         </el-form-item>
@@ -433,6 +433,5 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.mb-16 { margin-bottom: 16px; }
-.mt-16 { margin-top: 16px; }
+.full-width { width: 100%; }
 </style>

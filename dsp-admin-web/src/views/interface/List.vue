@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- 搜索栏 -->
-    <el-card class="mb-16">
+    <el-card shadow="never" class="card-search">
       <el-form :inline="true" :model="searchForm">
         <el-form-item label="接口编码">
           <el-input v-model="searchForm.transno" placeholder="请输入接口编码" clearable />
@@ -10,12 +10,12 @@
           <el-input v-model="searchForm.name" placeholder="请输入接口名称" clearable />
         </el-form-item>
         <el-form-item label="所属系统">
-          <el-select v-model="searchForm.systemName" placeholder="全部" clearable filterable style="width:160px">
+          <el-select v-model="searchForm.systemName" placeholder="全部" clearable filterable class="filter-select">
             <el-option v-for="sys in systemOptions" :key="sys.id" :label="sys.name" :value="sys.name" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width:160px">
+          <el-select v-model="searchForm.status" placeholder="全部" clearable class="filter-select">
             <el-option label="草稿" :value="0" />
             <el-option label="待审批" :value="1" />
             <el-option label="已驳回" :value="2" />
@@ -32,7 +32,7 @@
 
     <!-- 操作栏 -->
     <el-card>
-      <div class="mb-16">
+      <div class="mb-md">
         <el-button type="primary" @click="handleCreate" v-role="'USER'">新增接口</el-button>
         <el-button type="success" @click="handleExportSelected" :disabled="!selectedRows.length">导出选中</el-button>
         <el-button type="warning" @click="openImportDialog" v-role="'IMPORTER'">导入配置</el-button>
@@ -63,7 +63,7 @@
       </el-table>
 
       <!-- 分页 -->
-      <div class="mt-16" style="display:flex;justify-content:flex-end">
+      <div class="pagination-wrap">
         <el-pagination v-model:current-page="searchForm.pageNum" v-model:page-size="searchForm.pageSize"
           :total="total" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next"
           @size-change="loadData" @current-change="loadData" />
@@ -79,7 +79,7 @@
     />
 
     <!-- 版本历史弹窗 -->
-    <el-dialog v-model="versionDialogVisible" :title="`版本历史 - ${versionTransno}`" width="900px">
+    <el-dialog v-model="versionDialogVisible" :title="`版本历史 - ${versionTransno}`" width="90%" style="max-width:900px">
       <el-table :data="versionData" border stripe>
         <el-table-column prop="versionNo" label="版本号" width="80" />
         <el-table-column prop="status" label="状态" width="100">
@@ -97,7 +97,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="mt-16" style="display:flex;justify-content:flex-end">
+      <div class="pagination-wrap">
         <el-pagination v-model:current-page="versionPage.pageNum" v-model:page-size="versionPage.pageSize"
           :total="versionTotal" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next"
           @size-change="loadVersions" @current-change="loadVersions" />
@@ -125,8 +125,8 @@
     />
 
     <!-- 导入配置弹窗 -->
-    <el-dialog v-model="importDialogVisible" title="导入配置" width="600px" destroy-on-close>
-      <el-alert type="info" :closable="false" class="mb-16">
+    <el-dialog v-model="importDialogVisible" title="导入配置" width="90%" style="max-width:600px" destroy-on-close>
+      <el-alert type="info" :closable="false" class="mb-md">
         请选择从测试环境导出的 JSON 文件。导入时接口信息、Schema和模板XML会创建新版本。
       </el-alert>
       <el-upload
@@ -138,13 +138,13 @@
         :on-remove="() => importFileData = null"
         drag
       >
-        <el-icon style="font-size:40px;color:#c0c4cc"><UploadFilled /></el-icon>
+        <el-icon class="upload-icon"><UploadFilled /></el-icon>
         <div>拖拽文件到此处，或<em>点击上传</em></div>
         <template #tip>
           <div class="el-upload__tip">仅支持 .json 文件</div>
         </template>
       </el-upload>
-      <el-form class="mt-16" v-if="importPreview.length">
+      <el-form class="mt-md" v-if="importPreview.length">
         <el-form-item label="变更说明">
           <el-input v-model="importChangeLog" placeholder="导入说明" />
         </el-form-item>
@@ -418,8 +418,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.mb-16 { margin-bottom: 16px; }
-.mt-16 { margin-top: 16px; }
+.filter-select { width: 160px; }
+.upload-icon { font-size: 40px; color: var(--text-placeholder); }
 .ml-8 { margin-left: 8px; }
 .import-preview-item { margin-bottom: 4px; display: flex; align-items: center; }
 </style>
