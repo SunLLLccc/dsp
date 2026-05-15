@@ -9,9 +9,7 @@
             <path d="M7 8h4v8H7V8zm6 0h4v8h-4V8z" fill="white"/>
           </svg>
         </div>
-        <transition name="logo-fade">
-          <span v-show="!collapsed" class="logo-text">DSP</span>
-        </transition>
+        <span v-show="!collapsed" class="logo-text">DSP</span>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -169,9 +167,8 @@
       <el-header class="layout-header">
         <div class="header-left">
           <el-icon class="hamburger-btn" @click="drawerVisible = true"><Expand /></el-icon>
-          <span class="header-title">{{ currentTitle }}</span>
+          <span class="header-brand">数据服务平台</span>
         </div>
-        <span class="header-center">数据服务平台</span>
         <div class="header-right">
           <el-dropdown trigger="click" @command="handleUserCommand">
             <span class="user-info">
@@ -318,27 +315,9 @@ onBeforeUnmount(() => {
 .logo-text {
   font-size: 18px;
   font-weight: 700;
-  color: #FFFFFF;
+  color: #1D2939;
   letter-spacing: 3px;
   white-space: nowrap;
-}
-
-.logo-fade-enter-active,
-.logo-fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.logo-fade-enter-from,
-.logo-fade-leave-to {
-  opacity: 0;
-}
-.logo-fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.logo-fade-enter-from,
-.logo-fade-leave-to {
-  opacity: 0;
 }
 
 /* 菜单 */
@@ -414,11 +393,11 @@ onBeforeUnmount(() => {
   z-index: 1;
 }
 
-.header-title {
+.header-brand {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
-  line-height: 1;
+  letter-spacing: 1px;
 }
 
 .hamburger-btn {
@@ -433,19 +412,6 @@ onBeforeUnmount(() => {
 .hamburger-btn:hover {
   background: var(--bg-hover);
   color: var(--el-color-primary);
-}
-
-.header-center {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  letter-spacing: 2px;
-  white-space: nowrap;
-  pointer-events: none;
 }
 
 .header-right {
