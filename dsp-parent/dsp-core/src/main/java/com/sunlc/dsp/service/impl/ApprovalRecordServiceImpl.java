@@ -242,12 +242,12 @@ public class ApprovalRecordServiceImpl extends ServiceImpl<ApprovalRecordMapper,
             wrapper.and(w -> {
                 // 第一步：服务方系统属于本部门
                 w.inSql(ApprovalRecord::getProviderSystemId,
-                        "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND (deleted IS NULL OR deleted = 0)")
+                        "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1")
                         .eq(ApprovalRecord::getCurrentStep, 1)
                         .or(sub -> sub
                                 // 第二步：申请方系统属于本部门
                                 .inSql(ApprovalRecord::getApplicantSystemId,
-                                        "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND (deleted IS NULL OR deleted = 0)")
+                                        "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1")
                                 .eq(ApprovalRecord::getCurrentStep, 2));
             });
         }
