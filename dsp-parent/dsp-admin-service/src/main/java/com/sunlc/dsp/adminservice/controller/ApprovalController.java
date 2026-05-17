@@ -6,11 +6,11 @@ import com.sunlc.dsp.entity.ApprovalInfo;
 import com.sunlc.dsp.service.ApprovalInfoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +48,19 @@ public class ApprovalController {
         return roles instanceof List ? (List<String>) roles : java.util.Collections.emptyList();
     }
 
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isEmpty()) return null;
+        try {
+            return LocalDateTime.parse(value, DateTimeFormatter.ISO_DATE_TIME);
+        } catch (Exception e) {
+            try {
+                return LocalDateTime.parse(value, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            } catch (Exception e2) {
+                return null;
+            }
+        }
+    }
+
     @PostMapping("/submit")
     public ApiResponse<ApprovalInfo> submit(@RequestBody Map<String, Object> params,
                                              HttpServletRequest request) {
@@ -67,14 +80,14 @@ public class ApprovalController {
     public ApiResponse<Object> mySubmissions(
             @RequestParam(required = false) Integer type,
             @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             HttpServletRequest request) {
         String applicant = getCurrentUser(request);
         return ApiResponse.success("APPROVAL", "MY_SUBMISSIONS",
-                approvalInfoService.mySubmissions(applicant, type, status, startDate, endDate, pageNum, pageSize));
+                approvalInfoService.mySubmissions(applicant, type, status, parseDateTime(startDate), parseDateTime(endDate), pageNum, pageSize));
     }
 
     @GetMapping("/pending")
@@ -91,15 +104,15 @@ public class ApprovalController {
     @GetMapping("/history")
     public ApiResponse<Object> history(
             @RequestParam(required = false) Integer type,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             HttpServletRequest request) {
         Long deptId = getCurrentDeptId(request);
         List<String> roles = getCurrentRoles(request);
         return ApiResponse.success("APPROVAL", "HISTORY",
-                approvalInfoService.approvedHistory(deptId, roles, startDate, endDate, pageNum, pageSize));
+                approvalInfoService.approvedHistory(deptId, roles, parseDateTime(startDate), parseDateTime(endDate), pageNum, pageSize));
     }
 
     @PostMapping("/{id}/approve")
