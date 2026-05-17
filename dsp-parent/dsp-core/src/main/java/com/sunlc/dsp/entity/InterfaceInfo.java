@@ -22,4 +22,7 @@ public class InterfaceInfo {
     private LocalDateTime updatedTime;
     @TableLogic
     private Integer deleted;
+
+    @TableField(exist = false)
+    private Boolean canWithdraw;
 }

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.sunlc.dsp.adminservice.annotation.RequireRole;
 import com.sunlc.dsp.common.model.ApiResponse;
 import com.sunlc.dsp.engine.XmlEngine;
+import com.sunlc.dsp.entity.ApprovalFlow;
 import com.sunlc.dsp.entity.ApprovalInfo;
 import com.sunlc.dsp.enums.InterfaceStatus;
 import com.sunlc.dsp.entity.ApprovalRecord;
@@ -24,9 +25,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -47,6 +47,22 @@ public class InterfaceAdminController {
     private String getCurrentUser(HttpServletRequest request) {
         Object user = request.getAttribute("adminUser");
         return user != null ? user.toString() : "anonymous";
+    }
+
+    private Long getCurrentDeptId(HttpServletRequest request) {
+        Object deptId = request.getAttribute("adminDeptId");
+        if (deptId instanceof Long) return (Long) deptId;
+        if (deptId instanceof Number) return ((Number) deptId).longValue();
+        if (deptId instanceof String) {
+            try { return Long.parseLong((String) deptId); } catch (NumberFormatException e) { return null; }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> getCurrentRoles(HttpServletRequest request) {
+        Object roles = request.getAttribute("adminRoles");
+        return roles instanceof List ? (List<String>) roles : Collections.emptyList();
     }
 
     /**
@@ -85,6 +101,10 @@ public class InterfaceAdminController {
             HttpServletRequest request) {
 
         String currentUser = getCurrentUser(request);
+        Long deptId = getCurrentDeptId(request);
+        List<String> roles = getCurrentRoles(request);
+        boolean isAdmin = roles.contains("ADMIN");
+
         Page<InterfaceInfo> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<InterfaceInfo> wrapper = new LambdaQueryWrapper<>();
         if (transno != null && !transno.isEmpty()) {
@@ -99,13 +119,62 @@ public class InterfaceAdminController {
         if (systemId != null) {
             wrapper.eq(InterfaceInfo::getSystemId, systemId);
         }
+        // 非ADMIN用户只能查看自己部门所属系统的接口
+        if (!isAdmin && deptId != null) {
+            List<SysSystem> systems = sysSystemService.listByDeptId(deptId);
+            List<Long> deptSystemIds = systems.stream().map(SysSystem::getId).collect(Collectors.toList());
+            if (deptSystemIds.isEmpty()) {
+                return ApiResponse.success("INTERFACE_LIST", "", new Page<>());
+            }
+            wrapper.in(InterfaceInfo::getSystemId, deptSystemIds);
+        }
         // 草稿只对创建人可见：status != 0 OR created_by = currentUser
         wrapper.and(w -> w.ne(InterfaceInfo::getStatus, InterfaceStatus.DRAFT.getCode())
                 .or(sub -> sub.eq(InterfaceInfo::getStatus, InterfaceStatus.DRAFT.getCode())
                         .eq(InterfaceInfo::getCreatedBy, currentUser)));
         wrapper.orderByDesc(InterfaceInfo::getUpdatedTime);
 
-        return ApiResponse.success("INTERFACE_LIST", "", interfaceInfoService.page(page, wrapper));
+        Page<InterfaceInfo> result = interfaceInfoService.page(page, wrapper);
+
+        // 计算待审批接口的 canWithdraw 状态
+        List<InterfaceInfo> records = result.getRecords();
+        List<String> pendingTransnos = records.stream()
+                .filter(r -> r.getStatus() != null && r.getStatus() == 1)
+                .map(InterfaceInfo::getTransno)
+                .collect(Collectors.toList());
+        if (!pendingTransnos.isEmpty()) {
+            // 批量查询待审批记录
+            LambdaQueryWrapper<ApprovalInfo> approvalWrapper = new LambdaQueryWrapper<>();
+            approvalWrapper.in(ApprovalInfo::getTransno, pendingTransnos)
+                    .eq(ApprovalInfo::getStatus, 0);
+            List<ApprovalInfo> pendingApprovals = approvalInfoService.list(approvalWrapper);
+            Map<String, Long> transnoToApprovalId = pendingApprovals.stream()
+                    .collect(Collectors.toMap(ApprovalInfo::getTransno, ApprovalInfo::getId, (a, b) -> a));
+
+            if (!transnoToApprovalId.isEmpty()) {
+                // 批量查询已处理的流程步骤
+                LambdaQueryWrapper<ApprovalFlow> flowWrapper = new LambdaQueryWrapper<>();
+                flowWrapper.in(ApprovalFlow::getApprovalId, transnoToApprovalId.values())
+                        .ne(ApprovalFlow::getStatus, 0);
+                List<ApprovalFlow> processedFlows = approvalInfoService.listFlows(flowWrapper);
+                Set<Long> approvalsWithProcessedStep = processedFlows.stream()
+                        .map(ApprovalFlow::getApprovalId)
+                        .collect(Collectors.toSet());
+
+                for (InterfaceInfo info : records) {
+                    if (info.getStatus() != null && info.getStatus() == 1) {
+                        Long approvalId = transnoToApprovalId.get(info.getTransno());
+                        info.setCanWithdraw(approvalId != null && !approvalsWithProcessedStep.contains(approvalId));
+                    } else {
+                        info.setCanWithdraw(false);
+                    }
+                }
+            } else {
+                records.forEach(r -> r.setCanWithdraw(false));
+            }
+        }
+
+        return ApiResponse.success("INTERFACE_LIST", "", result);
     }
 
     @GetMapping("/{id}")

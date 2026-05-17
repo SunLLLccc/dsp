@@ -13,8 +13,8 @@
               <el-input v-model="searchForm.name" placeholder="请输入接口名称" clearable />
             </el-form-item>
             <el-form-item label="所属系统">
-              <el-select v-model="searchForm.systemName" placeholder="全部" clearable filterable class="filter-select">
-                <el-option v-for="sys in systemOptions" :key="sys.id" :label="sys.name" :value="sys.name" />
+              <el-select v-model="searchForm.systemId" placeholder="全部" clearable filterable class="filter-select">
+                <el-option v-for="sys in systemOptions" :key="sys.id" :label="sys.name" :value="sys.id" />
               </el-select>
             </el-form-item>
             <el-form-item label="状态">
@@ -59,7 +59,7 @@
                 <el-button size="small" @click="handleViewSchema(row)">查看</el-button>
                 <el-button size="small" @click="handleEdit(row)" :disabled="row.status === 1" v-role="'USER'">编辑</el-button>
                 <el-button size="small" @click="showVersionHistory(row)">版本</el-button>
-                <el-button size="small" type="warning" @click="handleWithdraw(row)" v-if="row.status === 1" v-role="'USER'">撤销审批</el-button>
+                <el-button size="small" type="warning" @click="handleWithdraw(row)" v-if="row.status === 1 && row.canWithdraw" v-role="'USER'">撤销审批</el-button>
                 <el-button size="small" type="danger" @click="handleDelete(row)" :disabled="row.status === 1" v-role="'USER'">删除</el-button>
               </template>
             </el-table-column>
@@ -371,7 +371,7 @@ function handleTabChange(tab) {
 // ==================== 页签一：接口信息（原有逻辑完全保留） ====================
 const tableData = ref([])
 const total = ref(0)
-const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', name: '', systemName: '', status: null })
+const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', name: '', systemId: null, status: null })
 const systemOptions = ref([])
 
 const statusText = (s) => INTERFACE_STATUS[s] || '未知'
@@ -412,7 +412,7 @@ async function loadData() {
 }
 
 function resetSearch() {
-  searchForm.value = { pageNum: 1, pageSize: 10, transno: '', name: '', systemName: '', status: null }
+  searchForm.value = { pageNum: 1, pageSize: 10, transno: '', name: '', systemId: null, status: null }
   loadData()
 }
 
@@ -811,7 +811,9 @@ async function handleOfflineRelation(row) {
 // ==================== 初始化 ====================
 onMounted(() => {
   loadData()
-  systemApi.list().then(res => { systemOptions.value = res.data || [] })
+  // ADMIN用户加载全部系统，其他用户只加载自己部门的系统
+  const params = authStore.hasRole('ADMIN') ? {} : { deptId: authStore.deptId }
+  systemApi.list(params).then(res => { systemOptions.value = res.data || [] })
 })
 </script>
 

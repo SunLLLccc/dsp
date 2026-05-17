@@ -330,6 +330,11 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
         return info;
     }
 
+    @Override
+    public List<ApprovalFlow> listFlows(LambdaQueryWrapper<ApprovalFlow> wrapper) {
+        return approvalFlowMapper.selectList(wrapper);
+    }
+
     // ==================== 私有方法 ====================
 
     /**

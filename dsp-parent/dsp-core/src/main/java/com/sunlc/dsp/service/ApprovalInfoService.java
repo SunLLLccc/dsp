@@ -1,5 +1,6 @@
 package com.sunlc.dsp.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.sunlc.dsp.entity.ApprovalFlow;
@@ -60,4 +61,9 @@ public interface ApprovalInfoService extends IService<ApprovalInfo> {
      * 获取审批单详情（含流程步骤、系统名称等展示字段）
      */
     ApprovalInfo getDetail(Long approvalId);
+
+    /**
+     * 按条件查询流程步骤
+     */
+    List<ApprovalFlow> listFlows(LambdaQueryWrapper<ApprovalFlow> wrapper);
 }
