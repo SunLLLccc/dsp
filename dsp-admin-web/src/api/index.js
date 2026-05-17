@@ -66,11 +66,22 @@ export const exportApi = {
 
 // 审批管理API
 export const approvalApi = {
-  pending: (params) => request.get('/interface/approval-pending', { params }),
-  records: (transno, params) => request.get(`/interface/${transno}/approval-records`, { params }),
-  submit: (transno, versionNo, data) => request.post(`/interface/${transno}/version/${versionNo}/submit`, data),
-  approve: (transno) => request.post(`/interface/${transno}/approve`),
-  reject: (transno, data) => request.post(`/interface/${transno}/reject`, data)
+  mySubmissions: (params) => request.get('/approval/my-submissions', { params }),
+  pending: (params) => request.get('/approval/pending', { params }),
+  history: (params) => request.get('/approval/history', { params }),
+  submitApply: (data) => request.post('/approval/submit', data),
+  approve: (id) => request.post(`/approval/${id}/approve`),
+  reject: (id, data) => request.post(`/approval/${id}/reject`, data),
+  withdraw: (id) => request.post(`/approval/${id}/withdraw`),
+  flowDetail: (id) => request.get(`/approval/${id}/flow`),
+  detail: (id) => request.get(`/approval/${id}/detail`),
+}
+
+// 接口关系API
+export const relationApi = {
+  provider: (params) => request.get('/relation/provider', { params }),
+  applicant: (params) => request.get('/relation/applicant', { params }),
+  offline: (id, data) => request.post(`/relation/${id}/offline`, data),
 }
 
 // 审计日志API
@@ -118,13 +129,4 @@ export const configApi = {
   importConfig: (data) => request.post('/config/import', data)
 }
 
-// 接口申请API
-export const applicationApi = {
-  submit: (data) => request.post('/approval/application', data),
-  myList: (params) => request.get('/approval/my-applications', { params }),
-  pendingApproval: (params) => request.get('/approval/pending-approval', { params }),
-  approvedList: (params) => request.get('/approval/approved-list', { params }),
-  approve: (id) => request.post(`/approval/application/${id}/approve`),
-  reject: (id, data) => request.post(`/approval/application/${id}/reject`, data)
-}
 
