@@ -178,6 +178,14 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
             throw new BusinessException(ErrorCode.ACCESS_DENIED, "只有申请人可以撤回审批单");
         }
 
+        // 检查是否已有步骤被审批通过，已有人审批则不允许撤回
+        List<ApprovalFlow> flows = getFlowDetail(approvalId);
+        for (ApprovalFlow flow : flows) {
+            if (flow.getStatus() != 0) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "已有审批人处理过该审批，无法撤回");
+            }
+        }
+
         // 标记审批单为已撤回
         info.setStatus(3); // 3=已撤回
         info.setWithdrawTime(LocalDateTime.now());

@@ -51,7 +51,7 @@
             </el-table-column>
             <el-table-column label="操作" width="200" fixed="right">
               <template #default="{ row }">
-                <el-button size="small" type="warning" @click="handleWithdraw(row)" v-if="row.status === 0">撤回</el-button>
+                <el-button size="small" type="warning" @click="handleWithdraw(row)" v-if="row.status === 0 && (!row.currentStep || row.currentStep === 0)">撤回</el-button>
                 <el-button size="small" @click="showFlowDetail(row)">审批记录</el-button>
                 <el-button size="small" type="primary" @click="showApprovalDetail(row)">详情</el-button>
               </template>
