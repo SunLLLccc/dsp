@@ -711,7 +711,16 @@ async function handleSubmitApply() {
 
   submitting.value = true
   try {
-    await approvalApi.submitApply(form)
+    await approvalApi.submitApply({
+      type: 3,
+      applicantSystemId: form.reqSystemId,
+      providerSystemId: form.providerSystemId,
+      transno: form.transno,
+      requirementNo: form.reqNo,
+      requirementDesc: form.reqDesc,
+      applyReason: form.applyReason,
+      downstreamInfo: form.downstreamInfo
+    })
     ElMessage.success('申请已提交')
     applyDialogVisible.value = false
     loadApplyList()

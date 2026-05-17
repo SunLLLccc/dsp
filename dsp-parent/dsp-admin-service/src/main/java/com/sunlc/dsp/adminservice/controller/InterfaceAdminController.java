@@ -190,7 +190,7 @@ public class InterfaceAdminController {
         String applicantName = body.getOrDefault("applicantName", "");
 
         // 判断审批类型：如果接口有 currentVersion 且 > 0 则为修改，否则为新增
-        InterfaceInfo interfaceInfo = interfaceInfoService.getByTransno(transno);
+        InterfaceInfo interfaceInfo = interfaceInfoService.getByTransnoAnyStatus(transno);
         int type = (interfaceInfo != null && interfaceInfo.getCurrentVersion() != null
                 && interfaceInfo.getCurrentVersion() > 0) ? 2 : 1;
 
