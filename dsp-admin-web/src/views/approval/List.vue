@@ -273,11 +273,22 @@ const APPROVAL_STATUS_TAG = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info'
 
 function fmtTimeCol(_row, _col, val) { return fmtTime(val) }
 
-// 默认日期范围：近7天
+// 格式化日期为本地时间字符串
+function formatLocalDateTime(date) {
+  const y = date.getFullYear()
+  const M = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const h = String(date.getHours()).padStart(2, '0')
+  const m = String(date.getMinutes()).padStart(2, '0')
+  const s = String(date.getSeconds()).padStart(2, '0')
+  return `${y}-${M}-${d} ${h}:${m}:${s}`
+}
+
+// 默认日期范围：近7天（返回本地时间字符串）
 function defaultDateRange() {
   const end = new Date()
   const start = new Date(Date.now() - 7 * 24 * 3600 * 1000)
-  return [start, end]
+  return [formatLocalDateTime(start), formatLocalDateTime(end)]
 }
 
 // ==================== 页签控制 ====================
@@ -313,8 +324,9 @@ async function loadSubmissions() {
       params.status = submitSearchForm.value.status
     }
     if (submitSearchForm.value.dateRange && submitSearchForm.value.dateRange.length === 2) {
-      params.startDate = submitSearchForm.value.dateRange[0]
-      params.endDate = submitSearchForm.value.dateRange[1]
+      const dr = submitSearchForm.value.dateRange
+      params.startDate = dr[0] instanceof Date ? formatLocalDateTime(dr[0]) : dr[0]
+      params.endDate = dr[1] instanceof Date ? formatLocalDateTime(dr[1]) : dr[1]
     }
     const res = await approvalApi.mySubmissions(params)
     submissionList.value = res.data?.records || []
@@ -415,8 +427,9 @@ async function loadHistoryList() {
       params.type = historySearchForm.value.type
     }
     if (historySearchForm.value.dateRange && historySearchForm.value.dateRange.length === 2) {
-      params.startDate = historySearchForm.value.dateRange[0]
-      params.endDate = historySearchForm.value.dateRange[1]
+      const dr = historySearchForm.value.dateRange
+      params.startDate = dr[0] instanceof Date ? formatLocalDateTime(dr[0]) : dr[0]
+      params.endDate = dr[1] instanceof Date ? formatLocalDateTime(dr[1]) : dr[1]
     }
     const res = await approvalApi.history(params)
     historyList.value = res.data?.records || []
