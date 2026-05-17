@@ -229,13 +229,13 @@
           :key="idx"
           :timestamp="step.approveTime || '-'"
           placement="top"
-          :type="step.result === 1 ? 'success' : step.result === 2 ? 'danger' : 'warning'"
+          :type="step.status === 1 ? 'success' : step.status === 2 ? 'danger' : 'warning'"
         >
           <el-card shadow="never" class="flow-step-card">
             <div class="flow-step-header">
               <span class="flow-step-name">{{ step.stepName || `步骤 ${idx + 1}` }}</span>
-              <el-tag v-if="step.result === 1" type="success" size="small">通过</el-tag>
-              <el-tag v-else-if="step.result === 2" type="danger" size="small">驳回</el-tag>
+              <el-tag v-if="step.status === 1" type="success" size="small">通过</el-tag>
+              <el-tag v-else-if="step.status === 2" type="danger" size="small">驳回</el-tag>
               <el-tag v-else type="warning" size="small">待审批</el-tag>
             </div>
             <div class="flow-step-info">
