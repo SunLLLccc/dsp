@@ -1,0 +1,283 @@
+<h2>前端页面设计</h2>
+<p class="subtitle">两个模块的页面布局和交互设计</p>
+
+<div class="section">
+<h3>模块一：接口管理（合并后）</h3>
+<div class="mockup">
+<div class="mockup-header">接口管理 — 三个页签</div>
+<div class="mockup-body">
+  <div style="border-bottom: 2px solid #409EFF; display: flex; margin-bottom: 16px;">
+    <div style="padding: 10px 24px; background: #409EFF; color: white; border-radius: 4px 4px 0 0; font-weight: bold;">接口信息</div>
+    <div style="padding: 10px 24px; color: #666; cursor: pointer;">接口申请</div>
+    <div style="padding: 10px 24px; color: #666; cursor: pointer;">请求关系</div>
+  </div>
+
+  <div style="background: #f8f9fa; border: 1px dashed #ccc; border-radius: 4px; padding: 16px;">
+    <h4 style="margin: 0 0 12px 0; color: #333;">页签1 — 接口信息（保持现有）</h4>
+    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">接口编码</div>
+      <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">接口名称</div>
+      <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">所属系统</div>
+      <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">状态</div>
+      <div style="background: #409EFF; color: white; border-radius: 4px; padding: 4px 12px; font-size: 12px;">查询</div>
+      <div style="background: #67C23A; color: white; border-radius: 4px; padding: 4px 12px; font-size: 12px;">新增接口</div>
+    </div>
+    <table style="width:100%; border-collapse: collapse; font-size: 12px;">
+      <tr style="background: #f0f0f0;">
+        <th style="padding: 6px; text-align:left;">接口编码</th>
+        <th style="padding: 6px; text-align:left;">接口名称</th>
+        <th style="padding: 6px; text-align:left;">所属系统</th>
+        <th style="padding: 6px; text-align:left;">版本</th>
+        <th style="padding: 6px; text-align:left;">状态</th>
+        <th style="padding: 6px; text-align:left;">更新时间</th>
+        <th style="padding: 6px; text-align:left;">操作</th>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 6px;">DSP001</td>
+        <td style="padding: 6px;">用户查询</td>
+        <td style="padding: 6px;">核心系统</td>
+        <td style="padding: 6px;">V3</td>
+        <td style="padding: 6px;"><span style="background:#67C23A; color:white; padding:2px 6px; border-radius:2px; font-size:11px;">已发布</span></td>
+        <td style="padding: 6px;">2026-05-18</td>
+        <td style="padding: 6px; color: #409EFF;">查看 | 编辑 | 版本 | 删除</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="background: #f8f9fa; border: 1px dashed #ccc; border-radius: 4px; padding: 16px; margin-top: 12px;">
+    <h4 style="margin: 0 0 12px 0; color: #333;">页签2 — 接口申请</h4>
+    <div style="display: flex; gap: 8px; margin-bottom: 12px; justify-content: space-between;">
+      <div style="display: flex; gap: 8px;">
+        <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">申请状态</div>
+        <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">日期范围</div>
+        <div style="background: #409EFF; color: white; border-radius: 4px; padding: 4px 12px; font-size: 12px;">查询</div>
+      </div>
+      <div style="background: #67C23A; color: white; border-radius: 4px; padding: 4px 12px; font-size: 12px;">+ 新建申请</div>
+    </div>
+    <table style="width:100%; border-collapse: collapse; font-size: 12px;">
+      <tr style="background: #f0f0f0;">
+        <th style="padding: 6px; text-align:left;">需求编号</th>
+        <th style="padding: 6px; text-align:left;">接口编码</th>
+        <th style="padding: 6px; text-align:left;">服务方系统</th>
+        <th style="padding: 6px; text-align:left;">申请方系统</th>
+        <th style="padding: 6px; text-align:left;">申请时间</th>
+        <th style="padding: 6px; text-align:left;">状态</th>
+        <th style="padding: 6px; text-align:left;">操作</th>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 6px;">REQ-2026-001</td>
+        <td style="padding: 6px;">DSP001</td>
+        <td style="padding: 6px;">核心系统</td>
+        <td style="padding: 6px;">营销系统</td>
+        <td style="padding: 6px;">2026-05-18</td>
+        <td style="padding: 6px;"><span style="background:#E6A23C; color:white; padding:2px 6px; border-radius:2px; font-size:11px;">待审批</span></td>
+        <td style="padding: 6px; color: #409EFF;">详情 | 撤回</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="background: #f8f9fa; border: 1px dashed #ccc; border-radius: 4px; padding: 16px; margin-top: 12px;">
+    <h4 style="margin: 0 0 12px 0; color: #333;">页签3 — 请求关系</h4>
+    <div style="display: flex; border-bottom: 1px solid #ddd; margin-bottom: 12px;">
+      <div style="padding: 8px 20px; border-bottom: 2px solid #409EFF; color: #409EFF; font-weight: bold; font-size: 13px;">作为服务方</div>
+      <div style="padding: 8px 20px; color: #999; font-size: 13px;">作为请求方</div>
+    </div>
+    <table style="width:100%; border-collapse: collapse; font-size: 12px;">
+      <tr style="background: #f0f0f0;">
+        <th style="padding: 6px; text-align:left;">接口编码</th>
+        <th style="padding: 6px; text-align:left;">接口名称</th>
+        <th style="padding: 6px; text-align:left;">请求方系统</th>
+        <th style="padding: 6px; text-align:left;">需求编号</th>
+        <th style="padding: 6px; text-align:left;">申请时间</th>
+        <th style="padding: 6px; text-align:left;">申请事由</th>
+        <th style="padding: 6px; text-align:left;">状态</th>
+        <th style="padding: 6px; text-align:left;">操作</th>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 6px;">DSP001</td>
+        <td style="padding: 6px;">用户查询</td>
+        <td style="padding: 6px;">营销系统</td>
+        <td style="padding: 6px;">REQ-2026-001</td>
+        <td style="padding: 6px;">2026-05-18</td>
+        <td style="padding: 6px;">营销活动需要用户信息</td>
+        <td style="padding: 6px;"><span style="background:#67C23A; color:white; padding:2px 6px; border-radius:2px; font-size:11px;">生效</span></td>
+        <td style="padding: 6px; color: #F56C6C;">下线</td>
+      </tr>
+    </table>
+  </div>
+</div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+<h3>模块二：审批管理（重构后）</h3>
+<div class="mockup">
+<div class="mockup-header">审批管理 — 三个页签</div>
+<div class="mockup-body">
+  <div style="border-bottom: 2px solid #409EFF; display: flex; margin-bottom: 16px;">
+    <div style="padding: 10px 24px; background: #409EFF; color: white; border-radius: 4px 4px 0 0; font-weight: bold;">我的提交</div>
+    <div style="padding: 10px 24px; color: #666; cursor: pointer;">待我审批</div>
+    <div style="padding: 10px 24px; color: #666; cursor: pointer;">已审批</div>
+  </div>
+
+  <div style="background: #f8f9fa; border: 1px dashed #ccc; border-radius: 4px; padding: 16px;">
+    <h4 style="margin: 0 0 12px 0; color: #333;">页签1 — 我的提交</h4>
+    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">审批类型</div>
+      <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">状态</div>
+      <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">日期范围（默认近7天）</div>
+      <div style="background: #409EFF; color: white; border-radius: 4px; padding: 4px 12px; font-size: 12px;">查询</div>
+    </div>
+    <table style="width:100%; border-collapse: collapse; font-size: 12px;">
+      <tr style="background: #f0f0f0;">
+        <th style="padding: 6px; text-align:left;">审批单号</th>
+        <th style="padding: 6px; text-align:left;">标题</th>
+        <th style="padding: 6px; text-align:left;">审批类型</th>
+        <th style="padding: 6px; text-align:left;">申请时间</th>
+        <th style="padding: 6px; text-align:left;">当前步骤</th>
+        <th style="padding: 6px; text-align:left;">状态</th>
+        <th style="padding: 6px; text-align:left;">操作</th>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 6px;">AP20260518001</td>
+        <td style="padding: 6px;">新增接口 - 用户查询</td>
+        <td style="padding: 6px;"><span style="background:#409EFF; color:white; padding:2px 6px; border-radius:2px; font-size:11px;">新增接口</span></td>
+        <td style="padding: 6px;">2026-05-18</td>
+        <td style="padding: 6px;">1/1</td>
+        <td style="padding: 6px;"><span style="background:#E6A23C; color:white; padding:2px 6px; border-radius:2px; font-size:11px;">待审批</span></td>
+        <td style="padding: 6px; color: #409EFF;">撤回 | 审批记录 | 详情</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 6px;">AP20260517002</td>
+        <td style="padding: 6px;">申请接口 - DSP001</td>
+        <td style="padding: 6px;"><span style="background:#67C23A; color:white; padding:2px 6px; border-radius:2px; font-size:11px;">申请接口</span></td>
+        <td style="padding: 6px;">2026-05-17</td>
+        <td style="padding: 6px;">2/2</td>
+        <td style="padding: 6px;"><span style="background:#E6A23C; color:white; padding: 2px 6px; border-radius:2px; font-size:11px;">待审批</span></td>
+        <td style="padding: 6px; color: #409EFF;">撤回 | 审批记录 | 详情</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="background: #f8f9fa; border: 1px dashed #ccc; border-radius: 4px; padding: 16px; margin-top: 12px;">
+    <h4 style="margin: 0 0 12px 0; color: #333;">页签2 — 待我审批</h4>
+    <table style="width:100%; border-collapse: collapse; font-size: 12px;">
+      <tr style="background: #f0f0f0;">
+        <th style="padding: 6px; text-align:left;">审批单号</th>
+        <th style="padding: 6px; text-align:left;">标题</th>
+        <th style="padding: 6px; text-align:left;">审批类型</th>
+        <th style="padding: 6px; text-align:left;">申请人</th>
+        <th style="padding: 6px; text-align:left;">申请时间</th>
+        <th style="padding: 6px; text-align:left;">当前步骤</th>
+        <th style="padding: 6px; text-align:left;">操作</th>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 6px;">AP20260518001</td>
+        <td style="padding: 6px;">新增接口 - 用户查询</td>
+        <td style="padding: 6px;"><span style="background:#409EFF; color:white; padding:2px 6px; border-radius:2px; font-size:11px;">新增接口</span></td>
+        <td style="padding: 6px;">张三</td>
+        <td style="padding: 6px;">2026-05-18</td>
+        <td style="padding: 6px;">1/1</td>
+        <td style="padding: 6px;">
+          <span style="color:#67C23A;">通过</span> |
+          <span style="color:#F56C6C;">驳回</span> |
+          <span style="color:#409EFF;">详情</span> |
+          <span style="color:#909399;">审批记录</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="background: #f8f9fa; border: 1px dashed #ccc; border-radius: 4px; padding: 16px; margin-top: 12px;">
+    <h4 style="margin: 0 0 12px 0; color: #333;">页签3 — 已审批</h4>
+    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">审批类型</div>
+      <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 4px 12px; font-size: 12px;">日期范围（默认近7天）</div>
+      <div style="background: #409EFF; color: white; border-radius: 4px; padding: 4px 12px; font-size: 12px;">查询</div>
+    </div>
+    <table style="width:100%; border-collapse: collapse; font-size: 12px;">
+      <tr style="background: #f0f0f0;">
+        <th style="padding: 6px; text-align:left;">审批单号</th>
+        <th style="padding: 6px; text-align:left;">标题</th>
+        <th style="padding: 6px; text-align:left;">审批类型</th>
+        <th style="padding: 6px; text-align:left;">申请人</th>
+        <th style="padding: 6px; text-align:left;">申请时间</th>
+        <th style="padding: 6px; text-align:left;">审批人</th>
+        <th style="padding: 6px; text-align:left;">审批时间</th>
+        <th style="padding: 6px; text-align:left;">结果</th>
+        <th style="padding: 6px; text-align:left;">操作</th>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 6px;">AP20260515003</td>
+        <td style="padding: 6px;">修改接口 - DSP002</td>
+        <td style="padding: 6px;"><span style="background:#E6A23C; color:white; padding:2px 6px; border-radius:2px; font-size:11px;">修改接口</span></td>
+        <td style="padding: 6px;">李四</td>
+        <td style="padding: 6px;">2026-05-15</td>
+        <td style="padding: 6px;">王经理</td>
+        <td style="padding: 6px;">2026-05-15</td>
+        <td style="padding: 6px;"><span style="background:#67C23A; color:white; padding:2px 6px; border-radius:2px; font-size:11px;">通过</span></td>
+        <td style="padding: 6px; color: #409EFF;">审批记录 | 详情</td>
+      </tr>
+    </table>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+<h3>弹窗设计</h3>
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">详情弹窗 — 新增/修改接口</div>
+    <div class="mockup-body" style="font-size: 12px;">
+      <p style="color:#666; margin-bottom: 8px;">展示接口版本差异对比（复用现有的 Schema 对比组件）</p>
+      <div style="background:#1e1e1e; color:#d4d4d4; padding:12px; border-radius:4px; font-family:monospace; font-size:11px;">
+        <div style="display:flex; gap: 16px;">
+          <div style="flex:1;">
+            <div style="color:#569CD6; margin-bottom:4px;">--- 旧版本 V2</div>
+            <div style="color:#CE9178;">"name": "string"</div>
+            <div style="color:#CE9178;">"age": "integer"</div>
+          </div>
+          <div style="flex:1;">
+            <div style="color:#569CD6; margin-bottom:4px;">+++ 新版本 V3</div>
+            <div style="color:#CE9178;">"name": "string"</div>
+            <div style="color:#608B4E;">+"email": "string"</div>
+            <div style="color:#CE9178;">"age": "integer"</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">详情弹窗 — 申请接口</div>
+    <div class="mockup-body" style="font-size: 12px;">
+      <div style="display: grid; grid-template-columns: 100px 1fr; gap: 8px; line-height: 2;">
+        <span style="color:#999;">需求编号:</span><span>REQ-2026-001</span>
+        <span style="color:#999;">需求描述:</span><span>营销活动需要查询用户信息</span>
+        <span style="color:#999;">申请方系统:</span><span>营销系统</span>
+        <span style="color:#999;">服务方系统:</span><span>核心系统</span>
+        <span style="color:#999;">接口编码:</span><span>DSP001</span>
+        <span style="color:#999;">申请原因:</span><span>对接营销活动的用户画像功能</span>
+        <span style="color:#999;">下游接口:</span><span>marketing/user-profile</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 16px;">
+  <div class="mockup">
+    <div class="mockup-header">审批记录弹窗</div>
+    <div class="mockup-body" style="font-size: 12px;">
+      <div style="padding-left: 20px; border-left: 2px solid #409EFF;">
+        <div style="margin-bottom: 16px;">
+          <div style="color:#67C23A; font-weight:bold;">步骤1：申请方部门经理审批</div>
+          <div style="color:#999; margin-left: 16px;">审批人：王经理 | 2026-05-17 14:30 | <span style="color:#67C23A;">已通过</span></div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <div style="color:#409EFF; font-weight:bold;">步骤2：服务方部门经理审批</div>
+          <div style="color:#999; margin-left: 16px;"><span style="color:#E6A23C;">⏳ 待审批</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>

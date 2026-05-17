@@ -193,6 +193,7 @@ Vue 3 SPA，路由懒加载：`/interface`（接口列表）、`/interface/edit/
 - Dynamic-DS 的 datasource name 来自 `datasource_config.ds_name`，运行时可通过 `DatasourceInitRunner` 动态注册
 
 ## 11. 开发规范
+如果需要修改代码，先创建分支切换分支以后再进行代码的修改
 
 ### 11.1 分支策略
 

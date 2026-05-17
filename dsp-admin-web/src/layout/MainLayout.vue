@@ -71,10 +71,6 @@
             <span>系统管理</span>
           </el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="/application">
-          <el-icon><Promotion /></el-icon>
-          <span>接口申请</span>
-        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -155,10 +151,6 @@
             <span>系统管理</span>
           </el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="/application">
-          <el-icon><Promotion /></el-icon>
-          <span>接口申请</span>
-        </el-menu-item>
       </el-menu>
     </el-drawer>
 

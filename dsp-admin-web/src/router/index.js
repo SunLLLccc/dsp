@@ -72,11 +72,6 @@ const routes = [
         name: '系统管理',
         component: () => import('../views/system/SystemList.vue')
       },
-      {
-        path: 'application',
-        name: '接口申请',
-        component: () => import('../views/application/List.vue')
-      }
     ]
   }
 ]
