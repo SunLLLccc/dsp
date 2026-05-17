@@ -295,8 +295,7 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
 
         Page<ApprovalInfo> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ApprovalInfo> wrapper = new LambdaQueryWrapper<>();
-        wrapper.in(ApprovalInfo::getId, approvalIds)
-               .ne(ApprovalInfo::getStatus, 0); // 排除待审批
+        wrapper.in(ApprovalInfo::getId, approvalIds);
         if (startDate != null) {
             wrapper.ge(ApprovalInfo::getApplyTime, startDate);
         }
