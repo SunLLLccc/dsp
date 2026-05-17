@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS interface_version (
 CREATE TABLE IF NOT EXISTS approval_record (
     id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键',
     transno         VARCHAR(64)     NOT NULL COMMENT '接口编码',
-    version_no      INT             NOT NULL COMMENT '版本号',
+    version_no      INT             NOT NULL DEFAULT 0 COMMENT '版本号（接口申请时为0）',
     status          TINYINT         DEFAULT 0 COMMENT '审批状态：0-待审批 1-已通过 2-已驳回',
     applicant       VARCHAR(64)     NOT NULL COMMENT '申请人',
     apply_time      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申请时间',
