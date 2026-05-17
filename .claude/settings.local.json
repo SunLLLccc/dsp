@@ -16,7 +16,11 @@
       "Bash(mvn compile *)",
       "Bash(rm -rf target/classes target/test-classes target/maven-status)",
       "Bash(ls target/)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(gh pr *)",
+      "Bash(xargs grep -l \"transition\\\\|meta\")",
+      "Bash(npm run *)",
+      "Bash(bash 'C:\\\\Users\\\\10215\\\\.claude\\\\skills\\\\brainstorming\\\\scripts\\\\start-server.sh' --project-dir D:/sunlc/dsp_01/dsp)"
     ]
   }
 }

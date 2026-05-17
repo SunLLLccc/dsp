@@ -1,0 +1,128 @@
+<h2>数据库表设计</h2>
+<p class="subtitle">3 张新表 + 废弃旧 approval_record</p>
+
+<div class="section">
+<h3>1. approval_info — 审批信息表</h3>
+<div class="mockup">
+<div class="mockup-header">表结构预览</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+<pre style="margin:0;">
+CREATE TABLE approval_info (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    approval_no     VARCHAR(64)  NOT NULL UNIQUE COMMENT '审批单号（自动生成）',
+    type            TINYINT      NOT NULL COMMENT '类型：1-新增接口 2-修改接口 3-申请接口',
+    title           VARCHAR(256) NOT NULL COMMENT '审批标题（自动拼接）',
+    status          TINYINT      DEFAULT 0 COMMENT '状态：0-待审批 1-已通过 2-已驳回 3-已撤回',
+    applicant       VARCHAR(64)  NOT NULL COMMENT '申请人用户名',
+    applicant_name  VARCHAR(64)  COMMENT '申请人姓名',
+    applicant_dept_id BIGINT     COMMENT '申请人部门ID',
+    apply_time      DATETIME     NOT NULL COMMENT '申请时间',
+    withdraw_time   DATETIME     COMMENT '撤回时间',
+
+    -- 关联业务字段（根据 type 不同使用不同字段组合）
+    transno         VARCHAR(64)  COMMENT '接口编码（新增/修改接口时）',
+    version_no      INT          COMMENT '版本号（新增/修改接口时）',
+    applicant_system_id BIGINT   COMMENT '申请方系统ID（申请接口时）',
+    provider_system_id  BIGINT   COMMENT '服务方系统ID（申请接口时）',
+
+    -- 申请接口专用字段
+    requirement_no  VARCHAR(128) COMMENT '需求编号',
+    requirement_desc VARCHAR(512) COMMENT '需求描述',
+    apply_reason    VARCHAR(512) COMMENT '申请原因',
+    downstream_info VARCHAR(512) COMMENT '下游接口/页面',
+
+    created_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    KEY idx_applicant (applicant),
+    KEY idx_transno (transno),
+    KEY idx_status_time (status, apply_time)
+) COMMENT='审批信息表';</pre>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>2. approval_flow — 审批流程表</h3>
+<div class="mockup">
+<div class="mockup-header">表结构预览</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+<pre style="margin:0;">
+CREATE TABLE approval_flow (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    approval_id     BIGINT       NOT NULL COMMENT '审批信息ID',
+    step_no         TINYINT      NOT NULL COMMENT '步骤序号：1,2,3...',
+    step_name       VARCHAR(64)  NOT NULL COMMENT '步骤名称：如"部门经理审批"',
+    status          TINYINT      DEFAULT 0 COMMENT '0-待审批 1-已通过 2-已驳回',
+    dept_id         BIGINT       COMMENT '审批部门ID（匹配该部门的部门经理）',
+    approver        VARCHAR(64)  COMMENT '审批人用户名',
+    approver_name   VARCHAR(64)  COMMENT '审批人姓名',
+    approve_time    DATETIME     COMMENT '审批时间',
+    reject_reason   VARCHAR(512) COMMENT '驳回原因',
+    created_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    KEY idx_approval_id (approval_id),
+    UNIQUE KEY uk_approval_step (approval_id, step_no)
+) COMMENT='审批流程表';</pre>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>3. interface_relation — 接口申请关系表</h3>
+<div class="mockup">
+<div class="mockup-header">表结构预览</div>
+<div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+<pre style="margin:0;">
+CREATE TABLE interface_relation (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    transno         VARCHAR(64)  NOT NULL COMMENT '接口编码',
+    provider_system_id BIGINT    NOT NULL COMMENT '服务方系统ID',
+    applicant_system_id BIGINT   NOT NULL COMMENT '申请方系统ID',
+    approval_id     BIGINT       COMMENT '关联审批ID',
+    status          TINYINT      DEFAULT 1 COMMENT '1-生效 2-已下线',
+    apply_time      DATETIME     COMMENT '申请时间',
+    requirement_no  VARCHAR(128) COMMENT '需求编号',
+    apply_reason    VARCHAR(512) COMMENT '申请原因',
+    offline_time    DATETIME     COMMENT '下线时间',
+    offline_reason  VARCHAR(256) COMMENT '下线原因',
+    created_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    KEY idx_transno (transno),
+    KEY idx_provider (provider_system_id),
+    KEY idx_applicant (applicant_system_id)
+) COMMENT='接口申请关系表';</pre>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>流程模板（代码中定义）</h3>
+<div class="mockup">
+<div class="mockup-header">三种审批类型对应的审批步骤</div>
+<div class="mockup-body" style="font-size: 14px; line-height: 1.8;">
+<table style="width:100%; border-collapse: collapse;">
+<tr style="border-bottom: 2px solid #ddd;">
+  <th style="text-align:left; padding: 8px;">审批类型</th>
+  <th style="text-align:left; padding: 8px;">步骤1</th>
+  <th style="text-align:left; padding: 8px;">步骤2</th>
+</tr>
+<tr style="border-bottom: 1px solid #eee;">
+  <td style="padding: 8px;"><strong>新增接口</strong></td>
+  <td style="padding: 8px;">申请人部门经理 / ADMIN</td>
+  <td style="padding: 8px;">—</td>
+</tr>
+<tr style="border-bottom: 1px solid #eee;">
+  <td style="padding: 8px;"><strong>修改接口</strong></td>
+  <td style="padding: 8px;">接口所属系统部门的经理 / ADMIN</td>
+  <td style="padding: 8px;">请求方部门经理（如有请求方）</td>
+</tr>
+<tr>
+  <td style="padding: 8px;"><strong>申请接口</strong></td>
+  <td style="padding: 8px;">申请方部门经理 / ADMIN</td>
+  <td style="padding: 8px;">服务方系统所属部门的经理 / ADMIN</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
