@@ -5,21 +5,26 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.sunlc.dsp.adminservice.annotation.RequireRole;
 import com.sunlc.dsp.common.model.ApiResponse;
 import com.sunlc.dsp.engine.XmlEngine;
+import com.sunlc.dsp.entity.ApprovalInfo;
 import com.sunlc.dsp.enums.InterfaceStatus;
 import com.sunlc.dsp.entity.ApprovalRecord;
 import com.sunlc.dsp.entity.InterfaceInfo;
 import com.sunlc.dsp.entity.SysSystem;
 import com.sunlc.dsp.entity.InterfaceVersion;
+import com.sunlc.dsp.service.ApprovalInfoService;
 import com.sunlc.dsp.service.ApprovalRecordService;
 import com.sunlc.dsp.service.InterfaceInfoService;
 import com.sunlc.dsp.service.InterfaceVersionService;
 import com.sunlc.dsp.service.SysSystemService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,9 +40,29 @@ public class InterfaceAdminController {
     private final XmlEngine xmlEngine;
     private final SysSystemService sysSystemService;
 
+    @Lazy
+    @Autowired
+    private ApprovalInfoService approvalInfoService;
+
     private String getCurrentUser(HttpServletRequest request) {
         Object user = request.getAttribute("adminUser");
         return user != null ? user.toString() : "anonymous";
+    }
+
+    /**
+     * 通过 transno 查找待审批的 ApprovalInfo 记录 ID
+     */
+    private Long findPendingApprovalId(String transno) {
+        LambdaQueryWrapper<ApprovalInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ApprovalInfo::getTransno, transno)
+               .eq(ApprovalInfo::getStatus, 0)
+               .orderByDesc(ApprovalInfo::getCreatedTime)
+               .last("LIMIT 1");
+        ApprovalInfo info = approvalInfoService.getOne(wrapper);
+        if (info == null) {
+            throw new RuntimeException("未找到接口 [" + transno + "] 的待审批记录");
+        }
+        return info.getId();
     }
 
     private void fillSystemName(InterfaceInfo info) {
@@ -162,7 +187,24 @@ public class InterfaceAdminController {
             @RequestBody Map<String, String> body,
             HttpServletRequest request) {
         String operator = body.getOrDefault("operator", getCurrentUser(request));
-        interfaceVersionService.submitApproval(transno, versionNo, operator);
+        String applicantName = body.getOrDefault("applicantName", "");
+
+        // 判断审批类型：如果接口有 currentVersion 且 > 0 则为修改，否则为新增
+        InterfaceInfo interfaceInfo = interfaceInfoService.getByTransno(transno);
+        int type = (interfaceInfo != null && interfaceInfo.getCurrentVersion() != null
+                && interfaceInfo.getCurrentVersion() > 0) ? 2 : 1;
+
+        // 构建 params
+        Map<String, Object> params = new HashMap<>();
+        params.put("transno", transno);
+        params.put("versionNo", versionNo);
+        params.put("applicantName", applicantName);
+        params.put("applicantDeptId", request.getAttribute("adminDeptId"));
+        if (interfaceInfo != null) {
+            params.put("providerSystemId", interfaceInfo.getSystemId());
+        }
+
+        approvalInfoService.submit(type, params, operator);
         return ApiResponse.success("APPROVAL_SUBMIT", "", null);
     }
 
@@ -171,7 +213,12 @@ public class InterfaceAdminController {
     public ApiResponse<Void> approveAndPublish(
             @PathVariable String transno,
             HttpServletRequest request) {
-        interfaceVersionService.approveAndPublish(transno, getCurrentUser(request));
+        String approver = getCurrentUser(request);
+        String approverName = request.getAttribute("adminRealName") != null
+                ? request.getAttribute("adminRealName").toString() : "";
+        // 通过 transno 查找待审批的 ApprovalInfo 记录
+        Long approvalId = findPendingApprovalId(transno);
+        approvalInfoService.approve(approvalId, approver, approverName);
         return ApiResponse.success("APPROVAL_PASS", "", null);
     }
 
@@ -181,7 +228,12 @@ public class InterfaceAdminController {
             @PathVariable String transno,
             @RequestBody Map<String, String> body,
             HttpServletRequest request) {
-        interfaceVersionService.rejectApproval(transno, body.get("reason"), getCurrentUser(request));
+        String approver = getCurrentUser(request);
+        String approverName = request.getAttribute("adminRealName") != null
+                ? request.getAttribute("adminRealName").toString() : "";
+        // 通过 transno 查找待审批的 ApprovalInfo 记录
+        Long approvalId = findPendingApprovalId(transno);
+        approvalInfoService.reject(approvalId, approver, approverName, body.get("reason"));
         return ApiResponse.success("APPROVAL_REJECT", "", null);
     }
 
@@ -194,7 +246,10 @@ public class InterfaceAdminController {
 
     @PostMapping("/{transno}/withdraw")
     public ApiResponse<Void> withdrawApproval(@PathVariable String transno, HttpServletRequest request) {
-        interfaceVersionService.withdrawApproval(transno, getCurrentUser(request));
+        String applicant = getCurrentUser(request);
+        // 通过 transno 查找待审批的 ApprovalInfo 记录
+        Long approvalId = findPendingApprovalId(transno);
+        approvalInfoService.withdraw(approvalId, applicant);
         return ApiResponse.success("APPROVAL_WITHDRAW", "", null);
     }
 
