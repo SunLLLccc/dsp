@@ -25,6 +25,11 @@ public enum ErrorCode {
     APP_NOT_FOUND("4106", "应用不存在或已禁用"),
     DATASOURCE_BIND_DUPLICATE("4107", "数据源关联已存在"),
     DATASOURCE_NOT_CONFIGURED("4108", "数据源未配置"),
+    APPROVAL_INFO_NOT_FOUND("4109", "审批单不存在"),
+    APPROVAL_FLOW_NOT_FOUND("4110", "审批流程步骤不存在"),
+    APPROVAL_NOT_PENDING("4111", "审批单不是待审批状态"),
+    APPROVAL_FLOW_NOT_MATCH("4112", "当前步骤不属于您的审批范围"),
+    RELATION_NOT_FOUND("4113", "接口关系不存在"),
     SYSTEM_ERROR("5001", "系统内部错误"),
     DATASOURCE_ERROR("5002", "数据源连接异常"),
     EXPORT_ERROR("5003", "导出失败");
