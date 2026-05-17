@@ -3,16 +3,24 @@ package com.sunlc.dsp.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.sunlc.dsp.common.enums.ErrorCode;
+import com.sunlc.dsp.common.exception.BusinessException;
 import com.sunlc.dsp.entity.InterfaceInfo;
 import com.sunlc.dsp.entity.InterfaceRelation;
 import com.sunlc.dsp.entity.SysSystem;
 import com.sunlc.dsp.mapper.InterfaceRelationMapper;
+import com.sunlc.dsp.service.InterfaceInfoService;
 import com.sunlc.dsp.service.InterfaceRelationService;
 import com.sunlc.dsp.service.SysSystemService;
-import com.sunlc.dsp.service.InterfaceInfoService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InterfaceRelationServiceImpl extends ServiceImpl<InterfaceRelationMapper, InterfaceRelation>
@@ -22,49 +30,58 @@ public class InterfaceRelationServiceImpl extends ServiceImpl<InterfaceRelationM
     private final InterfaceInfoService interfaceInfoService;
 
     @Override
-    public Page<InterfaceRelation> pageList(String transno, Long applicantSystemId, Long providerSystemId,
-                                             Integer status, Integer pageNum, Integer pageSize) {
+    public Page<InterfaceRelation> getByProvider(Long deptId, Integer pageNum, Integer pageSize) {
         Page<InterfaceRelation> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<InterfaceRelation> wrapper = new LambdaQueryWrapper<>();
-        if (transno != null && !transno.isEmpty()) {
-            wrapper.eq(InterfaceRelation::getTransno, transno);
-        }
-        if (applicantSystemId != null) {
-            wrapper.eq(InterfaceRelation::getApplicantSystemId, applicantSystemId);
-        }
-        if (providerSystemId != null) {
-            wrapper.eq(InterfaceRelation::getProviderSystemId, providerSystemId);
-        }
-        if (status != null) {
-            wrapper.eq(InterfaceRelation::getStatus, status);
-        }
-        wrapper.orderByDesc(InterfaceRelation::getCreatedTime);
-
+        wrapper.inSql(InterfaceRelation::getProviderSystemId,
+                "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1")
+               .orderByDesc(InterfaceRelation::getCreatedTime);
         Page<InterfaceRelation> result = page(page, wrapper);
-        // 填充展示字段
-        for (InterfaceRelation relation : result.getRecords()) {
-            fillDisplayFields(relation);
-        }
+        fillDisplayFields(result.getRecords());
         return result;
     }
 
-    private void fillDisplayFields(InterfaceRelation relation) {
-        if (relation.getProviderSystemId() != null) {
-            SysSystem system = sysSystemService.getById(relation.getProviderSystemId());
-            if (system != null) {
-                relation.setProviderSystemName(system.getName());
-            }
+    @Override
+    public Page<InterfaceRelation> getByApplicant(Long deptId, Integer pageNum, Integer pageSize) {
+        Page<InterfaceRelation> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<InterfaceRelation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.inSql(InterfaceRelation::getApplicantSystemId,
+                "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1")
+               .orderByDesc(InterfaceRelation::getCreatedTime);
+        Page<InterfaceRelation> result = page(page, wrapper);
+        fillDisplayFields(result.getRecords());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void offline(Long relationId, String reason, String operator) {
+        InterfaceRelation relation = getById(relationId);
+        if (relation == null) {
+            throw new BusinessException(ErrorCode.RELATION_NOT_FOUND);
         }
-        if (relation.getApplicantSystemId() != null) {
-            SysSystem system = sysSystemService.getById(relation.getApplicantSystemId());
-            if (system != null) {
-                relation.setApplicantSystemName(system.getName());
+        relation.setStatus(2);
+        relation.setOfflineTime(LocalDateTime.now());
+        relation.setOfflineReason(reason);
+        updateById(relation);
+        log.info("接口关系下线: relationId={}, transno={}, operator={}", relationId, relation.getTransno(), operator);
+    }
+
+    private void fillDisplayFields(List<InterfaceRelation> records) {
+        for (InterfaceRelation r : records) {
+            if (r.getProviderSystemId() != null) {
+                SysSystem sys = sysSystemService.getById(r.getProviderSystemId());
+                if (sys != null) r.setProviderSystemName(sys.getName());
             }
-        }
-        if (relation.getTransno() != null) {
-            InterfaceInfo info = interfaceInfoService.getByTransnoAnyStatus(relation.getTransno());
-            if (info != null) {
-                relation.setInterfaceName(info.getName());
+            if (r.getApplicantSystemId() != null) {
+                SysSystem sys = sysSystemService.getById(r.getApplicantSystemId());
+                if (sys != null) r.setApplicantSystemName(sys.getName());
+            }
+            if (r.getTransno() != null) {
+                LambdaQueryWrapper<InterfaceInfo> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(InterfaceInfo::getTransno, r.getTransno()).last("LIMIT 1");
+                InterfaceInfo info = interfaceInfoService.getOne(wrapper);
+                if (info != null) r.setInterfaceName(info.getTransno() + " - " + info.getName());
             }
         }
     }
