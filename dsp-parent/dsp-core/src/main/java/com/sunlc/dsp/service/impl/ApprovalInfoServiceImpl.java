@@ -222,10 +222,14 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
     @Override
     public Page<ApprovalInfo> pendingApproval(Long deptId, List<String> roles,
                                                Integer pageNum, Integer pageSize) {
+        boolean isAdmin = roles != null && roles.contains("ADMIN");
+
         // 先通过 approval_flow 找到当前用户部门待审批的 approvalId 列表
         LambdaQueryWrapper<ApprovalFlow> flowWrapper = new LambdaQueryWrapper<>();
-        flowWrapper.eq(ApprovalFlow::getDeptId, deptId)
-                   .eq(ApprovalFlow::getStatus, 0); // 待审批步骤
+        flowWrapper.eq(ApprovalFlow::getStatus, 0); // 待审批步骤
+        if (!isAdmin) {
+            flowWrapper.eq(ApprovalFlow::getDeptId, deptId);
+        }
         List<ApprovalFlow> flows = approvalFlowMapper.selectList(flowWrapper);
 
         if (flows.isEmpty()) {
@@ -263,15 +267,13 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
     public Page<ApprovalInfo> approvedHistory(Long deptId, List<String> roles,
                                                LocalDateTime startDate, LocalDateTime endDate,
                                                Integer pageNum, Integer pageSize) {
-        // 通过 approval_flow 找到本部门审批过的 approvalId
+        boolean isAdmin = roles != null && roles.contains("ADMIN");
+
+        // 通过 approval_flow 找到本部门审批过的 approvalId（不在此处过滤日期，日期在 approval_info 层过滤）
         LambdaQueryWrapper<ApprovalFlow> flowWrapper = new LambdaQueryWrapper<>();
-        flowWrapper.eq(ApprovalFlow::getDeptId, deptId)
-                   .in(ApprovalFlow::getStatus, Arrays.asList(1, 2)); // 通过或驳回
-        if (startDate != null) {
-            flowWrapper.ge(ApprovalFlow::getApproveTime, startDate);
-        }
-        if (endDate != null) {
-            flowWrapper.le(ApprovalFlow::getApproveTime, endDate);
+        flowWrapper.in(ApprovalFlow::getStatus, Arrays.asList(1, 2)); // 通过或驳回
+        if (!isAdmin) {
+            flowWrapper.eq(ApprovalFlow::getDeptId, deptId);
         }
         List<ApprovalFlow> flows = approvalFlowMapper.selectList(flowWrapper);
 
@@ -286,8 +288,14 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
         Page<ApprovalInfo> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ApprovalInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(ApprovalInfo::getId, approvalIds)
-               .ne(ApprovalInfo::getStatus, 0) // 排除待审批（即查看已处理的）
-               .orderByDesc(ApprovalInfo::getUpdatedTime);
+               .ne(ApprovalInfo::getStatus, 0); // 排除待审批
+        if (startDate != null) {
+            wrapper.ge(ApprovalInfo::getApplyTime, startDate);
+        }
+        if (endDate != null) {
+            wrapper.le(ApprovalInfo::getApplyTime, endDate);
+        }
+        wrapper.orderByDesc(ApprovalInfo::getUpdatedTime);
 
         Page<ApprovalInfo> result = page(page, wrapper);
         for (ApprovalInfo info : result.getRecords()) {
