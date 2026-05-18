@@ -703,9 +703,10 @@ async function openApplyDialog() {
   applyInterfaceOptions.value = []
   applyDialogVisible.value = true
 
-  // 加载请求方系统（当前用户部门下的系统）
+  // 加载请求方系统：ADMIN加载全部，其他用户只加载本部门
   try {
-    const res = await systemApi.list({ deptId: authStore.deptId })
+    const params = authStore.hasRole('ADMIN') ? {} : { deptId: authStore.deptId }
+    const res = await systemApi.list(params)
     reqSystemList.value = res.data?.records || res.data || []
   } catch {
     reqSystemList.value = []
