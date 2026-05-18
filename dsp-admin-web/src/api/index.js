@@ -81,6 +81,7 @@ export const approvalApi = {
 export const relationApi = {
   provider: (params) => request.get('/relation/provider', { params }),
   applicant: (params) => request.get('/relation/applicant', { params }),
+  applicantsByTransno: (transno) => request.get('/relation/applicants-by-transno', { params: { transno } }),
   offline: (id, data) => request.post(`/relation/${id}/offline`, data),
 }
 

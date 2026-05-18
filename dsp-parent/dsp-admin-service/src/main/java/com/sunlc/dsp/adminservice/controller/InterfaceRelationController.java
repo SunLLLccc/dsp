@@ -1,12 +1,14 @@
 package com.sunlc.dsp.adminservice.controller;
 
 import com.sunlc.dsp.common.model.ApiResponse;
+import com.sunlc.dsp.entity.InterfaceRelation;
 import com.sunlc.dsp.service.InterfaceRelationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -31,20 +33,32 @@ public class InterfaceRelationController {
     public ApiResponse<Object> provider(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String transno,
+            @RequestParam(required = false) Long applicantSystemId,
+            @RequestParam(required = false) String requirementNo,
             HttpServletRequest request) {
         Long deptId = getCurrentDeptId(request);
         return ApiResponse.success("RELATION", "PROVIDER",
-                interfaceRelationService.getByProvider(deptId, pageNum, pageSize));
+                interfaceRelationService.getByProvider(deptId, transno, applicantSystemId, requirementNo, pageNum, pageSize));
     }
 
     @GetMapping("/applicant")
     public ApiResponse<Object> applicant(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String transno,
+            @RequestParam(required = false) Long providerSystemId,
+            @RequestParam(required = false) String requirementNo,
             HttpServletRequest request) {
         Long deptId = getCurrentDeptId(request);
         return ApiResponse.success("RELATION", "APPLICANT",
-                interfaceRelationService.getByApplicant(deptId, pageNum, pageSize));
+                interfaceRelationService.getByApplicant(deptId, transno, providerSystemId, requirementNo, pageNum, pageSize));
+    }
+
+    @GetMapping("/applicants-by-transno")
+    public ApiResponse<List<InterfaceRelation>> applicantsByTransno(@RequestParam String transno) {
+        return ApiResponse.success("RELATION", "APPLICANTS",
+                interfaceRelationService.getApplicantsByTransno(transno));
     }
 
     @PostMapping("/{id}/offline")

@@ -54,11 +54,12 @@
               </template>
             </el-table-column>
             <el-table-column prop="updatedTime" label="更新时间" width="180" :formatter="fmtTimeCol" />
-            <el-table-column label="操作" fixed="right" width="360">
+            <el-table-column label="操作" fixed="right" width="420">
               <template #default="{ row }">
                 <el-button size="small" @click="handleViewSchema(row)">查看</el-button>
                 <el-button size="small" @click="handleEdit(row)" :disabled="row.status === 1" v-role="'USER'">编辑</el-button>
                 <el-button size="small" @click="showVersionHistory(row)">版本</el-button>
+                <el-button size="small" type="info" @click="viewApplicants(row)">请求方</el-button>
                 <el-button size="small" type="warning" @click="handleWithdraw(row)" v-if="row.status === 1 && row.canWithdraw" v-role="'USER'">撤销审批</el-button>
                 <el-button size="small" type="danger" @click="handleDelete(row)" :disabled="row.status === 1" v-role="'USER'">删除</el-button>
               </template>
@@ -282,6 +283,27 @@
 
       <!-- 页签三：请求关系 -->
       <el-tab-pane label="请求关系" name="relation">
+        <!-- 搜索栏 -->
+        <el-card shadow="never" class="card-search">
+          <el-form :inline="true" :model="relationSearchForm">
+            <el-form-item label="接口编码">
+              <el-input v-model="relationSearchForm.transno" placeholder="请输入接口编码" clearable />
+            </el-form-item>
+            <el-form-item label="对方系统">
+              <el-select v-model="relationSearchForm.systemId" placeholder="全部" clearable filterable class="filter-select">
+                <el-option v-for="sys in allSystemOptions" :key="sys.id" :label="sys.name" :value="sys.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="需求编号">
+              <el-input v-model="relationSearchForm.requirementNo" placeholder="请输入需求编号" clearable />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="searchRelation">查询</el-button>
+              <el-button @click="resetRelationSearch">重置</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+
         <el-card>
           <el-tabs v-model="relationSubTab" @tab-change="handleRelationTabChange">
             <!-- 作为服务方 -->
@@ -296,11 +318,6 @@
                 <el-table-column prop="status" label="状态" width="100">
                   <template #default="{ row }">
                     <el-tag :type="relationStatusType(row.status)">{{ relationStatusText(row.status) }}</el-tag>
-                  </template>
-                </el-table-column>
-                <el-table-column label="操作" width="120" fixed="right">
-                  <template #default="{ row }">
-                    <el-button size="small" type="danger" @click="handleOfflineRelation(row)" v-if="row.status === 1">下线</el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -336,6 +353,20 @@
         </el-card>
       </el-tab-pane>
     </el-tabs>
+
+    <!-- 查看请求方弹窗 -->
+    <el-dialog v-model="applicantsDialogVisible" :title="`请求方列表 - ${applicantsTransno}`" width="700px">
+      <el-table :data="applicantsList" border stripe v-loading="applicantsLoading">
+        <el-table-column prop="applicantSystemName" label="请求方系统" width="160" />
+        <el-table-column prop="requirementNo" label="需求编号" width="140" />
+        <el-table-column prop="applyTime" label="申请时间" width="170" :formatter="fmtTimeCol" />
+        <el-table-column prop="applyReason" label="申请事由" show-overflow-tooltip />
+      </el-table>
+      <el-empty v-if="!applicantsLoading && !applicantsList.length" description="暂无请求方" />
+      <template #footer>
+        <el-button @click="applicantsDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -754,6 +785,8 @@ function viewApplyDetail(row) {
 
 // ==================== 页签三：请求关系 ====================
 const relationSubTab = ref('provider')
+const allSystemOptions = ref([])
+const relationSearchForm = ref({ transno: '', systemId: null, requirementNo: '' })
 
 const RELATION_STATUS = { 0: '待审批', 1: '已通过', 2: '已驳回', 3: '已下线' }
 const RELATION_STATUS_TYPE = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info' }
@@ -775,9 +808,30 @@ function handleRelationTabChange(tab) {
   else loadApplicantList()
 }
 
+function searchRelation() {
+  if (relationSubTab.value === 'provider') {
+    providerPage.value.pageNum = 1
+    loadProviderList()
+  } else {
+    applicantPage.value.pageNum = 1
+    loadApplicantList()
+  }
+}
+
+function resetRelationSearch() {
+  relationSearchForm.value = { transno: '', systemId: null, requirementNo: '' }
+  searchRelation()
+}
+
 async function loadProviderList() {
   try {
-    const res = await relationApi.provider(providerPage.value)
+    const params = {
+      ...providerPage.value,
+      transno: relationSearchForm.value.transno || undefined,
+      applicantSystemId: relationSearchForm.value.systemId || undefined,
+      requirementNo: relationSearchForm.value.requirementNo || undefined,
+    }
+    const res = await relationApi.provider(params)
     providerList.value = res.data?.records || []
     providerTotal.value = res.data?.total || 0
   } catch {
@@ -788,7 +842,13 @@ async function loadProviderList() {
 
 async function loadApplicantList() {
   try {
-    const res = await relationApi.applicant(applicantPage.value)
+    const params = {
+      ...applicantPage.value,
+      transno: relationSearchForm.value.transno || undefined,
+      providerSystemId: relationSearchForm.value.systemId || undefined,
+      requirementNo: relationSearchForm.value.requirementNo || undefined,
+    }
+    const res = await relationApi.applicant(params)
     applicantList.value = res.data?.records || []
     applicantTotal.value = res.data?.total || 0
   } catch {
@@ -797,23 +857,35 @@ async function loadApplicantList() {
   }
 }
 
-async function handleOfflineRelation(row) {
-  await ElMessageBox.confirm(`确认下线与 ${row.applicantSystemName} 的接口关系？`, '下线确认', { type: 'warning' })
+// ==================== 查看请求方弹窗 ====================
+const applicantsDialogVisible = ref(false)
+const applicantsTransno = ref('')
+const applicantsList = ref([])
+const applicantsLoading = ref(false)
+
+async function viewApplicants(row) {
+  applicantsTransno.value = row.transno
+  applicantsList.value = []
+  applicantsDialogVisible.value = true
+  applicantsLoading.value = true
   try {
-    await relationApi.offline(row.id, { operator: authStore.username })
-    ElMessage.success('已下线')
-    loadProviderList()
+    const res = await relationApi.applicantsByTransno(row.transno)
+    applicantsList.value = res.data || []
   } catch {
-    ElMessage.error('下线失败')
+    applicantsList.value = []
+  } finally {
+    applicantsLoading.value = false
   }
 }
 
 // ==================== 初始化 ====================
 onMounted(() => {
   loadData()
-  // ADMIN用户加载全部系统，其他用户只加载自己部门的系统
+  // 接口信息页系统下拉：ADMIN加载全部，其他用户只加载本部门
   const params = authStore.hasRole('ADMIN') ? {} : { deptId: authStore.deptId }
   systemApi.list(params).then(res => { systemOptions.value = res.data || [] })
+  // 请求关系页搜索下拉：加载全部系统
+  systemApi.list().then(res => { allSystemOptions.value = res.data || [] })
 })
 </script>
 
