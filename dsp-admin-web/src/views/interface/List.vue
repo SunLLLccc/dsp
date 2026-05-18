@@ -289,9 +289,14 @@
             <el-form-item label="接口编码">
               <el-input v-model="relationSearchForm.transno" placeholder="请输入接口编码" clearable />
             </el-form-item>
-            <el-form-item label="对方系统">
-              <el-select v-model="relationSearchForm.systemId" placeholder="全部" clearable filterable class="filter-select">
-                <el-option v-for="sys in allSystemOptions" :key="sys.id" :label="sys.name" :value="sys.id" />
+            <el-form-item label="服务方系统">
+              <el-select v-model="relationSearchForm.providerSystemId" placeholder="全部" clearable filterable class="filter-select">
+                <el-option v-for="sys in providerSystemOptions" :key="sys.id" :label="sys.name" :value="sys.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="请求方系统">
+              <el-select v-model="relationSearchForm.applicantSystemId" placeholder="全部" clearable filterable class="filter-select">
+                <el-option v-for="sys in applicantSystemOptions" :key="sys.id" :label="sys.name" :value="sys.id" />
               </el-select>
             </el-form-item>
             <el-form-item label="需求编号">
@@ -311,6 +316,7 @@
               <el-table :data="providerList" border stripe>
                 <el-table-column prop="transno" label="接口编码" width="200" />
                 <el-table-column prop="interfaceName" label="接口名称" width="180" />
+                <el-table-column prop="providerSystemName" label="服务方系统" width="150" />
                 <el-table-column prop="applicantSystemName" label="请求方系统" width="150" />
                 <el-table-column prop="requirementNo" label="需求编号" width="150" />
                 <el-table-column prop="createdTime" label="申请时间" width="170" :formatter="fmtTimeCol" />
@@ -334,6 +340,7 @@
                 <el-table-column prop="transno" label="接口编码" width="200" />
                 <el-table-column prop="interfaceName" label="接口名称" width="180" />
                 <el-table-column prop="providerSystemName" label="服务方系统" width="150" />
+                <el-table-column prop="applicantSystemName" label="请求方系统" width="150" />
                 <el-table-column prop="requirementNo" label="需求编号" width="150" />
                 <el-table-column prop="createdTime" label="申请时间" width="170" :formatter="fmtTimeCol" />
                 <el-table-column prop="applyReason" label="申请事由" show-overflow-tooltip />
@@ -373,7 +380,7 @@
 <script setup>
 defineOptions({ name: '接口管理' })
 
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { interfaceApi, configApi, systemApi, approvalApi, relationApi } from '../../api'
 import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE, VERSION_STATUS, VERSION_STATUS_TYPE } from '../../constants/status'
@@ -786,7 +793,19 @@ function viewApplyDetail(row) {
 // ==================== 页签三：请求关系 ====================
 const relationSubTab = ref('provider')
 const allSystemOptions = ref([])
-const relationSearchForm = ref({ transno: '', systemId: null, requirementNo: '' })
+const deptSystemOptions = ref([])
+const relationSearchForm = ref({ transno: '', providerSystemId: null, applicantSystemId: null, requirementNo: '' })
+
+// 服务方系统下拉：服务方页签=本部门系统，请求方页签=全部系统
+const providerSystemOptions = computed(() => {
+  if (relationSubTab.value === 'provider' && !authStore.hasRole('ADMIN')) return deptSystemOptions.value
+  return allSystemOptions.value
+})
+// 请求方系统下拉：请求方页签=本部门系统，服务方页签=全部系统
+const applicantSystemOptions = computed(() => {
+  if (relationSubTab.value === 'applicant' && !authStore.hasRole('ADMIN')) return deptSystemOptions.value
+  return allSystemOptions.value
+})
 
 const RELATION_STATUS = { 0: '待审批', 1: '已通过', 2: '已驳回', 3: '已下线' }
 const RELATION_STATUS_TYPE = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info' }
@@ -819,7 +838,7 @@ function searchRelation() {
 }
 
 function resetRelationSearch() {
-  relationSearchForm.value = { transno: '', systemId: null, requirementNo: '' }
+  relationSearchForm.value = { transno: '', providerSystemId: null, applicantSystemId: null, requirementNo: '' }
   searchRelation()
 }
 
@@ -828,7 +847,8 @@ async function loadProviderList() {
     const params = {
       ...providerPage.value,
       transno: relationSearchForm.value.transno || undefined,
-      applicantSystemId: relationSearchForm.value.systemId || undefined,
+      providerSystemId: relationSearchForm.value.providerSystemId || undefined,
+      applicantSystemId: relationSearchForm.value.applicantSystemId || undefined,
       requirementNo: relationSearchForm.value.requirementNo || undefined,
     }
     const res = await relationApi.provider(params)
@@ -845,7 +865,8 @@ async function loadApplicantList() {
     const params = {
       ...applicantPage.value,
       transno: relationSearchForm.value.transno || undefined,
-      providerSystemId: relationSearchForm.value.systemId || undefined,
+      providerSystemId: relationSearchForm.value.providerSystemId || undefined,
+      applicantSystemId: relationSearchForm.value.applicantSystemId || undefined,
       requirementNo: relationSearchForm.value.requirementNo || undefined,
     }
     const res = await relationApi.applicant(params)
@@ -884,8 +905,9 @@ onMounted(() => {
   // 接口信息页系统下拉：ADMIN加载全部，其他用户只加载本部门
   const params = authStore.hasRole('ADMIN') ? {} : { deptId: authStore.deptId }
   systemApi.list(params).then(res => { systemOptions.value = res.data || [] })
-  // 请求关系页搜索下拉：加载全部系统
+  // 请求关系页：加载全部系统 + 本部门系统（下拉框根据页签切换）
   systemApi.list().then(res => { allSystemOptions.value = res.data || [] })
+  systemApi.list({ deptId: authStore.deptId }).then(res => { deptSystemOptions.value = res.data || [] })
 })
 </script>
 

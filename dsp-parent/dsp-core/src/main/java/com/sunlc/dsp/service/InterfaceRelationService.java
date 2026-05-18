@@ -8,10 +8,12 @@ import java.util.List;
 
 public interface InterfaceRelationService extends IService<InterfaceRelation> {
 
-    Page<InterfaceRelation> getByProvider(Long deptId, String transno, Long applicantSystemId, String requirementNo,
+    Page<InterfaceRelation> getByProvider(Long deptId, boolean isAdmin, String transno, Long providerSystemId,
+                                          Long applicantSystemId, String requirementNo,
                                           Integer pageNum, Integer pageSize);
 
-    Page<InterfaceRelation> getByApplicant(Long deptId, String transno, Long providerSystemId, String requirementNo,
+    Page<InterfaceRelation> getByApplicant(Long deptId, boolean isAdmin, String transno, Long providerSystemId,
+                                           Long applicantSystemId, String requirementNo,
                                            Integer pageNum, Integer pageSize);
 
     List<InterfaceRelation> getApplicantsByTransno(String transno);

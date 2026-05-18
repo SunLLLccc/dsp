@@ -30,14 +30,20 @@ public class InterfaceRelationServiceImpl extends ServiceImpl<InterfaceRelationM
     private final InterfaceInfoService interfaceInfoService;
 
     @Override
-    public Page<InterfaceRelation> getByProvider(Long deptId, String transno, Long applicantSystemId,
-                                                  String requirementNo, Integer pageNum, Integer pageSize) {
+    public Page<InterfaceRelation> getByProvider(Long deptId, boolean isAdmin, String transno, Long providerSystemId,
+                                                  Long applicantSystemId, String requirementNo,
+                                                  Integer pageNum, Integer pageSize) {
         Page<InterfaceRelation> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<InterfaceRelation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.inSql(InterfaceRelation::getProviderSystemId,
-                "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1");
+        if (!isAdmin && deptId != null) {
+            wrapper.inSql(InterfaceRelation::getProviderSystemId,
+                    "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1");
+        }
         if (transno != null && !transno.isEmpty()) {
             wrapper.like(InterfaceRelation::getTransno, transno);
+        }
+        if (providerSystemId != null) {
+            wrapper.eq(InterfaceRelation::getProviderSystemId, providerSystemId);
         }
         if (applicantSystemId != null) {
             wrapper.eq(InterfaceRelation::getApplicantSystemId, applicantSystemId);
@@ -52,17 +58,23 @@ public class InterfaceRelationServiceImpl extends ServiceImpl<InterfaceRelationM
     }
 
     @Override
-    public Page<InterfaceRelation> getByApplicant(Long deptId, String transno, Long providerSystemId,
-                                                   String requirementNo, Integer pageNum, Integer pageSize) {
+    public Page<InterfaceRelation> getByApplicant(Long deptId, boolean isAdmin, String transno, Long providerSystemId,
+                                                   Long applicantSystemId, String requirementNo,
+                                                   Integer pageNum, Integer pageSize) {
         Page<InterfaceRelation> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<InterfaceRelation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.inSql(InterfaceRelation::getApplicantSystemId,
-                "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1");
+        if (!isAdmin && deptId != null) {
+            wrapper.inSql(InterfaceRelation::getApplicantSystemId,
+                    "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1");
+        }
         if (transno != null && !transno.isEmpty()) {
             wrapper.like(InterfaceRelation::getTransno, transno);
         }
         if (providerSystemId != null) {
             wrapper.eq(InterfaceRelation::getProviderSystemId, providerSystemId);
+        }
+        if (applicantSystemId != null) {
+            wrapper.eq(InterfaceRelation::getApplicantSystemId, applicantSystemId);
         }
         if (requirementNo != null && !requirementNo.isEmpty()) {
             wrapper.like(InterfaceRelation::getRequirementNo, requirementNo);

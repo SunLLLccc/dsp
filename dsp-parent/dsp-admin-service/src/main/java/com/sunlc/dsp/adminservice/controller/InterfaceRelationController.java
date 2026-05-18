@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -29,17 +30,24 @@ public class InterfaceRelationController {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
+    private boolean isAdmin(HttpServletRequest request) {
+        Object roles = request.getAttribute("adminRoles");
+        return roles instanceof List && ((List<String>) roles).contains("ADMIN");
+    }
+
     @GetMapping("/provider")
     public ApiResponse<Object> provider(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String transno,
+            @RequestParam(required = false) Long providerSystemId,
             @RequestParam(required = false) Long applicantSystemId,
             @RequestParam(required = false) String requirementNo,
             HttpServletRequest request) {
         Long deptId = getCurrentDeptId(request);
         return ApiResponse.success("RELATION", "PROVIDER",
-                interfaceRelationService.getByProvider(deptId, transno, applicantSystemId, requirementNo, pageNum, pageSize));
+                interfaceRelationService.getByProvider(deptId, isAdmin(request), transno, providerSystemId, applicantSystemId, requirementNo, pageNum, pageSize));
     }
 
     @GetMapping("/applicant")
@@ -48,11 +56,12 @@ public class InterfaceRelationController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String transno,
             @RequestParam(required = false) Long providerSystemId,
+            @RequestParam(required = false) Long applicantSystemId,
             @RequestParam(required = false) String requirementNo,
             HttpServletRequest request) {
         Long deptId = getCurrentDeptId(request);
         return ApiResponse.success("RELATION", "APPLICANT",
-                interfaceRelationService.getByApplicant(deptId, transno, providerSystemId, requirementNo, pageNum, pageSize));
+                interfaceRelationService.getByApplicant(deptId, isAdmin(request), transno, providerSystemId, applicantSystemId, requirementNo, pageNum, pageSize));
     }
 
     @GetMapping("/applicants-by-transno")
