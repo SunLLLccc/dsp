@@ -30,27 +30,70 @@ public class InterfaceRelationServiceImpl extends ServiceImpl<InterfaceRelationM
     private final InterfaceInfoService interfaceInfoService;
 
     @Override
-    public Page<InterfaceRelation> getByProvider(Long deptId, Integer pageNum, Integer pageSize) {
+    public Page<InterfaceRelation> getByProvider(Long deptId, boolean isAdmin, String transno, Long providerSystemId,
+                                                  Long applicantSystemId, String requirementNo,
+                                                  Integer pageNum, Integer pageSize) {
         Page<InterfaceRelation> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<InterfaceRelation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.inSql(InterfaceRelation::getProviderSystemId,
-                "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1")
-               .orderByDesc(InterfaceRelation::getCreatedTime);
+        if (!isAdmin && deptId != null) {
+            wrapper.inSql(InterfaceRelation::getProviderSystemId,
+                    "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1");
+        }
+        if (transno != null && !transno.isEmpty()) {
+            wrapper.like(InterfaceRelation::getTransno, transno);
+        }
+        if (providerSystemId != null) {
+            wrapper.eq(InterfaceRelation::getProviderSystemId, providerSystemId);
+        }
+        if (applicantSystemId != null) {
+            wrapper.eq(InterfaceRelation::getApplicantSystemId, applicantSystemId);
+        }
+        if (requirementNo != null && !requirementNo.isEmpty()) {
+            wrapper.like(InterfaceRelation::getRequirementNo, requirementNo);
+        }
+        wrapper.orderByDesc(InterfaceRelation::getCreatedTime);
         Page<InterfaceRelation> result = page(page, wrapper);
         fillDisplayFields(result.getRecords());
         return result;
     }
 
     @Override
-    public Page<InterfaceRelation> getByApplicant(Long deptId, Integer pageNum, Integer pageSize) {
+    public Page<InterfaceRelation> getByApplicant(Long deptId, boolean isAdmin, String transno, Long providerSystemId,
+                                                   Long applicantSystemId, String requirementNo,
+                                                   Integer pageNum, Integer pageSize) {
         Page<InterfaceRelation> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<InterfaceRelation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.inSql(InterfaceRelation::getApplicantSystemId,
-                "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1")
-               .orderByDesc(InterfaceRelation::getCreatedTime);
+        if (!isAdmin && deptId != null) {
+            wrapper.inSql(InterfaceRelation::getApplicantSystemId,
+                    "SELECT id FROM sys_system WHERE dept_id = " + deptId + " AND status = 1");
+        }
+        if (transno != null && !transno.isEmpty()) {
+            wrapper.like(InterfaceRelation::getTransno, transno);
+        }
+        if (providerSystemId != null) {
+            wrapper.eq(InterfaceRelation::getProviderSystemId, providerSystemId);
+        }
+        if (applicantSystemId != null) {
+            wrapper.eq(InterfaceRelation::getApplicantSystemId, applicantSystemId);
+        }
+        if (requirementNo != null && !requirementNo.isEmpty()) {
+            wrapper.like(InterfaceRelation::getRequirementNo, requirementNo);
+        }
+        wrapper.orderByDesc(InterfaceRelation::getCreatedTime);
         Page<InterfaceRelation> result = page(page, wrapper);
         fillDisplayFields(result.getRecords());
         return result;
+    }
+
+    @Override
+    public List<InterfaceRelation> getApplicantsByTransno(String transno) {
+        LambdaQueryWrapper<InterfaceRelation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(InterfaceRelation::getTransno, transno)
+               .eq(InterfaceRelation::getStatus, 1)
+               .orderByDesc(InterfaceRelation::getCreatedTime);
+        List<InterfaceRelation> list = list(wrapper);
+        fillDisplayFields(list);
+        return list;
     }
 
     @Override
