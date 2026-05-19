@@ -12,4 +12,7 @@ public interface SysUserService extends IService<SysUser> {
     void createUser(SysUser user);
     void resetPassword(Long userId, String newPassword);
     void fillUserRoles(List<SysUser> users);
+    SysUser getProfile(String username);
+    void updateProfile(String username, String realName);
+    void changePassword(String username, String oldPassword, String newPassword);
 }

@@ -98,7 +98,10 @@ export const userApi = {
   resetPassword: (id, password) => request.put(`/user/${id}/password`, { password }),
   updateStatus: (id, status) => request.put(`/user/${id}/status`, { status }),
   delete: (id) => request.delete(`/user/${id}`),
-  assignRoles: (id, roleIds) => request.post(`/user/${id}/roles`, { roleIds })
+  assignRoles: (id, roleIds) => request.post(`/user/${id}/roles`, { roleIds }),
+  profile: () => request.get('/user/profile'),
+  updateProfile: (data) => request.put('/user/profile', data),
+  changePassword: (data) => request.put('/user/change-password', data),
 }
 
 // 部门管理API

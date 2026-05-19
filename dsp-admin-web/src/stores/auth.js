@@ -40,5 +40,10 @@ export const useAuthStore = defineStore('auth', () => {
     return roles.value.includes(roleCode)
   }
 
-  return { token, username, realName, roles, deptId, isAuthenticated, setLogin, logout, hasRole }
+  function updateRealName(name) {
+    realName.value = name
+    localStorage.setItem('admin_realname', name || '')
+  }
+
+  return { token, username, realName, roles, deptId, isAuthenticated, setLogin, logout, hasRole, updateRealName }
 })

@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sunlc.dsp.common.enums.ErrorCode;
 import com.sunlc.dsp.common.exception.BusinessException;
+import com.sunlc.dsp.entity.SysDept;
 import com.sunlc.dsp.entity.SysRole;
 import com.sunlc.dsp.entity.SysUser;
 import com.sunlc.dsp.entity.SysUserRole;
 import com.sunlc.dsp.mapper.SysRoleMapper;
 import com.sunlc.dsp.mapper.SysUserMapper;
 import com.sunlc.dsp.mapper.SysUserRoleMapper;
+import com.sunlc.dsp.service.SysDeptService;
 import com.sunlc.dsp.service.SysUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -28,6 +30,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser>
     private final SysUserRoleMapper sysUserRoleMapper;
     private final SysRoleMapper sysRoleMapper;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final SysDeptService sysDeptService;
 
     @Override
     public SysUser login(String username, String password) {
@@ -111,5 +114,51 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser>
             user.setRoleNames(userRolesList.stream().map(SysRole::getRoleName).collect(Collectors.toList()));
             user.setRoleIds(userRolesList.stream().map(SysRole::getId).collect(Collectors.toList()));
         }
+    }
+
+    @Override
+    public SysUser getProfile(String username) {
+        SysUser user = getOne(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, username));
+        if (user == null) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "用户不存在");
+        }
+        user.setPassword(null);
+        fillUserRoles(Collections.singletonList(user));
+        if (user.getDeptId() != null) {
+            SysDept dept = sysDeptService.getById(user.getDeptId());
+            if (dept != null) {
+                user.setDeptName(dept.getName());
+            }
+        }
+        return user;
+    }
+
+    @Override
+    public void updateProfile(String username, String realName) {
+        SysUser user = getOne(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, username));
+        if (user == null) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "用户不存在");
+        }
+        user.setRealName(realName);
+        updateById(user);
+    }
+
+    @Override
+    public void changePassword(String username, String oldPassword, String newPassword) {
+        SysUser user = getOne(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, username));
+        if (user == null) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "用户不存在");
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "旧密码错误");
+        }
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "新密码不能与旧密码相同");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        updateById(user);
     }
 }
