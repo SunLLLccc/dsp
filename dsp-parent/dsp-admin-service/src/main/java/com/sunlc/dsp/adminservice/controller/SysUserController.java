@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+
 import java.util.List;
 import java.util.Map;
 
@@ -109,5 +111,40 @@ public class SysUserController {
         }
         sysUserService.assignRoles(id, roleIds);
         return ApiResponse.success("USER", "ASSIGN_ROLES", null);
+    }
+
+    private String getCurrentUser(HttpServletRequest request) {
+        Object user = request.getAttribute("adminUser");
+        return user != null ? user.toString() : null;
+    }
+
+    @GetMapping("/profile")
+    public ApiResponse<SysUser> getProfile(HttpServletRequest request) {
+        String username = getCurrentUser(request);
+        return ApiResponse.success("USER", "PROFILE", sysUserService.getProfile(username));
+    }
+
+    @PutMapping("/profile")
+    public ApiResponse<Void> updateProfile(@RequestBody Map<String, String> body,
+                                            HttpServletRequest request) {
+        String username = getCurrentUser(request);
+        sysUserService.updateProfile(username, body.get("realName"));
+        return ApiResponse.success("USER", "UPDATE_PROFILE", null);
+    }
+
+    @PutMapping("/change-password")
+    public ApiResponse<Void> changePassword(@RequestBody Map<String, String> body,
+                                              HttpServletRequest request) {
+        String username = getCurrentUser(request);
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+        if (oldPassword == null || oldPassword.isEmpty()) {
+            return ApiResponse.error("USER", "CHANGE_PWD", "4001", "旧密码不能为空");
+        }
+        if (newPassword == null || newPassword.isEmpty()) {
+            return ApiResponse.error("USER", "CHANGE_PWD", "4002", "新密码不能为空");
+        }
+        sysUserService.changePassword(username, oldPassword, newPassword);
+        return ApiResponse.success("USER", "CHANGE_PWD", null);
     }
 }
