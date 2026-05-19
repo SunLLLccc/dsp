@@ -172,6 +172,14 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item command="profile">
+                  <el-icon><User /></el-icon>
+                  个人信息
+                </el-dropdown-item>
+                <el-dropdown-item command="password">
+                  <el-icon><Lock /></el-icon>
+                  修改密码
+                </el-dropdown-item>
                 <el-dropdown-item command="logout" divided>
                   <el-icon><SwitchButton /></el-icon>
                   退出登录
@@ -192,6 +200,49 @@
         </router-view>
       </el-main>
     </el-container>
+    <el-dialog v-model="profileDialogVisible" title="个人信息" width="500px" destroy-on-close>
+      <el-descriptions :column="1" border v-if="profileData">
+        <el-descriptions-item label="用户名">{{ profileData.username }}</el-descriptions-item>
+        <el-descriptions-item label="所属部门">{{ profileData.deptName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="角色">
+          <el-tag v-for="rn in profileData.roleNames" :key="rn" size="small" style="margin-right:4px">{{ rn }}</el-tag>
+          <span v-if="!profileData.roleNames || !profileData.roleNames.length">-</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag :type="profileData.status === 1 ? 'success' : 'danger'">
+            {{ profileData.status === 1 ? '正常' : '禁用' }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ fmtTime(profileData.createdTime) }}</el-descriptions-item>
+      </el-descriptions>
+      <el-form style="margin-top:16px" v-if="profileData">
+        <el-form-item label="真实姓名">
+          <el-input v-model="profileRealName" placeholder="请输入真实姓名" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="profileDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSaveProfile" :loading="profileSaving">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="pwdDialogVisible" title="修改密码" width="450px" destroy-on-close>
+      <el-form :model="pwdForm" label-width="90px">
+        <el-form-item label="旧密码">
+          <el-input v-model="pwdForm.oldPassword" type="password" show-password placeholder="请输入旧密码" />
+        </el-form-item>
+        <el-form-item label="新密码">
+          <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="至少6位" />
+        </el-form-item>
+        <el-form-item label="确认新密码">
+          <el-input v-model="pwdForm.confirmPassword" type="password" show-password placeholder="再次输入新密码" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="pwdDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleChangePwd" :loading="pwdSaving">确认修改</el-button>
+      </template>
+    </el-dialog>
   </el-container>
 </template>
 
@@ -202,9 +253,12 @@ import { useAuthStore } from '../stores/auth'
 import { useTabStore } from '../stores/tabs'
 import {
   Document, Coin, Key, Download, Monitor, Notebook, Stamp, Files,
-  Setting, User, OfficeBuilding, Promotion, Expand, ArrowDown, SwitchButton
+  Setting, User, OfficeBuilding, Promotion, Expand, ArrowDown, SwitchButton, Lock
 } from '@element-plus/icons-vue'
 import TabBar from './TabBar.vue'
+import { userApi } from '../api'
+import { fmtTime } from '../utils/format'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -240,6 +294,68 @@ function handleUserCommand(command) {
   if (command === 'logout') {
     authStore.logout()
     router.push('/login')
+  } else if (command === 'profile') {
+    openProfileDialog()
+  } else if (command === 'password') {
+    pwdForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+    pwdDialogVisible.value = true
+  }
+}
+
+const profileDialogVisible = ref(false)
+const profileData = ref(null)
+const profileRealName = ref('')
+const profileSaving = ref(false)
+
+async function openProfileDialog() {
+  profileDialogVisible.value = true
+  try {
+    const res = await userApi.profile()
+    profileData.value = res.data
+    profileRealName.value = res.data?.realName || ''
+  } catch {
+    profileData.value = null
+  }
+}
+
+async function handleSaveProfile() {
+  if (!profileRealName.value.trim()) {
+    ElMessage.warning('真实姓名不能为空')
+    return
+  }
+  profileSaving.value = true
+  try {
+    await userApi.updateProfile({ realName: profileRealName.value.trim() })
+    authStore.updateRealName(profileRealName.value.trim())
+    ElMessage.success('保存成功')
+    profileDialogVisible.value = false
+  } catch {
+    ElMessage.error('保存失败')
+  } finally {
+    profileSaving.value = false
+  }
+}
+
+const pwdDialogVisible = ref(false)
+const pwdForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const pwdSaving = ref(false)
+
+async function handleChangePwd() {
+  const form = pwdForm.value
+  if (!form.oldPassword) { ElMessage.warning('请输入旧密码'); return }
+  if (!form.newPassword || form.newPassword.length < 6) { ElMessage.warning('新密码至少6位'); return }
+  if (form.newPassword !== form.confirmPassword) { ElMessage.warning('两次输入的密码不一致'); return }
+  pwdSaving.value = true
+  try {
+    await userApi.changePassword({ oldPassword: form.oldPassword, newPassword: form.newPassword })
+    ElMessage.success('密码修改成功，请重新登录')
+    pwdDialogVisible.value = false
+    authStore.logout()
+    router.push('/login')
+  } catch (e) {
+    ElMessage.error(e.response?.data?.message || '修改失败')
+  } finally {
+    pwdSaving.value = false
   }
 }
 
