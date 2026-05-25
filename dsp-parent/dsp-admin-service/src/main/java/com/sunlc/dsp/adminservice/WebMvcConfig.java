@@ -20,6 +20,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(adminAuthInterceptor)
                 .addPathPatterns("/dsp/admin/**")
                 .excludePathPatterns("/dsp/admin/login");
+
     }
 
     @Override
