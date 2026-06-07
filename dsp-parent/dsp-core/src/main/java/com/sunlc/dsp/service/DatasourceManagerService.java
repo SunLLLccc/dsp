@@ -10,4 +10,8 @@ public interface DatasourceManagerService extends IService<DatasourceConfig> {
     void registerDatasource(DatasourceConfig config);
     void removeDatasource(String dsName);
     List<DatasourceConfig> listAll();
+    /**
+     * 测试数据源连接，校验类型白名单和 URL 合法性，失败时返回脱敏信息
+     */
+    String testConnection(DatasourceConfig config);
 }

@@ -1,5 +1,7 @@
 package com.sunlc.dsp.adminservice.controller;
 
+import com.sunlc.dsp.common.enums.ErrorCode;
+import com.sunlc.dsp.common.exception.BusinessException;
 import com.sunlc.dsp.common.model.ApiResponse;
 import com.sunlc.dsp.common.util.JwtUtil;
 import com.sunlc.dsp.entity.SysUser;
@@ -30,8 +32,8 @@ public class LoginController {
         String username = loginForm.get("username");
         String password = loginForm.get("password");
 
-        if (username == null || password == null) {
-            return ApiResponse.error("LOGIN", "", "4001", "用户名和密码不能为空");
+        if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "用户名和密码不能为空");
         }
 
         SysUser user = sysUserService.login(username, password);

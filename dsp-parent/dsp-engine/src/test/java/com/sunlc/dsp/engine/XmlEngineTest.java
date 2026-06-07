@@ -1,11 +1,15 @@
 package com.sunlc.dsp.engine;
 
+import com.sunlc.dsp.common.exception.BusinessException;
 import com.sunlc.dsp.engine.executor.*;
 import com.sunlc.dsp.engine.model.*;
 import com.sunlc.dsp.engine.parser.XmlConfigParser;
+import com.sunlc.dsp.engine.validator.SqlSecurityValidator;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -297,6 +301,129 @@ class XmlEngineTest {
     }
 
     @Test
+    void xmlParsing_dynamicSqlQuery_template() {
+        XmlConfigParser parser = new XmlConfigParser();
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<interface transno=\"USER_LIST_QUERY\" name=\"用户列表查询\" description=\"支持多条件筛选的用户列表查询\">\n" +
+                "  <requestData>\n" +
+                "    <param name=\"userName\" type=\"String\" required=\"false\" description=\"用户名（模糊查询）\" />\n" +
+                "    <param name=\"status\" type=\"String\" required=\"false\" defaultValue=\"active\" description=\"状态\" />\n" +
+                "    <param name=\"departmentId\" type=\"String\" required=\"false\" description=\"部门ID\" />\n" +
+                "    <param name=\"ids\" type=\"List\" required=\"false\" description=\"用户ID列表（批量查询）\" />\n" +
+                "    <param name=\"minAge\" type=\"Integer\" required=\"false\" description=\"最小年龄\" />\n" +
+                "    <param name=\"maxAge\" type=\"Integer\" required=\"false\" description=\"最大年龄\" />\n" +
+                "  </requestData>\n" +
+                "  <datasource name=\"ds_main\" />\n" +
+                "  <query id=\"q1\" type=\"mysql\" datasource=\"ds_main\">\n" +
+                "    SELECT id, user_name, email, phone, status, age, department_id, created_at\n" +
+                "    FROM users\n" +
+                "    WHERE 1=1\n" +
+                "    <if test=\"$requestData['userName'] != null\">AND user_name LIKE #{$requestData['userName']}</if>\n" +
+                "    <if test=\"$requestData['status'] != null\">AND status = #{$requestData['status']}</if>\n" +
+                "    <if test=\"$requestData['departmentId'] != null\">AND department_id = #{$requestData['departmentId']}</if>\n" +
+                "    <if test=\"$requestData['minAge'] != null\">AND age &gt;= #{$requestData['minAge']}</if>\n" +
+                "    <if test=\"$requestData['maxAge'] != null\">AND age &lt;= #{$requestData['maxAge']}</if>\n" +
+                "    <foreach collection=\"$requestData['ids']\" item=\"id\" separator=\",\" open=\"AND id IN (\" close=\")\">\n" +
+                "      #{id}\n" +
+                "    </foreach>\n" +
+                "    ORDER BY created_at DESC\n" +
+                "  </query>\n" +
+                "  <resultMap id=\"userListMap\" query=\"q1\">\n" +
+                "    <field name=\"userId\" column=\"id\" />\n" +
+                "    <field name=\"userName\" column=\"user_name\" />\n" +
+                "    <field name=\"email\" column=\"email\" />\n" +
+                "    <field name=\"phone\" column=\"phone\" />\n" +
+                "    <field name=\"status\" column=\"status\" />\n" +
+                "    <field name=\"age\" column=\"age\" function=\"fn:TYPE_CONVERT,INTEGER\" />\n" +
+                "    <field name=\"departmentId\" column=\"department_id\" />\n" +
+                "    <field name=\"createdAt\" column=\"created_at\" function=\"fn:DATE_FORMAT,yyyy-MM-dd\" />\n" +
+                "  </resultMap>\n" +
+                "  <responseData resultMap=\"userListMap\">\n" +
+                "    <field name=\"list\" as=\"list\" />\n" +
+                "  </responseData>\n" +
+                "</interface>";
+
+        InterfaceConfig config = parser.parse(xml);
+
+        // 1. 顶层属性
+        assertEquals("USER_LIST_QUERY", config.getTransno());
+        assertEquals("用户列表查询", config.getName());
+        assertEquals("支持多条件筛选的用户列表查询", config.getDescription());
+
+        // 2. requestData: 6 个参数
+        List<ParamConfig> params = config.getRequestData().getParams();
+        assertEquals(6, params.size());
+        assertEquals("userName", params.get(0).getName());
+        assertFalse(params.get(0).isRequired());
+        assertEquals("status", params.get(1).getName());
+        assertEquals("active", params.get(1).getDefaultValue());
+        assertEquals("ids", params.get(3).getName());
+        assertEquals("List", params.get(3).getType());
+        assertEquals("minAge", params.get(4).getName());
+        assertEquals("Integer", params.get(4).getType());
+
+        // 3. datasource
+        assertEquals(1, config.getDataSources().size());
+        assertEquals("ds_main", config.getDataSources().get(0).getName());
+
+        // 4. query
+        assertEquals(1, config.getQueries().size());
+        QueryConfig q1 = config.getQueries().get(0);
+        assertEquals("q1", q1.getId());
+        assertEquals("mysql", q1.getType());
+        assertEquals("ds_main", q1.getDatasource());
+        assertTrue(q1.getSql().contains("SELECT id, user_name"));
+        assertTrue(q1.getSql().contains("WHERE 1=1"));
+        assertTrue(q1.getSql().contains("ORDER BY created_at DESC"));
+
+        // 5. dynamicSqls: 5 个 IF + 1 个 FOREACH
+        List<DynamicSqlConfig> dyns = q1.getDynamicSqls();
+        assertEquals(6, dyns.size());
+
+        // 前 5 个都是 IF 类型
+        for (int i = 0; i < 5; i++) {
+            assertEquals(DynamicSqlConfig.DynamicType.IF, dyns.get(i).getType());
+        }
+        assertEquals("$requestData['userName'] != null", dyns.get(0).getTest());
+        assertTrue(dyns.get(0).getSql().contains("AND user_name LIKE"));
+        assertEquals("$requestData['status'] != null", dyns.get(1).getTest());
+        assertEquals("$requestData['departmentId'] != null", dyns.get(2).getTest());
+        assertEquals("$requestData['minAge'] != null", dyns.get(3).getTest());
+        assertTrue(dyns.get(3).getSql().contains("AND age >="));
+        assertEquals("$requestData['maxAge'] != null", dyns.get(4).getTest());
+        assertTrue(dyns.get(4).getSql().contains("AND age <="));
+
+        // 第 6 个是 FOREACH
+        DynamicSqlConfig foreach = dyns.get(5);
+        assertEquals(DynamicSqlConfig.DynamicType.FOREACH, foreach.getType());
+        assertEquals("$requestData['ids']", foreach.getCollection());
+        assertEquals("id", foreach.getItem());
+        assertEquals(",", foreach.getSeparator());
+        assertEquals("AND id IN (", foreach.getOpen());
+        assertEquals(")", foreach.getClose());
+
+        // 6. resultMap
+        assertEquals(1, config.getResultMaps().size());
+        ResultMapConfig rm = config.getResultMaps().get(0);
+        assertEquals("userListMap", rm.getId());
+        assertEquals("q1", rm.getQuery());
+        assertEquals(8, rm.getFields().size());
+        assertEquals("userId", rm.getFields().get(0).getName());
+        assertEquals("id", rm.getFields().get(0).getColumn());
+        assertEquals("age", rm.getFields().get(5).getName());
+        assertEquals("fn:TYPE_CONVERT,INTEGER", rm.getFields().get(5).getFunction());
+        assertEquals("createdAt", rm.getFields().get(7).getName());
+        assertEquals("fn:DATE_FORMAT,yyyy-MM-dd", rm.getFields().get(7).getFunction());
+
+        // 7. responseData
+        assertNotNull(config.getResponseData());
+        assertEquals("userListMap", config.getResponseData().getResultMap());
+        assertEquals(1, config.getResponseData().getFields().size());
+        assertEquals("list", config.getResponseData().getFields().get(0).getName());
+        assertEquals("list", config.getResponseData().getFields().get(0).getAs());
+    }
+
+    @Test
     void xmlParsing_foreach() {
         XmlConfigParser parser = new XmlConfigParser();
         String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
@@ -323,5 +450,381 @@ class XmlEngineTest {
         assertEquals(",", dyn.getSeparator());
         assertEquals("AND id IN (", dyn.getOpen());
         assertEquals(")", dyn.getClose());
+    }
+
+    // ==================== SQL 安全校验测试 ====================
+
+    private SqlSecurityValidator validator;
+
+    @BeforeEach
+    void setUpValidator() {
+        validator = new SqlSecurityValidator();
+    }
+
+    private static final String VALID_XML_HEADER = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+            "<interface transno=\"TEST\" name=\"测试\">\n" +
+            "  <requestData><param name=\"id\" type=\"String\" /></requestData>\n" +
+            "  <datasource name=\"ds\" type=\"MYSQL\" url=\"jdbc:mysql://localhost/db\" username=\"root\" password=\"\" />\n" +
+            "  <query id=\"q1\" type=\"mysql\" datasource=\"ds\">\n";
+
+    private static final String VALID_XML_FOOTER = "  </query>\n</interface>";
+
+    @Test
+    void sqlSecurity_validSelect_passes() {
+        String xml = VALID_XML_HEADER +
+                "    SELECT id, name FROM users WHERE id = #{requestData.id}" +
+                VALID_XML_FOOTER;
+        assertDoesNotThrow(() -> validator.validateXmlConfig(xml));
+    }
+
+    @Test
+    void sqlSecurity_updateRejected() {
+        String xml = VALID_XML_HEADER +
+                "    UPDATE users SET name = 'hacked' WHERE 1=1" +
+                VALID_XML_FOOTER;
+        BusinessException ex = assertThrows(BusinessException.class, () -> validator.validateXmlConfig(xml));
+        assertTrue(ex.getMessage().contains("UPDATE"));
+    }
+
+    @Test
+    void sqlSecurity_deleteRejected() {
+        String xml = VALID_XML_HEADER +
+                "    DELETE FROM users WHERE 1=1" +
+                VALID_XML_FOOTER;
+        BusinessException ex = assertThrows(BusinessException.class, () -> validator.validateXmlConfig(xml));
+        assertTrue(ex.getMessage().contains("DELETE"));
+    }
+
+    @Test
+    void sqlSecurity_insertRejected() {
+        String xml = VALID_XML_HEADER +
+                "    INSERT INTO users (name) VALUES ('hacked')" +
+                VALID_XML_FOOTER;
+        BusinessException ex = assertThrows(BusinessException.class, () -> validator.validateXmlConfig(xml));
+        assertTrue(ex.getMessage().contains("INSERT"));
+    }
+
+    @Test
+    void sqlSecurity_dropRejected() {
+        String xml = VALID_XML_HEADER +
+                "    DROP TABLE users" +
+                VALID_XML_FOOTER;
+        BusinessException ex = assertThrows(BusinessException.class, () -> validator.validateXmlConfig(xml));
+        assertTrue(ex.getMessage().contains("DROP"));
+    }
+
+    @Test
+    void sqlSecurity_semicolonRejected() {
+        String xml = VALID_XML_HEADER +
+                "    SELECT * FROM users; DROP TABLE users" +
+                VALID_XML_FOOTER;
+        BusinessException ex = assertThrows(BusinessException.class, () -> validator.validateXmlConfig(xml));
+        assertTrue(ex.getMessage().contains("分号"));
+    }
+
+    @Test
+    void sqlSecurity_commentRejected() {
+        String xml = VALID_XML_HEADER +
+                "    SELECT * FROM users WHERE 1=1 -- bypass" +
+                VALID_XML_FOOTER;
+        BusinessException ex = assertThrows(BusinessException.class, () -> validator.validateXmlConfig(xml));
+        assertTrue(ex.getMessage().contains("注释"));
+    }
+
+    @Test
+    void sqlSecurity_blockCommentRejected() {
+        String xml = VALID_XML_HEADER +
+                "    SELECT * FROM users WHERE 1=1 /* always true */ AND id = 1" +
+                VALID_XML_FOOTER;
+        BusinessException ex = assertThrows(BusinessException.class, () -> validator.validateXmlConfig(xml));
+        assertTrue(ex.getMessage().contains("注释"));
+    }
+
+    @Test
+    void sqlSecurity_dynamicSqlContainsUpdateRejected() {
+        String xml = VALID_XML_HEADER +
+                "    SELECT * FROM users WHERE 1=1\n" +
+                "    <if test=\"$requestData.hack != null\"> UNION SELECT * FROM admin UPDATE users SET name='x'</if>" +
+                VALID_XML_FOOTER;
+        BusinessException ex = assertThrows(BusinessException.class, () -> validator.validateXmlConfig(xml));
+        assertTrue(ex.getMessage().contains("UPDATE"));
+    }
+
+    @Test
+    void sqlSecurity_validOrderBy_passes() {
+        assertDoesNotThrow(() -> validator.validateOrderBy("id", "q1"));
+        assertDoesNotThrow(() -> validator.validateOrderBy("created_at DESC", "q1"));
+        assertDoesNotThrow(() -> validator.validateOrderBy("t.id ASC, t.name DESC", "q1"));
+        assertDoesNotThrow(() -> validator.validateOrderBy("id, created_at", "q1"));
+    }
+
+    @Test
+    void sqlSecurity_orderBy_injectionRejected() {
+        // 尝试通过 orderBy 注入
+        assertThrows(BusinessException.class,
+                () -> validator.validateOrderBy("id; DROP TABLE users", "q1"));
+        assertThrows(BusinessException.class,
+                () -> validator.validateOrderBy("1=1 OR", "q1"));
+        assertThrows(BusinessException.class,
+                () -> validator.validateOrderBy("(SELECT 1)", "q1"));
+        assertThrows(BusinessException.class,
+                () -> validator.validateOrderBy("id; --", "q1"));
+    }
+
+    @Test
+    void sqlSecurity_nonSqlQuery_skipped() {
+        // HTTP 类型查询不校验 SQL
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<interface transno=\"HTTP_TEST\" name=\"测试\">\n" +
+                "  <requestData><param name=\"code\" type=\"String\" /></requestData>\n" +
+                "  <query id=\"q1\" type=\"http\">\n" +
+                "    <http url=\"https://api.example.com/data\" method=\"GET\" />\n" +
+                "  </query>\n" +
+                "</interface>";
+        assertDoesNotThrow(() -> validator.validateXmlConfig(xml));
+    }
+
+    // ==================== T09 导出分页配置解析测试 ====================
+
+    @Test
+    void exportPagination_cursorMode_parsedCorrectly() {
+        // 验证真实 DSL 格式: pagination/order-by 是 query 元素的属性
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<interface transno=\"EXPORT_CURSOR\" name=\"游标导出\">\n" +
+                "  <requestData><param name=\"pageSize\" type=\"Integer\" /></requestData>\n" +
+                "  <query id=\"q1\" type=\"mysql\" datasource=\"ds1\" " +
+                "pagination=\"cursor\" order-by=\"id\" " +
+                "page-size-param=\"pageSize\" last-id-param=\"lastId\" " +
+                "default-page-size=\"100\" max-page-size=\"5000\">\n" +
+                "    <sql>SELECT id, name FROM users</sql>\n" +
+                "  </query>\n" +
+                "</interface>";
+        InterfaceConfig config = new XmlConfigParser().parse(xml);
+        assertEquals(1, config.getQueries().size());
+        QueryConfig query = config.getQueries().get(0);
+        assertNotNull(query.getPaginationConfig(), "paginationConfig 不应为 null");
+        assertEquals(PaginationConfig.PaginationMode.CURSOR, query.getPaginationConfig().getMode());
+        assertEquals("id", query.getPaginationConfig().getOrderBy());
+        assertEquals("pageSize", query.getPaginationConfig().getPageSizeParam());
+        assertEquals("lastId", query.getPaginationConfig().getLastIdParam());
+        assertEquals(5000, query.getPaginationConfig().getMaxPageSize());
+    }
+
+    @Test
+    void exportPagination_optimizedMode_parsedCorrectly() {
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<interface transno=\"EXPORT_OPT\" name=\"优化分页导出\">\n" +
+                "  <requestData><param name=\"pageSize\" type=\"Integer\" /></requestData>\n" +
+                "  <query id=\"q1\" type=\"mysql\" datasource=\"ds1\" " +
+                "pagination=\"optimized\" order-by=\"create_time\" " +
+                "page-size-param=\"pageSize\" page-num-param=\"pageNum\" " +
+                "default-page-size=\"20\" max-page-size=\"1000\">\n" +
+                "    <sql>SELECT id, name, create_time FROM orders</sql>\n" +
+                "  </query>\n" +
+                "</interface>";
+        InterfaceConfig config = new XmlConfigParser().parse(xml);
+        QueryConfig query = config.getQueries().get(0);
+        assertNotNull(query.getPaginationConfig());
+        assertEquals(PaginationConfig.PaginationMode.OPTIMIZED, query.getPaginationConfig().getMode());
+        assertEquals("create_time", query.getPaginationConfig().getOrderBy());
+        assertEquals("pageNum", query.getPaginationConfig().getPageNumParam());
+        assertEquals(1000, query.getPaginationConfig().getMaxPageSize());
+    }
+
+    @Test
+    void exportPagination_noPagination_returnsNull() {
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<interface transno=\"EXPORT_NO_PAGE\" name=\"无分页\">\n" +
+                "  <query id=\"q1\" type=\"mysql\" datasource=\"ds1\">\n" +
+                "    <sql>SELECT * FROM small_table</sql>\n" +
+                "  </query>\n" +
+                "</interface>";
+        InterfaceConfig config = new XmlConfigParser().parse(xml);
+        QueryConfig query = config.getQueries().get(0);
+        assertNull(query.getPaginationConfig());
+    }
+
+    @Test
+    void exportPagination_cursorOrderByWithTablePrefix_parsedCorrectly() {
+        // orderBy 带表前缀 t.id → PaginationConfig 存储原始值
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<interface transno=\"EXPORT_PREFIX\" name=\"表前缀\">\n" +
+                "  <query id=\"q1\" type=\"mysql\" datasource=\"ds1\" " +
+                "pagination=\"cursor\" order-by=\"t.id\" page-size-param=\"pageSize\">\n" +
+                "    <sql>SELECT id, name FROM users</sql>\n" +
+                "  </query>\n" +
+                "</interface>";
+        InterfaceConfig config = new XmlConfigParser().parse(xml);
+        QueryConfig query = config.getQueries().get(0);
+        assertNotNull(query.getPaginationConfig());
+        assertEquals("t.id", query.getPaginationConfig().getOrderBy());
+        assertEquals(PaginationConfig.PaginationMode.CURSOR, query.getPaginationConfig().getMode());
+    }
+
+    // ==================== T14 调试跟踪模型测试 ====================
+
+    @Test
+    void debugTrace_sqlQuery_capturesAllFields() {
+        DebugTrace trace = new DebugTrace();
+        trace.setQueryId("q1");
+        trace.setType("mysql");
+        trace.setDatasource("ds_main");
+        trace.setSql("SELECT * FROM t WHERE id = ?");
+        trace.setParams(Arrays.asList("123"));
+        trace.setPaginationMode("cursor");
+        trace.setRowCount(5);
+        trace.setStartTimeMs(1000);
+        trace.setEndTimeMs(1050);
+        trace.setElapsedTimeMs(50);
+        trace.setStatus("SUCCESS");
+        trace.setErrorMessage(null);
+
+        assertEquals("q1", trace.getQueryId());
+        assertEquals("mysql", trace.getType());
+        assertEquals("ds_main", trace.getDatasource());
+        assertEquals("SELECT * FROM t WHERE id = ?", trace.getSql());
+        assertEquals(1, trace.getParams().size());
+        assertEquals("123", trace.getParams().get(0));
+        assertEquals("cursor", trace.getPaginationMode());
+        assertEquals(5, trace.getRowCount());
+        assertEquals(50, trace.getElapsedTimeMs());
+        assertEquals("SUCCESS", trace.getStatus());
+        assertNull(trace.getErrorMessage());
+    }
+
+    @Test
+    void debugTrace_errorQuery_capturesError() {
+        DebugTrace trace = new DebugTrace();
+        trace.setQueryId("q2");
+        trace.setType("mysql");
+        trace.setDatasource("ds_main");
+        trace.setStatus("ERROR");
+        trace.setErrorMessage("Table 't2' doesn't exist");
+        trace.setElapsedTimeMs(10);
+
+        assertEquals("ERROR", trace.getStatus());
+        assertEquals("Table 't2' doesn't exist", trace.getErrorMessage());
+    }
+
+    @Test
+    void debugContext_collectsMultipleTraces() {
+        DebugContext ctx = new DebugContext(true);
+        ctx.setTransno("TEST_DEBUG");
+        ctx.setStartTimeMs(1000);
+        ctx.setEndTimeMs(1100);
+        ctx.setTotalTimeMs(100);
+        ctx.setSuccess(true);
+
+        DebugTrace t1 = new DebugTrace();
+        t1.setQueryId("q1");
+        t1.setStatus("SUCCESS");
+        t1.setRowCount(10);
+        t1.setElapsedTimeMs(30);
+        ctx.addTrace(t1);
+
+        DebugTrace t2 = new DebugTrace();
+        t2.setQueryId("q2");
+        t2.setStatus("SUCCESS");
+        t2.setRowCount(3);
+        t2.setElapsedTimeMs(60);
+        ctx.addTrace(t2);
+
+        assertTrue(ctx.isDebugMode());
+        assertEquals("TEST_DEBUG", ctx.getTransno());
+        assertEquals(100, ctx.getTotalTimeMs());
+        assertTrue(ctx.isSuccess());
+        assertEquals(2, ctx.getTraces().size());
+        assertEquals("q1", ctx.getTraces().get(0).getQueryId());
+        assertEquals("q2", ctx.getTraces().get(1).getQueryId());
+        assertEquals(10, ctx.getTraces().get(0).getRowCount());
+        assertEquals(3, ctx.getTraces().get(1).getRowCount());
+    }
+
+    @Test
+    void debugContext_partialFailure_preservesCollectedTraces() {
+        DebugContext ctx = new DebugContext(true);
+        ctx.setTransno("PARTIAL_FAIL");
+        ctx.setStartTimeMs(1000);
+
+        // q1 成功
+        DebugTrace t1 = new DebugTrace();
+        t1.setQueryId("q1");
+        t1.setStatus("SUCCESS");
+        t1.setSql("SELECT 1");
+        t1.setRowCount(1);
+        t1.setElapsedTimeMs(5);
+        ctx.addTrace(t1);
+
+        // q2 失败
+        DebugTrace t2 = new DebugTrace();
+        t2.setQueryId("q2");
+        t2.setStatus("ERROR");
+        t2.setErrorMessage("connection refused");
+        t2.setElapsedTimeMs(2);
+        ctx.addTrace(t2);
+
+        ctx.setEndTimeMs(1010);
+        ctx.setTotalTimeMs(10);
+        ctx.setSuccess(false);
+        ctx.setErrorMessage("查询执行失败");
+
+        assertFalse(ctx.isSuccess());
+        assertEquals(2, ctx.getTraces().size());
+        assertEquals("SUCCESS", ctx.getTraces().get(0).getStatus());
+        assertEquals("ERROR", ctx.getTraces().get(1).getStatus());
+        assertEquals("connection refused", ctx.getTraces().get(1).getErrorMessage());
+        assertEquals("查询执行失败", ctx.getErrorMessage());
+    }
+
+    @Test
+    void debugContext_defaultNotDebugMode() {
+        DebugContext ctx = new DebugContext(false);
+        assertFalse(ctx.isDebugMode());
+        assertTrue(ctx.getTraces().isEmpty());
+    }
+
+    @Test
+    void debugStep_successFactory() {
+        DebugContext.DebugStep step = DebugContext.DebugStep.success("PARAM_VALIDATE", 5);
+        assertEquals("PARAM_VALIDATE", step.getName());
+        assertEquals("SUCCESS", step.getStatus());
+        assertEquals(5, step.getElapsedTimeMs());
+        assertNull(step.getErrorMessage());
+    }
+
+    @Test
+    void debugStep_errorFactory() {
+        DebugContext.DebugStep step = DebugContext.DebugStep.error("QUERY_EXECUTE", 120, "connection refused");
+        assertEquals("QUERY_EXECUTE", step.getName());
+        assertEquals("ERROR", step.getStatus());
+        assertEquals(120, step.getElapsedTimeMs());
+        assertEquals("connection refused", step.getErrorMessage());
+    }
+
+    @Test
+    void debugContext_stepsCollected() {
+        DebugContext ctx = new DebugContext(true);
+        ctx.addStep(DebugContext.DebugStep.success("PARAM_VALIDATE", 1));
+        ctx.addStep(DebugContext.DebugStep.success("QUERY_EXECUTE", 50));
+        ctx.addStep(DebugContext.DebugStep.success("RESULT_MAP", 3));
+        ctx.addStep(DebugContext.DebugStep.success("RESPONSE_BUILD", 1));
+
+        assertEquals(4, ctx.getSteps().size());
+        assertEquals("PARAM_VALIDATE", ctx.getSteps().get(0).getName());
+        assertEquals("RESPONSE_BUILD", ctx.getSteps().get(3).getName());
+        assertTrue(ctx.getSteps().stream().allMatch(s -> "SUCCESS".equals(s.getStatus())));
+    }
+
+    @Test
+    void debugContext_stepsPartialError() {
+        DebugContext ctx = new DebugContext(true);
+        ctx.addStep(DebugContext.DebugStep.success("PARAM_VALIDATE", 1));
+        ctx.addStep(DebugContext.DebugStep.error("QUERY_EXECUTE", 100, "Table not found"));
+        // RESULT_MAP 和 RESPONSE_BUILD 未执行，不在 steps 中
+
+        assertEquals(2, ctx.getSteps().size());
+        assertEquals("SUCCESS", ctx.getSteps().get(0).getStatus());
+        assertEquals("ERROR", ctx.getSteps().get(1).getStatus());
+        assertEquals("Table not found", ctx.getSteps().get(1).getErrorMessage());
     }
 }

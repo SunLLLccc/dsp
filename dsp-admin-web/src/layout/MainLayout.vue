@@ -25,6 +25,10 @@
           <el-icon><Document /></el-icon>
           <span>接口管理</span>
         </el-menu-item>
+        <el-menu-item index="/marketplace">
+          <el-icon><Promotion /></el-icon>
+          <span>接口市场</span>
+        </el-menu-item>
         <el-menu-item index="/template">
           <el-icon><Files /></el-icon>
           <span>XML模板管理</span>
@@ -104,6 +108,10 @@
         <el-menu-item index="/interface">
           <el-icon><Document /></el-icon>
           <span>接口管理</span>
+        </el-menu-item>
+        <el-menu-item index="/marketplace">
+          <el-icon><Promotion /></el-icon>
+          <span>接口市场</span>
         </el-menu-item>
         <el-menu-item index="/template">
           <el-icon><Files /></el-icon>
@@ -259,6 +267,7 @@ import TabBar from './TabBar.vue'
 import { userApi } from '../api'
 import { fmtTime } from '../utils/format'
 import { ElMessage } from 'element-plus'
+import { loadStatusEnums } from '../constants/status'
 
 const route = useRoute()
 const router = useRouter()
@@ -373,6 +382,7 @@ function handleResize() {
 onMounted(() => {
   handleResize()
   window.addEventListener('resize', handleResize)
+  loadStatusEnums()
 })
 
 onBeforeUnmount(() => {

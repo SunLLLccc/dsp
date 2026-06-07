@@ -31,7 +31,7 @@ DataApiController → XmlConfigCacheManager → XmlEngine.execute()
 
 5. **结果映射**: `ResultMapper` 按 `<resultMap>` 定义做 column→name 映射，支持 `fn:FUNC_NAME,arg1,arg2` 调用内置函数
 
-6. **响应组装**: 按 `<responseData>` 将多个 resultMap 结果拼装为最终 JSON
+6. **响应组装**: 按 `<responseData>` 将多个 resultMap 结果拼装为最终 JSON，`<field>` 的 `as` 属性控制返回类型（`map`=单对象，`list`=列表，默认 list）
 
 ## 各模块关键类
 
@@ -46,15 +46,15 @@ DataApiController → XmlConfigCacheManager → XmlEngine.execute()
 - `DubboExecutor` — Dubbo 泛化调用（GenericService.$invoke），ReferenceConfig 按 service:version:group 缓存
 - `MongoExecutor` — MongoDB 查询（filter/projection/sort/limit/skip）
 - `ResultMapper` — 字段映射 + fn: 函数调用
+- `QueryOrchestrator` — CompletableFuture DAG 编排（依赖校验 + DFS 循环检测 + 并行执行）
 
 ### engine.service
-- `QueryOrchestrator` — CompletableFuture DAG 编排
+- `DataQueryServiceImpl` — DataQueryService 接口实现，桥接 ApiRequest → XmlEngine
 
 ### engine.cache
-- `XmlConfigCacheManager` — 以 transno 为 key 缓存已解析的 XML 配置
-- `CacheRefreshScheduler` — 每 5 分钟刷新全部活跃接口
-- `XmlConfigCacheInvalidator` — 审批通过/发布/下线时立即失效
-- `CacheLoadStrategy` — 缓存加载策略
+- `XmlConfigCacheManager` — 以 transno 为 key 缓存已解析的 XML 配置，实现 XmlConfigCacheInvalidator 接口
+
+> 注：CacheRefreshScheduler、CacheLoadStrategy 在 dsp-data-service 模块；XmlConfigCacheInvalidator 接口在 dsp-common 模块
 
 ### engine.model
 - `InterfaceConfig`、查询/字段映射模型等配置 POJO
@@ -65,5 +65,5 @@ DataApiController → XmlConfigCacheManager → XmlEngine.execute()
 ## 缓存机制
 
 - `XmlConfigCacheManager` 以 transno 为 key 缓存已解析的 XML 配置
-- `CacheRefreshScheduler` 每 5 分钟刷新全部活跃接口
-- `XmlConfigCacheInvalidator` 审批通过/发布/下线时立即失效
+- 定时刷新由 dsp-data-service 的 CacheRefreshScheduler 实现（默认关闭，需配置 `dsp.cache.xml.refresh-enabled=true`）
+- 审批/发布/下线时通过 XmlConfigCacheInvalidator 接口（dsp-common）触发立即失效

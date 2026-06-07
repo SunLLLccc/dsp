@@ -3,6 +3,8 @@ package com.sunlc.dsp.adminservice.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.sunlc.dsp.adminservice.annotation.RequireRole;
+import com.sunlc.dsp.common.enums.ErrorCode;
+import com.sunlc.dsp.common.exception.BusinessException;
 import com.sunlc.dsp.common.model.ApiResponse;
 import com.sunlc.dsp.common.util.PasswordEncryptor;
 import com.sunlc.dsp.entity.DatasourceConfig;
@@ -40,17 +42,40 @@ public class DatasourceAdminController {
         }
         wrapper.orderByDesc(DatasourceConfig::getCreatedTime);
 
-        return ApiResponse.success("DS_LIST", "", datasourceManagerService.page(page, wrapper));
+        Page<DatasourceConfig> result = datasourceManagerService.page(page, wrapper);
+        result.getRecords().forEach(c -> c.setPassword(null));
+        return ApiResponse.success("DS_LIST", "", result);
     }
 
     @GetMapping("/{id}")
     public ApiResponse<DatasourceConfig> detail(@PathVariable Long id) {
-        return ApiResponse.success("DS_DETAIL", "", datasourceManagerService.getById(id));
+        DatasourceConfig config = datasourceManagerService.getById(id);
+        if (config != null) {
+            config.setPassword(null);
+        }
+        return ApiResponse.success("DS_DETAIL", "", config);
     }
 
     @PostMapping
     @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<DatasourceConfig> create(@RequestBody DatasourceConfig config) {
+        // 必填字段校验
+        if (config.getDsName() == null || config.getDsName().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "数据源名称不能为空");
+        }
+        if (config.getDsType() == null || config.getDsType().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "数据源类型不能为空");
+        }
+        if (config.getJdbcUrl() == null || config.getJdbcUrl().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "JDBC连接地址不能为空");
+        }
+        if (config.getUsername() == null || config.getUsername().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "数据库用户名不能为空");
+        }
+        if (config.getPassword() == null || config.getPassword().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "数据库密码不能为空");
+        }
+
         config.setPassword(passwordEncryptor.encrypt(config.getPassword()));
         config.setStatus(CommonStatus.ENABLED.getCode());
         config.setCreatedTime(LocalDateTime.now());
@@ -63,6 +88,8 @@ public class DatasourceAdminController {
             log.warn("数据源注册失败，但配置已保存: dsName={}", config.getDsName(), e);
         }
 
+        // 返回前脱敏，不暴露加密后的密码
+        config.setPassword(null);
         return ApiResponse.success("DS_CREATE", "", config);
     }
 
@@ -104,13 +131,36 @@ public class DatasourceAdminController {
     }
 
     @PostMapping("/test")
+    @RequireRole({"DEPT_MANAGER", "ADMIN"})
     public ApiResponse<String> testConnection(@RequestBody DatasourceConfig config) {
-        try {
-            datasourceManagerService.registerDatasource(config);
-            datasourceManagerService.removeDatasource(config.getDsName());
-            return ApiResponse.success("DS_TEST", "", "连接成功");
-        } catch (Exception e) {
-            return ApiResponse.error("DS_TEST", "", "5002", "连接失败: " + e.getMessage());
+        DatasourceConfig toTest;
+        if (config.getId() != null) {
+            // 已保存数据源：直接使用数据库中的完整配置测试，不与请求体混用
+            toTest = datasourceManagerService.getById(config.getId());
+            if (toTest == null) {
+                return ApiResponse.error("DS_TEST", "", "4004", "数据源配置不存在");
+            }
+        } else {
+            // 未保存配置：使用请求体中的 dsType/jdbcUrl/username/password，校验必填字段
+            if (config.getDsType() == null || config.getDsType().isEmpty()) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "数据源类型不能为空");
+            }
+            if (config.getJdbcUrl() == null || config.getJdbcUrl().isEmpty()) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "JDBC连接地址不能为空");
+            }
+            if (config.getUsername() == null || config.getUsername().isEmpty()) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "数据库用户名不能为空");
+            }
+            if (config.getPassword() == null || config.getPassword().isEmpty()) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "数据库密码不能为空");
+            }
+            toTest = config;
+        }
+        String result = datasourceManagerService.testConnection(toTest);
+        if ("连接成功".equals(result)) {
+            return ApiResponse.success("DS_TEST", "", result);
+        } else {
+            return ApiResponse.error("DS_TEST", "", "5002", result);
         }
     }
 }
