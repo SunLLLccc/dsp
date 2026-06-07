@@ -1,6 +1,8 @@
 package com.sunlc.dsp.adminservice.controller;
 
 import com.sunlc.dsp.adminservice.annotation.RequireRole;
+import com.sunlc.dsp.common.enums.ErrorCode;
+import com.sunlc.dsp.common.exception.BusinessException;
 import com.sunlc.dsp.common.model.ApiResponse;
 import com.sunlc.dsp.entity.AppAuth;
 import com.sunlc.dsp.enums.CommonStatus;
@@ -23,17 +25,31 @@ public class AppAuthAdminController {
 
     @GetMapping("/list")
     public ApiResponse<List<AppAuth>> list() {
-        return ApiResponse.success("APP_LIST", "", appAuthService.listAll());
+        List<AppAuth> list = appAuthService.listAll();
+        list.forEach(a -> a.setAppSecret(null));
+        return ApiResponse.success("APP_LIST", "", list);
     }
 
     @GetMapping("/{id}")
     public ApiResponse<AppAuth> detail(@PathVariable Long id) {
-        return ApiResponse.success("APP_DETAIL", "", appAuthService.getById(id));
+        AppAuth appAuth = appAuthService.getById(id);
+        if (appAuth != null) {
+            appAuth.setAppSecret(null);
+        }
+        return ApiResponse.success("APP_DETAIL", "", appAuth);
     }
 
     @PostMapping
     @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<AppAuth> create(@RequestBody AppAuth appAuth) {
+        // 必填字段校验
+        if (appAuth.getAppId() == null || appAuth.getAppId().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "应用ID不能为空");
+        }
+        if (appAuth.getAppName() == null || appAuth.getAppName().isEmpty()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "应用名称不能为空");
+        }
+
         appAuth.setStatus(CommonStatus.ENABLED.getCode());
         appAuth.setCreatedTime(LocalDateTime.now());
         appAuth.setUpdatedTime(LocalDateTime.now());
@@ -41,6 +57,8 @@ public class AppAuthAdminController {
             appAuth.setAppSecret(cn.hutool.core.util.RandomUtil.randomString(32));
         }
         appAuthService.save(appAuth);
+        // 返回前脱敏，不暴露 appSecret
+        appAuth.setAppSecret(null);
         return ApiResponse.success("APP_CREATE", "", appAuth);
     }
 
@@ -61,6 +79,7 @@ public class AppAuthAdminController {
     }
 
     @PostMapping("/{appId}/token")
+    @RequireRole({"DEPT_MANAGER", "ADMIN"})
     public ApiResponse<Map<String, Object>> generateToken(@PathVariable String appId) {
         try {
             Map<String, Object> result = appAuthService.generateToken(appId);

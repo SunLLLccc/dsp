@@ -3,7 +3,11 @@ package com.sunlc.dsp.adminservice.controller;
 import com.sunlc.dsp.common.model.ApiResponse;
 import com.sunlc.dsp.entity.ApprovalFlow;
 import com.sunlc.dsp.entity.ApprovalInfo;
+import com.sunlc.dsp.entity.InterfaceVersion;
 import com.sunlc.dsp.service.ApprovalInfoService;
+import com.sunlc.dsp.service.InterfaceVersionService;
+import com.sunlc.dsp.engine.validator.SqlSecurityValidator;
+import com.sunlc.dsp.adminservice.annotation.RequireRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +25,8 @@ import java.util.Map;
 public class ApprovalController {
 
     private final ApprovalInfoService approvalInfoService;
+    private final InterfaceVersionService interfaceVersionService;
+    private final SqlSecurityValidator sqlSecurityValidator;
 
     private String getCurrentUser(HttpServletRequest request) {
         Object user = request.getAttribute("adminUser");
@@ -46,6 +52,25 @@ public class ApprovalController {
     private List<String> getCurrentRoles(HttpServletRequest request) {
         Object roles = request.getAttribute("adminRoles");
         return roles instanceof List ? (List<String>) roles : java.util.Collections.emptyList();
+    }
+
+    /**
+     * 审批发布前校验待发布版本的 SQL 只读安全性
+     * 防止历史草稿或绕过写入路径的数据在审批通过时发布危险 SQL
+     */
+    private void validatePendingVersionSchema(Long approvalId) {
+        ApprovalInfo approvalInfo = approvalInfoService.getById(approvalId);
+        if (approvalInfo == null) return;
+        // 只校验接口审批类型 (1=NEW_INTERFACE, 2=MODIFY_INTERFACE)
+        Integer type = approvalInfo.getType();
+        if (type == null || (type != 1 && type != 2)) return;
+        String transno = approvalInfo.getTransno();
+        Integer versionNo = approvalInfo.getVersionNo();
+        if (transno == null || versionNo == null) return;
+        InterfaceVersion version = interfaceVersionService.getVersion(transno, versionNo);
+        if (version != null && version.getInputSchema() != null && !version.getInputSchema().isEmpty()) {
+            sqlSecurityValidator.validateXmlConfig(version.getInputSchema());
+        }
     }
 
     private LocalDateTime parseDateTime(String value) {
@@ -116,19 +141,27 @@ public class ApprovalController {
     }
 
     @PostMapping("/{id}/approve")
+    @RequireRole({"DEPT_MANAGER", "ADMIN"})
     public ApiResponse<Void> approve(@PathVariable Long id, HttpServletRequest request) {
+        // 审批发布前校验待发布版本的 SQL 只读安全性
+        validatePendingVersionSchema(id);
         String approver = getCurrentUser(request);
         String approverName = getCurrentUserName(request);
-        approvalInfoService.approve(id, approver, approverName);
+        Long deptId = getCurrentDeptId(request);
+        List<String> roles = getCurrentRoles(request);
+        approvalInfoService.approve(id, approver, approverName, deptId, roles);
         return ApiResponse.success("APPROVAL", "APPROVE", null);
     }
 
     @PostMapping("/{id}/reject")
+    @RequireRole({"DEPT_MANAGER", "ADMIN"})
     public ApiResponse<Void> reject(@PathVariable Long id, @RequestBody Map<String, String> body,
                                      HttpServletRequest request) {
         String approver = getCurrentUser(request);
         String approverName = getCurrentUserName(request);
-        approvalInfoService.reject(id, approver, approverName, body.get("reason"));
+        Long deptId = getCurrentDeptId(request);
+        List<String> roles = getCurrentRoles(request);
+        approvalInfoService.reject(id, approver, approverName, body.get("reason"), deptId, roles);
         return ApiResponse.success("APPROVAL", "REJECT", null);
     }
 

@@ -28,14 +28,14 @@
         <el-button type="primary" @click="showDialog(null)" v-role="'USER'">新增数据源</el-button>
       </div>
 
-      <el-table :data="tableData" border stripe>
+      <el-table :data="tableData" border stripe v-loading="loading" empty-text="暂无数据源数据">
         <el-table-column prop="dsName" label="数据源名称" width="160" />
         <el-table-column prop="dsType" label="类型" width="100" />
         <el-table-column prop="jdbcUrl" label="连接地址" show-overflow-tooltip />
         <el-table-column prop="username" label="用户名" width="120" />
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
+            <el-tag :type="COMMON_STATUS_TYPE[row.status] || 'info'">{{ COMMON_STATUS[row.status] || '未知' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="250" fixed="right">
@@ -99,9 +99,11 @@ import { ref, computed, onMounted } from 'vue'
 import { datasourceApi } from '../../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { hasAnyRole } from '../../directives/role'
+import { COMMON_STATUS, COMMON_STATUS_TYPE } from '../../constants/status'
 
 const tableData = ref([])
 const total = ref(0)
+const loading = ref(false)
 const dialogVisible = ref(false)
 const searchForm = ref({ pageNum: 1, pageSize: 10, dsName: '', dsType: '' })
 const editForm = ref({ dsName: '', dsType: 'MYSQL', jdbcUrl: '', username: '', password: '', extraConfig: '' })
@@ -109,9 +111,17 @@ const editForm = ref({ dsName: '', dsType: 'MYSQL', jdbcUrl: '', username: '', p
 const showJdbc = computed(() => ['MYSQL', 'DORIS', 'MONGODB'].includes(editForm.value.dsType))
 
 async function loadData() {
-  const res = await datasourceApi.list(searchForm.value)
-  tableData.value = res.data?.records || []
-  total.value = res.data?.total || 0
+  loading.value = true
+  try {
+    const res = await datasourceApi.list(searchForm.value)
+    tableData.value = res.data?.records || []
+    total.value = res.data?.total || 0
+  } catch {
+    tableData.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
 }
 
 function resetSearch() {

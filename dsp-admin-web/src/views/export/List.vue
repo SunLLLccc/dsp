@@ -8,7 +8,7 @@
         </div>
       </template>
 
-      <el-table :data="tableData" border stripe v-loading="loading">
+      <el-table :data="tableData" border stripe v-loading="loading" empty-text="暂无导出任务">
         <el-table-column prop="id" label="任务ID" width="80" />
         <el-table-column prop="transno" label="接口编码" width="180" />
         <el-table-column prop="exportType" label="导出类型" width="100">
@@ -58,6 +58,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { exportApi } from '../../api'
 import { fmtTime } from '../../utils/format'
+import { EXPORT_TASK_STATUS, EXPORT_TASK_STATUS_TYPE } from '../../constants/status'
 
 const tableData = ref([])
 const loading = ref(false)
@@ -65,8 +66,8 @@ const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-const taskStatusText = (s) => ({ 0: '待处理', 1: '处理中', 2: '已完成', 3: '失败' }[s] || '未知')
-const taskStatusType = (s) => ({ 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }[s] || 'info')
+const taskStatusText = (s) => EXPORT_TASK_STATUS[s] || '未知'
+const taskStatusType = (s) => EXPORT_TASK_STATUS_TYPE[s] || 'info'
 
 function fmtTimeCol(_row, _col, val) { return fmtTime(val) }
 
@@ -78,15 +79,17 @@ async function loadData() {
       tableData.value = res.data.records
       total.value = res.data.total
     }
-  } catch (e) {
-    ElMessage.error('加载导出任务失败')
+  } catch {
+    tableData.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
 }
 
 function handleDownload(row) {
-  window.open(`/dsp/admin/export/${row.id}/download`, '_blank')
+  const ext = (row.fileFormat || 'xlsx').toLowerCase()
+  exportApi.download(row.id, `export_${row.transno}_${row.id}.${ext}`)
 }
 
 async function handleRefresh(row) {
@@ -97,8 +100,8 @@ async function handleRefresh(row) {
       if (idx !== -1) tableData.value[idx] = res.data
       ElMessage.success('已刷新')
     }
-  } catch (e) {
-    ElMessage.error('刷新失败')
+  } catch {
+    // 全局拦截器已弹出错误
   }
 }
 

@@ -20,12 +20,12 @@ public interface ApprovalInfoService extends IService<ApprovalInfo> {
     /**
      * 审批通过
      */
-    void approve(Long approvalId, String approver, String approverName);
+    void approve(Long approvalId, String approver, String approverName, Long deptId, List<String> roles);
 
     /**
      * 审批驳回
      */
-    void reject(Long approvalId, String approver, String approverName, String reason);
+    void reject(Long approvalId, String approver, String approverName, String reason, Long deptId, List<String> roles);
 
     /**
      * 撤回审批（仅申请人、待审批状态可撤回）

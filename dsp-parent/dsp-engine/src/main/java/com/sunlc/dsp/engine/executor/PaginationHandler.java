@@ -1,6 +1,7 @@
 package com.sunlc.dsp.engine.executor;
 
 import com.sunlc.dsp.engine.model.PaginationConfig;
+import com.sunlc.dsp.engine.validator.SqlSecurityValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -10,6 +11,12 @@ import java.util.Map;
 @Slf4j
 @Component
 public class PaginationHandler {
+
+    private final SqlSecurityValidator sqlSecurityValidator;
+
+    public PaginationHandler(SqlSecurityValidator sqlSecurityValidator) {
+        this.sqlSecurityValidator = sqlSecurityValidator;
+    }
 
     public PaginationResult rewrite(String sql, PaginationConfig paginationConfig,
                                      Map<String, Object> params, List<Object> sqlParams) {
@@ -22,6 +29,8 @@ public class PaginationHandler {
         if (orderBy == null || orderBy.isEmpty()) {
             orderBy = "id";
         }
+        // 校验 orderBy 防止注入
+        sqlSecurityValidator.validateOrderBy(orderBy, "pagination");
 
         switch (paginationConfig.getMode()) {
             case CURSOR:

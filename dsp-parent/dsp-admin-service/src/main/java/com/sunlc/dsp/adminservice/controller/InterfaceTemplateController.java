@@ -6,6 +6,7 @@ import com.sunlc.dsp.adminservice.annotation.RequireRole;
 import com.sunlc.dsp.entity.InterfaceTemplate;
 import com.sunlc.dsp.entity.InterfaceTemplateHistory;
 import com.sunlc.dsp.service.InterfaceTemplateService;
+import com.sunlc.dsp.engine.validator.SqlSecurityValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class InterfaceTemplateController {
 
     private final InterfaceTemplateService interfaceTemplateService;
+    private final SqlSecurityValidator sqlSecurityValidator;
 
     @GetMapping("/list")
     public ApiResponse<Page<InterfaceTemplate>> list(
@@ -40,8 +42,13 @@ public class InterfaceTemplateController {
     @PostMapping
     @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<InterfaceTemplate> create(@RequestBody Map<String, String> body) {
+        String xmlContent = body.get("xmlContent");
+        // 保存前校验 XML 中的 SQL 只读安全性
+        if (xmlContent != null && !xmlContent.isEmpty()) {
+            sqlSecurityValidator.validateXmlConfig(xmlContent);
+        }
         InterfaceTemplate template = interfaceTemplateService.createTemplate(
-                body.get("transno"), body.get("xmlContent"),
+                body.get("transno"), xmlContent,
                 body.get("changeLog"), body.get("operator"));
         return ApiResponse.success("TEMPLATE_CREATE", "", template);
     }
@@ -49,8 +56,13 @@ public class InterfaceTemplateController {
     @PutMapping("/{id}")
     @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<InterfaceTemplate> update(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String xmlContent = body.get("xmlContent");
+        // 保存前校验 XML 中的 SQL 只读安全性
+        if (xmlContent != null && !xmlContent.isEmpty()) {
+            sqlSecurityValidator.validateXmlConfig(xmlContent);
+        }
         InterfaceTemplate template = interfaceTemplateService.updateTemplate(
-                id, body.get("xmlContent"), body.get("changeLog"), body.get("operator"));
+                id, xmlContent, body.get("changeLog"), body.get("operator"));
         return ApiResponse.success("TEMPLATE_UPDATE", "", template);
     }
 
@@ -64,6 +76,11 @@ public class InterfaceTemplateController {
     @PostMapping("/{id}/publish")
     @RequireRole({"USER", "DEPT_MANAGER"})
     public ApiResponse<Void> publish(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        // 发布前对当前模板的 xmlContent 再做一次安全校验
+        InterfaceTemplate template = interfaceTemplateService.getById(id);
+        if (template != null && template.getXmlContent() != null && !template.getXmlContent().isEmpty()) {
+            sqlSecurityValidator.validateXmlConfig(template.getXmlContent());
+        }
         interfaceTemplateService.publishTemplate(id, body.get("operator"));
         return ApiResponse.success("TEMPLATE_PUBLISH", "", null);
     }

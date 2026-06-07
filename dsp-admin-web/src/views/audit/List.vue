@@ -30,7 +30,7 @@
         </el-form-item>
       </el-form>
 
-      <el-table :data="tableData" border stripe v-loading="loading">
+      <el-table :data="tableData" border stripe v-loading="loading" empty-text="暂无审计日志">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="appId" label="应用ID" width="120" show-overflow-tooltip />
         <el-table-column prop="transno" label="接口编码" width="160" show-overflow-tooltip />
@@ -92,8 +92,9 @@ async function loadData() {
       tableData.value = res.data.records
       total.value = res.data.total
     }
-  } catch (e) {
-    ElMessage.error('加载审计日志失败')
+  } catch {
+    tableData.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }

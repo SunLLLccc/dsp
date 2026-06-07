@@ -32,7 +32,7 @@
       </div>
 
       <!-- 表格 -->
-      <el-table :data="tableData" border stripe>
+      <el-table :data="tableData" border stripe v-loading="loading" empty-text="暂无模板数据">
         <el-table-column prop="transno" label="接口编码" width="200" />
         <el-table-column prop="interfaceName" label="接口名称" width="180" />
         <el-table-column prop="systemName" label="所属系统" width="150" />
@@ -108,6 +108,9 @@
       <div class="xml-section-header">
         <span class="section-title">XML 配置</span>
         <div>
+          <el-button size="small" type="warning" @click="wizardVisible = true">
+            配置向导
+          </el-button>
           <el-button size="small" type="primary" @click="handleGenerateXml" :disabled="!editForm.transno">
             根据Schema生成
           </el-button>
@@ -164,6 +167,13 @@
       :left-xml="compareLeftXml"
       :right-xml="compareRightXml"
     />
+
+    <!-- 配置向导弹窗 -->
+    <ConfigWizard
+      v-model="wizardVisible"
+      :transno="editForm.transno"
+      @generated="handleWizardGenerated"
+    />
   </div>
 </template>
 
@@ -176,11 +186,13 @@ import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE } from '../../constants/status'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fmtTime } from '../../utils/format'
 import XmlCompareDialog from '../../components/XmlCompareDialog.vue'
+import ConfigWizard from './ConfigWizard.vue'
 import { hasAnyRole } from '../../directives/role'
 
 // 列表
 const tableData = ref([])
 const total = ref(0)
+const loading = ref(false)
 const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', systemName: '', status: null })
 
 const statusText = (s) => INTERFACE_STATUS[s] || '未知'
@@ -216,10 +228,26 @@ const compareLeftXml = ref('')
 const compareRightXml = ref('')
 const currentTemplateId = ref(null)
 
+// 配置向导
+const wizardVisible = ref(false)
+
+function handleWizardGenerated(xml) {
+  editForm.value.xmlContent = xml
+  hasUndo.value = true
+}
+
 async function loadData() {
-  const res = await templateApi.list(searchForm.value)
-  tableData.value = res.data?.records || []
-  total.value = res.data?.total || 0
+  loading.value = true
+  try {
+    const res = await templateApi.list(searchForm.value)
+    tableData.value = res.data?.records || []
+    total.value = res.data?.total || 0
+  } catch {
+    tableData.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
 }
 
 function resetSearch() {
@@ -315,7 +343,7 @@ async function handleSaveTemplate() {
     editDialogVisible.value = false
     loadData()
   } catch {
-    ElMessage.error('保存失败')
+    // 全局拦截器已弹出错误
   }
 }
 

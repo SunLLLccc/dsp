@@ -2,6 +2,7 @@ package com.sunlc.dsp.common.model;
 
 import lombok.Data;
 
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 /**
@@ -11,6 +12,7 @@ import javax.validation.constraints.NotNull;
 public class ApiRequest<T> {
 
     @NotNull(message = "head不能为空")
+    @Valid
     private RequestHead head;
 
     private T requestData;

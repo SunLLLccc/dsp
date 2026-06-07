@@ -30,7 +30,7 @@
         </el-card>
 
         <el-card>
-          <el-table :data="submissionList" border stripe>
+          <el-table :data="submissionList" border stripe v-loading="loading" empty-text="暂无提交记录">
             <el-table-column prop="approvalNo" label="审批单号" width="180" />
             <el-table-column prop="title" label="标题" show-overflow-tooltip />
             <el-table-column prop="type" label="审批类型" width="120">
@@ -68,7 +68,7 @@
       <!-- 页签二：待我审批 -->
       <el-tab-pane label="待我审批" name="pending">
         <el-card>
-          <el-table :data="pendingList" border stripe>
+          <el-table :data="pendingList" border stripe v-loading="loading" empty-text="暂无待审批记录">
             <el-table-column prop="approvalNo" label="审批单号" width="180" />
             <el-table-column prop="title" label="标题" show-overflow-tooltip />
             <el-table-column prop="type" label="审批类型" width="120">
@@ -124,7 +124,7 @@
         </el-card>
 
         <el-card>
-          <el-table :data="historyList" border stripe>
+          <el-table :data="historyList" border stripe v-loading="loading" empty-text="暂无审批记录">
             <el-table-column prop="approvalNo" label="审批单号" width="180" />
             <el-table-column prop="title" label="标题" show-overflow-tooltip />
             <el-table-column prop="type" label="审批类型" width="120">
@@ -264,12 +264,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { fmtTime, formatJson } from '../../utils/format'
 import SchemaCompareDialog from '../../components/SchemaCompareDialog.vue'
 import { hasAnyRole } from '../../directives/role'
+import { APPROVAL_STATUS, APPROVAL_STATUS_TYPE } from '../../constants/status'
 
 // ==================== 审批类型/状态映射 ====================
 const APPROVAL_TYPE_MAP = { 1: '新增接口', 2: '修改接口', 3: '申请接口' }
 const APPROVAL_TYPE_TAG = { 1: '', 2: 'warning', 3: 'success' }
-const APPROVAL_STATUS_MAP = { 0: '待审批', 1: '已通过', 2: '已驳回', 3: '已撤回' }
-const APPROVAL_STATUS_TAG = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info' }
+// 审批状态已从 status.js 统一导入（APPROVAL_STATUS / APPROVAL_STATUS_TYPE）
+const APPROVAL_STATUS_MAP = APPROVAL_STATUS
+const APPROVAL_STATUS_TAG = APPROVAL_STATUS_TYPE
 
 function fmtTimeCol(_row, _col, val) { return fmtTime(val) }
 
@@ -293,6 +295,7 @@ function defaultDateRange() {
 
 // ==================== 页签控制 ====================
 const activeTab = ref('mySubmissions')
+const loading = ref(false)
 
 function handleTabChange(tab) {
   if (tab === 'mySubmissions') loadSubmissions()
@@ -312,6 +315,7 @@ const submissionList = ref([])
 const submissionTotal = ref(0)
 
 async function loadSubmissions() {
+  loading.value = true
   try {
     const params = {
       pageNum: submitSearchForm.value.pageNum,
@@ -334,6 +338,8 @@ async function loadSubmissions() {
   } catch {
     submissionList.value = []
     submissionTotal.value = 0
+  } finally {
+    loading.value = false
   }
 }
 
@@ -349,7 +355,7 @@ async function handleWithdraw(row) {
     ElMessage.success('已撤回')
     loadSubmissions()
   } catch {
-    ElMessage.error('撤回失败')
+    // 全局拦截器已弹出错误
   }
 }
 
@@ -359,6 +365,7 @@ const pendingTotal = ref(0)
 const pendingPage = ref({ pageNum: 1, pageSize: 10 })
 
 async function loadPendingList() {
+  loading.value = true
   try {
     const res = await approvalApi.pending(pendingPage.value)
     pendingList.value = res.data?.records || []
@@ -366,6 +373,8 @@ async function loadPendingList() {
   } catch {
     pendingList.value = []
     pendingTotal.value = 0
+  } finally {
+    loading.value = false
   }
 }
 
@@ -376,7 +385,7 @@ async function handleApprove(row) {
     ElMessage.success('审批通过')
     loadPendingList()
   } catch {
-    ElMessage.error('审批失败')
+    // 全局拦截器已弹出错误
   }
 }
 
@@ -403,7 +412,7 @@ async function handleReject() {
     rejectDialogVisible.value = false
     loadPendingList()
   } catch {
-    ElMessage.error('驳回失败')
+    // 全局拦截器已弹出错误
   }
 }
 
@@ -418,6 +427,7 @@ const historyList = ref([])
 const historyTotal = ref(0)
 
 async function loadHistoryList() {
+  loading.value = true
   try {
     const params = {
       pageNum: historySearchForm.value.pageNum,
@@ -437,6 +447,8 @@ async function loadHistoryList() {
   } catch {
     historyList.value = []
     historyTotal.value = 0
+  } finally {
+    loading.value = false
   }
 }
 
