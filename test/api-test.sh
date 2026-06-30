@@ -125,8 +125,8 @@ echo "--- JWT 鉴权 ---"
 
 RESP=$(call_api "USER_GET_BY_ID" '{"head":{"token":"invalid-token","appId":"test","timestamp":"'$TIMESTAMP'","traceId":"t-jwt"},"requestData":{"userId":"1"}}')
 CODE=$(get_code "$RESP")
-# 4001=Token缺失, 4002=Token过期/无效 — 均表示鉴权拦截生效
-assert_code_in "无效token被拦截" "4001,4002" "$CODE"
+# 4001=Token缺失, 4002/4005=Token过期/无效 — 均表示鉴权拦截生效
+assert_code_in "无效token被拦截" "4001,4002,4005" "$CODE"
 
 RESP=$(call_api "USER_GET_BY_ID" '{"head":{"appId":"test","timestamp":"'$TIMESTAMP'","traceId":"t-jwt2"},"requestData":{"userId":"1"}}')
 CODE=$(get_code "$RESP")
