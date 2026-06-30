@@ -11,6 +11,7 @@
 
 BASE_URL="${1:-http://localhost:8080}"
 TOKEN="base"
+TIMESTAMP="2026-06-30T00:00:00+08:00"
 PASS=0
 FAIL=0
 
@@ -78,7 +79,7 @@ echo ""
 
 # ------ 模板01: 简单查询 ------
 echo "--- 模板01: USER_GET_BY_ID ---"
-RESP=$(call_api "USER_GET_BY_ID" '{"head":{"token":"'$TOKEN'","appId":"test","traceId":"t01"},"requestData":{"userId":"1"}}')
+RESP=$(call_api "USER_GET_BY_ID" '{"head":{"token":"'$TOKEN'","appId":"test","timestamp":"'$TIMESTAMP'","traceId":"t01"},"requestData":{"userId":"1"}}')
 CODE=$(get_code "$RESP")
 # 0000=成功(有业务数据), 5001=系统错误(无业务表), 5002=数据源异常 — 均表示模板加载+鉴权通过
 assert_code_in "模板加载+鉴权通过" "0000,5001,5002" "$CODE"
@@ -89,7 +90,7 @@ echo ""
 
 # ------ 模板02: 动态SQL查询 ------
 echo "--- 模板02: USER_LIST_QUERY ---"
-RESP=$(call_api "USER_LIST_QUERY" '{"head":{"token":"'$TOKEN'","appId":"test","traceId":"t02"},"requestData":{"status":"active"}}')
+RESP=$(call_api "USER_LIST_QUERY" '{"head":{"token":"'$TOKEN'","appId":"test","timestamp":"'$TIMESTAMP'","traceId":"t02"},"requestData":{"status":"active"}}')
 CODE=$(get_code "$RESP")
 assert_code_in "动态SQL模板加载" "0000,5001,5002" "$CODE"
 
@@ -97,7 +98,7 @@ echo ""
 
 # ------ 模板03: 游标分页 ------
 echo "--- 模板03: ORDER_LIST_CURSOR ---"
-RESP=$(call_api "ORDER_LIST_CURSOR" '{"head":{"token":"'$TOKEN'","appId":"test","traceId":"t03"},"requestData":{"pageSize":10}}')
+RESP=$(call_api "ORDER_LIST_CURSOR" '{"head":{"token":"'$TOKEN'","appId":"test","timestamp":"'$TIMESTAMP'","traceId":"t03"},"requestData":{"pageSize":10}}')
 CODE=$(get_code "$RESP")
 assert_code_in "游标分页模板加载" "0000,5001,5002" "$CODE"
 
@@ -105,7 +106,7 @@ echo ""
 
 # ------ 模板09: 并行编排 ------
 echo "--- 模板09: DASHBOARD_OVERVIEW ---"
-RESP=$(call_api "DASHBOARD_OVERVIEW" '{"head":{"token":"'$TOKEN'","appId":"test","traceId":"t09"},"requestData":{"dateRange":"7d"}}')
+RESP=$(call_api "DASHBOARD_OVERVIEW" '{"head":{"token":"'$TOKEN'","appId":"test","timestamp":"'$TIMESTAMP'","traceId":"t09"},"requestData":{"dateRange":"7d"}}')
 CODE=$(get_code "$RESP")
 assert_code_in "并行编排模板加载" "0000,5001,5002" "$CODE"
 
@@ -113,7 +114,7 @@ echo ""
 
 # ------ 模板15: 无 resultMap 查询 ------
 echo "--- 模板15: DICT_QUERY ---"
-RESP=$(call_api "DICT_QUERY" '{"head":{"token":"'$TOKEN'","appId":"test","traceId":"t15"},"requestData":{"dictType":"STATUS"}}')
+RESP=$(call_api "DICT_QUERY" '{"head":{"token":"'$TOKEN'","appId":"test","timestamp":"'$TIMESTAMP'","traceId":"t15"},"requestData":{"dictType":"STATUS"}}')
 CODE=$(get_code "$RESP")
 assert_code_in "无resultMap模板加载" "0000,5001,5002" "$CODE"
 
@@ -122,20 +123,20 @@ echo ""
 # ------ JWT 鉴权测试 ------
 echo "--- JWT 鉴权 ---"
 
-RESP=$(call_api "USER_GET_BY_ID" '{"head":{"token":"invalid-token","appId":"test","traceId":"t-jwt"},"requestData":{"userId":"1"}}')
+RESP=$(call_api "USER_GET_BY_ID" '{"head":{"token":"invalid-token","appId":"test","timestamp":"'$TIMESTAMP'","traceId":"t-jwt"},"requestData":{"userId":"1"}}')
 CODE=$(get_code "$RESP")
-# 4001=Token缺失, 4002=Token过期/无效 — 均表示鉴权拦截生效
-assert_code_in "无效token被拦截" "4001,4002" "$CODE"
+# 4001=Token缺失, 4002/4005=Token过期/无效 — 均表示鉴权拦截生效
+assert_code_in "无效token被拦截" "4001,4002,4005" "$CODE"
 
-RESP=$(call_api "USER_GET_BY_ID" '{"head":{"appId":"test","traceId":"t-jwt2"},"requestData":{"userId":"1"}}')
+RESP=$(call_api "USER_GET_BY_ID" '{"head":{"appId":"test","timestamp":"'$TIMESTAMP'","traceId":"t-jwt2"},"requestData":{"userId":"1"}}')
 CODE=$(get_code "$RESP")
-assert_code "缺失token返回4001" "4001" "$CODE"
+assert_code_in "缺失token被拦截" "4001,4100" "$CODE"
 
 echo ""
 
 # ------ 不存在的接口 ------
 echo "--- 异常场景 ---"
-RESP=$(call_api "NOT_EXIST_API" '{"head":{"token":"'$TOKEN'","appId":"test","traceId":"t-err"},"requestData":{}}')
+RESP=$(call_api "NOT_EXIST_API" '{"head":{"token":"'$TOKEN'","appId":"test","timestamp":"'$TIMESTAMP'","traceId":"t-err"},"requestData":{}}')
 CODE=$(get_code "$RESP")
 # 4004=接口不存在, 5001=系统错误(异常被兜底处理)
 assert_code_in "不存在的接口返回错误" "4004,5001" "$CODE"

@@ -8,7 +8,7 @@ import com.sunlc.dsp.enums.CommonStatus;
 import com.sunlc.dsp.mapper.DatasourceConfigMapper;
 import com.sunlc.dsp.service.DatasourceManagerService;
 import com.baomidou.dynamic.datasource.DynamicRoutingDataSource;
-import com.baomidou.dynamic.datasource.spring.boot.autoconfigure.DataSourceProperty;
+import com.baomidou.dynamic.datasource.creator.DataSourceProperty;
 import com.baomidou.dynamic.datasource.creator.DefaultDataSourceCreator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

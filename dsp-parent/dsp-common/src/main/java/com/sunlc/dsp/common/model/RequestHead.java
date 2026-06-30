@@ -2,7 +2,7 @@ package com.sunlc.dsp.common.model;
 
 import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * 统一请求报文头
