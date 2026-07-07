@@ -92,7 +92,7 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void approve(Long approvalId, String approver, String approverName) {
+    public void approve(Long approvalId, String approver, String approverName, Long deptId, List<String> roles) {
         ApprovalInfo info = getById(approvalId);
         if (info == null) {
             throw new BusinessException(ErrorCode.APPROVAL_INFO_NOT_FOUND);
@@ -106,6 +106,9 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
         if (currentFlow == null) {
             throw new BusinessException(ErrorCode.APPROVAL_FLOW_NOT_FOUND);
         }
+
+        // 校验部门权限：ADMIN 可跳过，非 ADMIN 必须是当前步骤所属部门
+        checkFlowDeptPermission(currentFlow, deptId, roles);
 
         // 更新当前步骤为通过
         currentFlow.setStatus(1); // 1=通过
@@ -130,7 +133,7 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void reject(Long approvalId, String approver, String approverName, String reason) {
+    public void reject(Long approvalId, String approver, String approverName, String reason, Long deptId, List<String> roles) {
         ApprovalInfo info = getById(approvalId);
         if (info == null) {
             throw new BusinessException(ErrorCode.APPROVAL_INFO_NOT_FOUND);
@@ -144,6 +147,9 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
         if (currentFlow == null) {
             throw new BusinessException(ErrorCode.APPROVAL_FLOW_NOT_FOUND);
         }
+
+        // 校验部门权限：ADMIN 可跳过，非 ADMIN 必须是当前步骤所属部门
+        checkFlowDeptPermission(currentFlow, deptId, roles);
 
         // 标记当前步骤为驳回
         currentFlow.setStatus(2); // 2=驳回
@@ -220,10 +226,8 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
         wrapper.orderByDesc(ApprovalInfo::getCreatedTime);
 
         Page<ApprovalInfo> result = page(page, wrapper);
-        // 填充展示字段
-        for (ApprovalInfo info : result.getRecords()) {
-            fillDisplayFields(info);
-        }
+        // 批量填充展示字段
+        batchFillDisplayFields(result.getRecords());
         return result;
     }
 
@@ -232,24 +236,49 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
                                                Integer pageNum, Integer pageSize) {
         boolean isAdmin = roles != null && roles.contains("ADMIN");
 
-        // 先通过 approval_flow 找到当前用户部门待审批的 approvalId 列表
+        // 1. 查询待审批 flow：ADMIN 查全部，非 ADMIN 按部门过滤（减少候选集）
         LambdaQueryWrapper<ApprovalFlow> flowWrapper = new LambdaQueryWrapper<>();
-        flowWrapper.eq(ApprovalFlow::getStatus, 0); // 待审批步骤
+        flowWrapper.eq(ApprovalFlow::getStatus, 0)
+                .orderByAsc(ApprovalFlow::getStepNo);
         if (!isAdmin) {
             flowWrapper.eq(ApprovalFlow::getDeptId, deptId);
         }
-        List<ApprovalFlow> flows = approvalFlowMapper.selectList(flowWrapper);
+        List<ApprovalFlow> candidateFlows = approvalFlowMapper.selectList(flowWrapper);
 
-        if (flows.isEmpty()) {
+        if (candidateFlows.isEmpty()) {
             return new Page<>(pageNum, pageSize);
         }
 
-        // 过滤出确实属于当前步骤的 approvalId（即该步骤之前没有待审批步骤，或者就是第一个待审批步骤）
+        Set<Long> candidateIds = candidateFlows.stream()
+                .map(ApprovalFlow::getApprovalId)
+                .collect(Collectors.toSet());
+
+        // 2. 找到每个审批单的真实当前步骤（所有待审批步骤中 stepNo 最小的一条）
+        //    ADMIN 场景：candidateFlows 已是全部 pending flow（按 stepNo 排序），可直接构建
+        //    非 ADMIN 场景：需再查一次全部 pending flow 以确定真实当前步骤
+        Map<Long, ApprovalFlow> firstPendingByApproval = new LinkedHashMap<>();
+        if (isAdmin) {
+            for (ApprovalFlow f : candidateFlows) {
+                firstPendingByApproval.putIfAbsent(f.getApprovalId(), f);
+            }
+        } else {
+            LambdaQueryWrapper<ApprovalFlow> allPendingWrapper = new LambdaQueryWrapper<>();
+            allPendingWrapper.in(ApprovalFlow::getApprovalId, candidateIds)
+                    .eq(ApprovalFlow::getStatus, 0)
+                    .orderByAsc(ApprovalFlow::getStepNo);
+            for (ApprovalFlow f : approvalFlowMapper.selectList(allPendingWrapper)) {
+                firstPendingByApproval.putIfAbsent(f.getApprovalId(), f);
+            }
+        }
+
+        // 3. 过滤：ADMIN 包含所有；非 ADMIN 仅包含当前步骤属于本部门的审批单
         Set<Long> approvalIds = new HashSet<>();
-        for (ApprovalFlow flow : flows) {
-            ApprovalFlow currentStep = findCurrentFlow(flow.getApprovalId());
-            if (currentStep != null && currentStep.getId().equals(flow.getId())) {
-                approvalIds.add(flow.getApprovalId());
+        for (Map.Entry<Long, ApprovalFlow> entry : firstPendingByApproval.entrySet()) {
+            ApprovalFlow currentFlow = entry.getValue();
+            if (isAdmin) {
+                approvalIds.add(entry.getKey());
+            } else if (currentFlow.getDeptId() != null && currentFlow.getDeptId().equals(deptId)) {
+                approvalIds.add(entry.getKey());
             }
         }
 
@@ -257,7 +286,7 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
             return new Page<>(pageNum, pageSize);
         }
 
-        // 查询这些审批单且状态为待审批
+        // 4. 查询审批单并分页
         Page<ApprovalInfo> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<ApprovalInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(ApprovalInfo::getId, approvalIds)
@@ -265,9 +294,7 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
                .orderByDesc(ApprovalInfo::getCreatedTime);
 
         Page<ApprovalInfo> result = page(page, wrapper);
-        for (ApprovalInfo info : result.getRecords()) {
-            fillDisplayFields(info);
-        }
+        batchFillDisplayFields(result.getRecords());
         return result;
     }
 
@@ -305,9 +332,7 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
         wrapper.orderByDesc(ApprovalInfo::getUpdatedTime);
 
         Page<ApprovalInfo> result = page(page, wrapper);
-        for (ApprovalInfo info : result.getRecords()) {
-            fillDisplayFields(info);
-        }
+        batchFillDisplayFields(result.getRecords());
         return result;
     }
 
@@ -336,6 +361,25 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
     }
 
     // ==================== 私有方法 ====================
+
+    /**
+     * 校验当前审批步骤的部门权限
+     * ADMIN 角色可跳过部门限制，其他角色必须与步骤所属部门一致
+     */
+    private void checkFlowDeptPermission(ApprovalFlow currentFlow, Long deptId, List<String> roles) {
+        boolean isAdmin = roles != null && roles.contains("ADMIN");
+        if (isAdmin) {
+            return;
+        }
+        if (currentFlow.getDeptId() == null) {
+            log.warn("审批步骤未指定部门，非ADMIN角色不允许审批: userDeptId={}, roles={}", deptId, roles);
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+        if (!currentFlow.getDeptId().equals(deptId)) {
+            log.warn("审批部门不匹配: flowDeptId={}, userDeptId={}, roles={}", currentFlow.getDeptId(), deptId, roles);
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+    }
 
     /**
      * 生成审批单号: AP + yyyyMMddHHmmss + 4位序号
@@ -596,7 +640,7 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
     }
 
     /**
-     * 填充展示字段：系统名称、接口名称、步骤进度
+     * 填充展示字段：系统名称、接口名称、步骤进度（单条记录用，如 getDetail）
      */
     private void fillDisplayFields(ApprovalInfo info) {
         // 填充申请方系统名称
@@ -636,6 +680,88 @@ public class ApprovalInfoServiceImpl extends ServiceImpl<ApprovalInfoMapper, App
                 }
             }
             info.setCurrentStep(currentStep);
+        }
+    }
+
+    /**
+     * 批量填充展示字段：系统名称、接口名称、步骤进度
+     * 替代逐条调用 fillDisplayFields，将 N+1 查询优化为固定少量查询
+     */
+    private void batchFillDisplayFields(List<ApprovalInfo> records) {
+        if (records == null || records.isEmpty()) return;
+
+        // 1. 批量查询系统名称：收集所有 applicantSystemId + providerSystemId
+        Set<Long> systemIds = new HashSet<>();
+        for (ApprovalInfo info : records) {
+            if (info.getApplicantSystemId() != null) systemIds.add(info.getApplicantSystemId());
+            if (info.getProviderSystemId() != null) systemIds.add(info.getProviderSystemId());
+        }
+        Map<Long, SysSystem> systemMap = systemIds.isEmpty() ? Collections.emptyMap() :
+                sysSystemService.listByIds(systemIds).stream()
+                        .collect(Collectors.toMap(SysSystem::getId, s -> s, (a, b) -> a));
+
+        // 2. 批量查询接口名称：收集所有 transno
+        Set<String> transnos = new HashSet<>();
+        for (ApprovalInfo info : records) {
+            if (info.getTransno() != null) transnos.add(info.getTransno());
+        }
+        Map<String, InterfaceInfo> interfaceMap;
+        if (transnos.isEmpty()) {
+            interfaceMap = Collections.emptyMap();
+        } else {
+            LambdaQueryWrapper<InterfaceInfo> ifaceWrapper = new LambdaQueryWrapper<>();
+            ifaceWrapper.in(InterfaceInfo::getTransno, transnos);
+            interfaceMap = interfaceInfoService.list(ifaceWrapper).stream()
+                    .collect(Collectors.toMap(InterfaceInfo::getTransno, i -> i, (a, b) -> a));
+        }
+
+        // 3. 批量查询审批流程：收集所有 approvalId
+        Set<Long> approvalIds = new HashSet<>();
+        for (ApprovalInfo info : records) {
+            approvalIds.add(info.getId());
+        }
+        Map<Long, List<ApprovalFlow>> flowMap;
+        if (approvalIds.isEmpty()) {
+            flowMap = Collections.emptyMap();
+        } else {
+            LambdaQueryWrapper<ApprovalFlow> flowWrapper = new LambdaQueryWrapper<>();
+            flowWrapper.in(ApprovalFlow::getApprovalId, approvalIds)
+                    .orderByAsc(ApprovalFlow::getStepNo);
+            flowMap = approvalFlowMapper.selectList(flowWrapper).stream()
+                    .collect(Collectors.groupingBy(ApprovalFlow::getApprovalId));
+        }
+
+        // 4. 用 Map 组装展示字段（无额外 SQL）
+        for (ApprovalInfo info : records) {
+            // 系统名称
+            SysSystem applicantSystem = systemMap.get(info.getApplicantSystemId());
+            if (applicantSystem != null) {
+                info.setApplicantSystemName(applicantSystem.getName());
+            }
+            SysSystem providerSystem = systemMap.get(info.getProviderSystemId());
+            if (providerSystem != null) {
+                info.setProviderSystemName(providerSystem.getName());
+            }
+
+            // 接口名称
+            InterfaceInfo interfaceInfo = interfaceMap.get(info.getTransno());
+            if (interfaceInfo != null) {
+                info.setInterfaceName(interfaceInfo.getName());
+            }
+
+            // 步骤进度
+            List<ApprovalFlow> flows = flowMap.getOrDefault(info.getId(), Collections.emptyList());
+            if (!flows.isEmpty()) {
+                info.setTotalSteps(flows.size());
+                int currentStep = flows.size();
+                for (ApprovalFlow flow : flows) {
+                    if (flow.getStatus() == 0) {
+                        currentStep = flow.getStepNo();
+                        break;
+                    }
+                }
+                info.setCurrentStep(currentStep);
+            }
         }
     }
 

@@ -1,7 +1,7 @@
 <template>
   <div>
     <el-tabs v-model="activeTab" type="border-card" @tab-change="handleTabChange">
-      <!-- 页签一：接口信息（原有功能） -->
+      <!-- 页签一：接口信息 -->
       <el-tab-pane label="接口信息" name="info">
         <!-- 搜索栏 -->
         <el-card shadow="never" class="card-search">
@@ -38,11 +38,11 @@
           <div class="mb-md">
             <el-button type="primary" @click="handleCreate" v-role="'USER'">新增接口</el-button>
             <el-button type="success" @click="handleExportSelected" :disabled="!selectedRows.length">导出选中</el-button>
-            <el-button type="warning" @click="openImportDialog" v-role="'IMPORTER'">导入配置</el-button>
+            <el-button type="warning" @click="importDialogVisible = true" v-role="'IMPORTER'">导入配置</el-button>
           </div>
 
           <!-- 表格 -->
-          <el-table :data="tableData" border stripe @selection-change="handleSelectionChange">
+          <el-table :data="tableData" border stripe v-loading="loading" empty-text="暂无接口数据" @selection-change="handleSelectionChange">
             <el-table-column type="selection" width="45" />
             <el-table-column prop="transno" label="接口编码" width="200" />
             <el-table-column prop="name" label="接口名称" width="180" />
@@ -82,97 +82,18 @@
           :output-schema="viewOutputSchema"
         />
 
-        <!-- 版本历史弹窗 -->
-        <el-dialog v-model="versionDialogVisible" :title="`版本历史 - ${versionTransno}`" width="90%" style="max-width:900px">
-          <el-table :data="versionData" border stripe>
-            <el-table-column prop="versionNo" label="版本号" width="80" />
-            <el-table-column prop="status" label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="verStatusType(row.status)">{{ verStatusText(row.status) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="changeLog" label="变更说明" show-overflow-tooltip />
-            <el-table-column prop="createdBy" label="创建人" width="100" />
-            <el-table-column prop="createdTime" label="创建时间" width="170" :formatter="fmtTimeCol" />
-            <el-table-column label="操作" width="200">
-              <template #default="{ row }">
-                <el-button size="small" @click="viewSchema(row)">查看</el-button>
-                <el-button size="small" type="primary" @click="compareWithCurrent(row)">对比当前</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div class="pagination-wrap">
-            <el-pagination v-model:current-page="versionPage.pageNum" v-model:page-size="versionPage.pageSize"
-              :total="versionTotal" :page-sizes="[10,20,50]" layout="total, sizes, prev, pager, next"
-              @size-change="loadVersions" @current-change="loadVersions" />
-          </div>
-        </el-dialog>
+        <!-- 版本历史弹窗（已拆为子组件） -->
+        <VersionHistoryDialog v-model="versionDialogVisible" :transno="versionTransno" />
 
-        <!-- Schema 查看弹窗（版本历史） -->
-        <SchemaViewDialog
-          v-model="schemaDialogVisible"
-          :title="`Schema - V${schemaVersionNo}`"
-          :input-schema="inputSchema"
-          :output-schema="outputSchema"
-        />
+        <!-- 导入配置弹窗（已拆为子组件） -->
+        <ImportConfigDialog v-model="importDialogVisible" :existing-transnos="existingTransnos" @imported="loadData" />
 
-        <!-- Schema 对比弹窗 -->
-        <SchemaCompareDialog
-          v-model="compareVisible"
-          :title="`Schema 对比 - V${compareVersionNo} vs 当前版本`"
-          :left-label="`V${compareVersionNo}`"
-          right-label="当前版本"
-          :left-input="compareLeftInput"
-          :left-output="compareLeftOutput"
-          :right-input="compareRightInput"
-          :right-output="compareRightOutput"
-        />
-
-        <!-- 导入配置弹窗 -->
-        <el-dialog v-model="importDialogVisible" title="导入配置" width="90%" style="max-width:600px" destroy-on-close>
-          <el-alert type="info" :closable="false" class="mb-md">
-            请选择从测试环境导出的 JSON 文件。导入时接口信息、Schema和模板XML会创建新版本。
-          </el-alert>
-          <el-upload
-            ref="uploadRef"
-            :auto-upload="false"
-            :limit="1"
-            accept=".json"
-            :on-change="handleFileChange"
-            :on-remove="() => importFileData = null"
-            drag
-          >
-            <el-icon class="upload-icon"><UploadFilled /></el-icon>
-            <div>拖拽文件到此处，或<em>点击上传</em></div>
-            <template #tip>
-              <div class="el-upload__tip">仅支持 .json 文件</div>
-            </template>
-          </el-upload>
-          <el-form class="mt-md" v-if="importPreview.length">
-            <el-form-item label="变更说明">
-              <el-input v-model="importChangeLog" placeholder="导入说明" />
-            </el-form-item>
-            <el-form-item label="待导入接口">
-              <div v-for="item in importPreview" :key="item.transno" class="import-preview-item">
-                <el-tag>{{ item.transno }}</el-tag>
-                <span class="ml-8">{{ item.name }}</span>
-                <el-tag v-if="item.exists" type="warning" size="small" class="ml-8">已存在(将创建新版本)</el-tag>
-                <el-tag v-else type="success" size="small" class="ml-8">新建</el-tag>
-              </div>
-            </el-form-item>
-          </el-form>
-          <template #footer>
-            <el-button @click="importDialogVisible = false">取消</el-button>
-            <el-button type="primary" @click="handleImport" :disabled="!importFileData" :loading="importing">
-              确认导入
-            </el-button>
-          </template>
-        </el-dialog>
+        <!-- 查看请求方弹窗（已拆为子组件） -->
+        <ApplicantsDialog v-model="applicantsDialogVisible" :transno="applicantsTransno" />
       </el-tab-pane>
 
       <!-- 页签二：接口申请 -->
       <el-tab-pane label="接口申请" name="application">
-        <!-- 搜索栏 -->
         <el-card shadow="never" class="card-search">
           <el-form :inline="true" :model="applySearchForm">
             <el-form-item label="申请状态">
@@ -197,7 +118,7 @@
           <div class="mb-md">
             <el-button type="primary" @click="openApplyDialog">新建申请</el-button>
           </div>
-          <el-table :data="applyList" border stripe>
+          <el-table :data="applyList" border stripe v-loading="applyLoading" empty-text="暂无申请记录">
             <el-table-column prop="requirementNo" label="需求编号" width="150" />
             <el-table-column prop="transno" label="接口编码" width="180" />
             <el-table-column prop="providerSystemName" label="服务方系统" width="150" />
@@ -283,7 +204,6 @@
 
       <!-- 页签三：请求关系 -->
       <el-tab-pane label="请求关系" name="relation">
-        <!-- 搜索栏 -->
         <el-card shadow="never" class="card-search">
           <el-form :inline="true" :model="relationSearchForm">
             <el-form-item label="接口编码">
@@ -313,7 +233,7 @@
           <el-tabs v-model="relationSubTab" @tab-change="handleRelationTabChange">
             <!-- 作为服务方 -->
             <el-tab-pane label="作为服务方" name="provider">
-              <el-table :data="providerList" border stripe>
+              <el-table :data="providerList" border stripe v-loading="relationLoading" empty-text="暂无服务方记录">
                 <el-table-column prop="transno" label="接口编码" width="200" />
                 <el-table-column prop="interfaceName" label="接口名称" width="180" />
                 <el-table-column prop="providerSystemName" label="服务方系统" width="150" />
@@ -336,7 +256,7 @@
 
             <!-- 作为请求方 -->
             <el-tab-pane label="作为请求方" name="applicant">
-              <el-table :data="applicantList" border stripe>
+              <el-table :data="applicantList" border stripe v-loading="relationLoading" empty-text="暂无请求方记录">
                 <el-table-column prop="transno" label="接口编码" width="200" />
                 <el-table-column prop="interfaceName" label="接口名称" width="180" />
                 <el-table-column prop="providerSystemName" label="服务方系统" width="150" />
@@ -360,20 +280,6 @@
         </el-card>
       </el-tab-pane>
     </el-tabs>
-
-    <!-- 查看请求方弹窗 -->
-    <el-dialog v-model="applicantsDialogVisible" :title="`请求方列表 - ${applicantsTransno}`" width="700px">
-      <el-table :data="applicantsList" border stripe v-loading="applicantsLoading">
-        <el-table-column prop="applicantSystemName" label="请求方系统" width="160" />
-        <el-table-column prop="requirementNo" label="需求编号" width="140" />
-        <el-table-column prop="applyTime" label="申请时间" width="170" :formatter="fmtTimeCol" />
-        <el-table-column prop="applyReason" label="申请事由" show-overflow-tooltip />
-      </el-table>
-      <el-empty v-if="!applicantsLoading && !applicantsList.length" description="暂无请求方" />
-      <template #footer>
-        <el-button @click="applicantsDialogVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -383,14 +289,14 @@ defineOptions({ name: '接口管理' })
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { interfaceApi, configApi, systemApi, approvalApi, relationApi } from '../../api'
-import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE, VERSION_STATUS, VERSION_STATUS_TYPE } from '../../constants/status'
+import { INTERFACE_STATUS, INTERFACE_STATUS_TYPE, APPROVAL_STATUS, APPROVAL_STATUS_TYPE, RELATION_STATUS, RELATION_STATUS_TYPE } from '../../constants/status'
 import { useAuthStore } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fmtTime, formatJson } from '../../utils/format'
 import SchemaViewDialog from '../../components/SchemaViewDialog.vue'
-import SchemaCompareDialog from '../../components/SchemaCompareDialog.vue'
-import { UploadFilled } from '@element-plus/icons-vue'
-import { hasAnyRole } from '../../directives/role'
+import VersionHistoryDialog from './VersionHistoryDialog.vue'
+import ImportConfigDialog from './ImportConfigDialog.vue'
+import ApplicantsDialog from './ApplicantsDialog.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -406,17 +312,15 @@ function handleTabChange(tab) {
   }
 }
 
-// ==================== 页签一：接口信息（原有逻辑完全保留） ====================
+// ==================== 页签一：接口信息 ====================
 const tableData = ref([])
 const total = ref(0)
+const loading = ref(false)
 const searchForm = ref({ pageNum: 1, pageSize: 10, transno: '', name: '', systemId: null, status: null })
 const systemOptions = ref([])
 
 const statusText = (s) => INTERFACE_STATUS[s] || '未知'
 const statusType = (s) => INTERFACE_STATUS_TYPE[s] || 'info'
-
-const verStatusText = (s) => VERSION_STATUS[s] || '未知'
-const verStatusType = (s) => VERSION_STATUS_TYPE[s] || 'info'
 
 // 查看输入输出
 const viewSchemaVisible = ref(false)
@@ -424,29 +328,30 @@ const viewSchemaTransno = ref('')
 const viewInputSchema = ref('')
 const viewOutputSchema = ref('')
 
+// 版本历史（状态仅保留 visible + transno，逻辑在子组件）
 const versionDialogVisible = ref(false)
 const versionTransno = ref('')
-const versionData = ref([])
-const versionTotal = ref(0)
-const versionPage = ref({ pageNum: 1, pageSize: 10 })
 
-const schemaDialogVisible = ref(false)
-const inputSchema = ref('')
-const outputSchema = ref('')
-const schemaVersionNo = ref('')
+// 导入配置（状态仅保留 visible，逻辑在子组件）
+const importDialogVisible = ref(false)
+const existingTransnos = computed(() => tableData.value.map(t => t.transno))
 
-// 对比
-const compareVisible = ref(false)
-const compareVersionNo = ref('')
-const compareLeftInput = ref('')
-const compareLeftOutput = ref('')
-const compareRightInput = ref('')
-const compareRightOutput = ref('')
+// 请求方弹窗（状态仅保留 visible + transno，逻辑在子组件）
+const applicantsDialogVisible = ref(false)
+const applicantsTransno = ref('')
 
 async function loadData() {
-  const res = await interfaceApi.list(searchForm.value)
-  tableData.value = res.data?.records || []
-  total.value = res.data?.total || 0
+  loading.value = true
+  try {
+    const res = await interfaceApi.list(searchForm.value)
+    tableData.value = res.data?.records || []
+    total.value = res.data?.total || 0
+  } catch {
+    tableData.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
 }
 
 function resetSearch() {
@@ -492,7 +397,7 @@ async function handleDelete(row) {
       loadData()
     }
   } catch {
-    ElMessage.error('操作失败')
+    // 全局拦截器已弹出错误
   }
 }
 
@@ -503,47 +408,18 @@ async function handleWithdraw(row) {
     ElMessage.success('已撤销审批')
     loadData()
   } catch {
-    ElMessage.error('撤销失败')
+    // 全局拦截器已弹出错误
   }
 }
 
-async function showVersionHistory(row) {
+function showVersionHistory(row) {
   versionTransno.value = row.transno
-  versionPage.value = { pageNum: 1, pageSize: 10 }
   versionDialogVisible.value = true
-  loadVersions()
 }
 
-async function loadVersions() {
-  const res = await interfaceApi.versions(versionTransno.value, versionPage.value)
-  versionData.value = res.data?.records || []
-  versionTotal.value = res.data?.total || 0
-}
-
-async function viewSchema(row) {
-  const res = await interfaceApi.getVersion(versionTransno.value, row.versionNo)
-  inputSchema.value = formatJson(res.data?.inputSchema)
-  outputSchema.value = formatJson(res.data?.outputSchema)
-  schemaVersionNo.value = row.versionNo
-  schemaDialogVisible.value = true
-}
-
-async function compareWithCurrent(row) {
-  // 左侧：历史版本
-  const histRes = await interfaceApi.getVersion(versionTransno.value, row.versionNo)
-  compareLeftInput.value = histRes.data?.inputSchema || ''
-  compareLeftOutput.value = histRes.data?.outputSchema || ''
-  // 右侧：当前最新版本
-  try {
-    const curRes = await interfaceApi.getLatestVersion(versionTransno.value)
-    compareRightInput.value = curRes.data?.inputSchema || ''
-    compareRightOutput.value = curRes.data?.outputSchema || ''
-  } catch {
-    compareRightInput.value = ''
-    compareRightOutput.value = ''
-  }
-  compareVersionNo.value = row.versionNo
-  compareVisible.value = true
+function viewApplicants(row) {
+  applicantsTransno.value = row.transno
+  applicantsDialogVisible.value = true
 }
 
 function fmtTimeCol(_row, _col, val) {
@@ -578,73 +454,19 @@ async function handleExportSelected() {
   }
 }
 
-// 导入
-const importDialogVisible = ref(false)
-const importFileData = ref(null)
-const importPreview = ref([])
-const importChangeLog = ref('从测试环境导入')
-const importing = ref(false)
-const uploadRef = ref(null)
-
-function openImportDialog() {
-  importFileData.value = null
-  importPreview.value = []
-  importChangeLog.value = '从测试环境导入'
-  importDialogVisible.value = true
-}
-
-function handleFileChange(file) {
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result)
-      // 支持单文件多配置
-      const configs = data.configs || [data]
-      importFileData.value = configs
-      importPreview.value = configs.map(c => ({
-        transno: c.interfaceInfo?.transno || '',
-        name: c.interfaceInfo?.name || '',
-        exists: tableData.value.some(t => t.transno === c.interfaceInfo?.transno)
-      }))
-    } catch {
-      ElMessage.error('JSON文件解析失败')
-      importFileData.value = null
-    }
-  }
-  reader.readAsText(file.raw)
-}
-
-async function handleImport() {
-  if (!importFileData.value) return
-  importing.value = true
-  let successCount = 0
-  let failCount = 0
-  for (const config of importFileData.value) {
-    try {
-      config.changeLog = importChangeLog.value
-      await configApi.importConfig(config)
-      successCount++
-    } catch {
-      failCount++
-    }
-  }
-  importing.value = false
-  importDialogVisible.value = false
-  ElMessage.success(`导入完成：成功 ${successCount} 个${failCount ? '，失败 ' + failCount + ' 个' : ''}`)
-  loadData()
-}
-
 // ==================== 页签二：接口申请 ====================
 const applySearchForm = ref({ pageNum: 1, pageSize: 10, status: null, dateRange: null })
 const applyList = ref([])
 const applyTotal = ref(0)
+const applyLoading = ref(false)
 
-const APPLY_APP_STATUS = { 0: '待审批', 1: '已通过', 2: '已驳回', 3: '已撤回' }
-const APPLY_APP_STATUS_TYPE = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info' }
+const APPLY_APP_STATUS = APPROVAL_STATUS
+const APPLY_APP_STATUS_TYPE = APPROVAL_STATUS_TYPE
 const applyAppStatusText = (s) => APPLY_APP_STATUS[s] || '未知'
 const applyAppStatusType = (s) => APPLY_APP_STATUS_TYPE[s] || 'info'
 
 async function loadApplyList() {
+  applyLoading.value = true
   try {
     const params = {
       type: 3,
@@ -664,6 +486,8 @@ async function loadApplyList() {
   } catch {
     applyList.value = []
     applyTotal.value = 0
+  } finally {
+    applyLoading.value = false
   }
 }
 
@@ -703,7 +527,6 @@ async function openApplyDialog() {
   applyInterfaceOptions.value = []
   applyDialogVisible.value = true
 
-  // 加载请求方系统：ADMIN加载全部，其他用户只加载本部门
   try {
     const params = authStore.hasRole('ADMIN') ? {} : { deptId: authStore.deptId }
     const res = await systemApi.list(params)
@@ -712,7 +535,6 @@ async function openApplyDialog() {
     reqSystemList.value = []
   }
 
-  // 加载全部系统
   try {
     const res = await systemApi.list()
     allSystemList.value = res.data?.records || res.data || []
@@ -797,31 +619,27 @@ const allSystemOptions = ref([])
 const deptSystemOptions = ref([])
 const relationSearchForm = ref({ transno: '', providerSystemId: null, applicantSystemId: null, requirementNo: '' })
 
-// 服务方系统下拉：服务方页签=本部门系统，请求方页签=全部系统
 const providerSystemOptions = computed(() => {
   if (relationSubTab.value === 'provider' && !authStore.hasRole('ADMIN')) return deptSystemOptions.value
   return allSystemOptions.value
 })
-// 请求方系统下拉：请求方页签=本部门系统，服务方页签=全部系统
 const applicantSystemOptions = computed(() => {
   if (relationSubTab.value === 'applicant' && !authStore.hasRole('ADMIN')) return deptSystemOptions.value
   return allSystemOptions.value
 })
 
-const RELATION_STATUS = { 0: '待审批', 1: '已通过', 2: '已驳回', 3: '已下线' }
-const RELATION_STATUS_TYPE = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info' }
 const relationStatusText = (s) => RELATION_STATUS[s] || '未知'
 const relationStatusType = (s) => RELATION_STATUS_TYPE[s] || 'info'
 
-// 服务方
 const providerList = ref([])
 const providerTotal = ref(0)
 const providerPage = ref({ pageNum: 1, pageSize: 10 })
 
-// 请求方
 const applicantList = ref([])
 const applicantTotal = ref(0)
 const applicantPage = ref({ pageNum: 1, pageSize: 10 })
+
+const relationLoading = ref(false)
 
 function handleRelationTabChange(tab) {
   if (tab === 'provider') loadProviderList()
@@ -844,6 +662,7 @@ function resetRelationSearch() {
 }
 
 async function loadProviderList() {
+  relationLoading.value = true
   try {
     const params = {
       ...providerPage.value,
@@ -858,10 +677,13 @@ async function loadProviderList() {
   } catch {
     providerList.value = []
     providerTotal.value = 0
+  } finally {
+    relationLoading.value = false
   }
 }
 
 async function loadApplicantList() {
+  relationLoading.value = true
   try {
     const params = {
       ...applicantPage.value,
@@ -876,37 +698,16 @@ async function loadApplicantList() {
   } catch {
     applicantList.value = []
     applicantTotal.value = 0
-  }
-}
-
-// ==================== 查看请求方弹窗 ====================
-const applicantsDialogVisible = ref(false)
-const applicantsTransno = ref('')
-const applicantsList = ref([])
-const applicantsLoading = ref(false)
-
-async function viewApplicants(row) {
-  applicantsTransno.value = row.transno
-  applicantsList.value = []
-  applicantsDialogVisible.value = true
-  applicantsLoading.value = true
-  try {
-    const res = await relationApi.applicantsByTransno(row.transno)
-    applicantsList.value = res.data || []
-  } catch {
-    applicantsList.value = []
   } finally {
-    applicantsLoading.value = false
+    relationLoading.value = false
   }
 }
 
 // ==================== 初始化 ====================
 onMounted(() => {
   loadData()
-  // 接口信息页系统下拉：ADMIN加载全部，其他用户只加载本部门
   const params = authStore.hasRole('ADMIN') ? {} : { deptId: authStore.deptId }
   systemApi.list(params).then(res => { systemOptions.value = res.data || [] })
-  // 请求关系页：加载全部系统 + 本部门系统（下拉框根据页签切换）
   systemApi.list().then(res => { allSystemOptions.value = res.data || [] })
   systemApi.list({ deptId: authStore.deptId }).then(res => { deptSystemOptions.value = res.data || [] })
 })
@@ -914,8 +715,5 @@ onMounted(() => {
 
 <style scoped>
 .filter-select { width: 160px; }
-.upload-icon { font-size: 40px; color: var(--text-placeholder); }
-.ml-8 { margin-left: 8px; }
-.import-preview-item { margin-bottom: 4px; display: flex; align-items: center; }
 .full-width { width: 100%; }
 </style>

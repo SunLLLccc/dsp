@@ -5,43 +5,77 @@ import com.sunlc.dsp.common.exception.BusinessException;
 import com.sunlc.dsp.common.model.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    @ResponseStatus(HttpStatus.OK)
-    public ApiResponse<Void> handleBusinessException(BusinessException e, HttpServletRequest request) {
+    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e, HttpServletRequest request) {
         String transno = extractTransno(request);
         String traceId = extractTraceId(request);
         log.warn("业务异常: transno={}, code={}, message={}", transno, e.getCode(), e.getMessage());
-        return ApiResponse.error(transno, traceId, e.getCode(), e.getMessage());
+
+        // 认证失败（Token缺失/过期）：返回 401
+        if (ErrorCode.TOKEN_MISSING.getCode().equals(e.getCode())
+                || ErrorCode.TOKEN_EXPIRED.getCode().equals(e.getCode())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(transno, traceId, e.getCode(), e.getMessage()));
+        }
+        // 权限不足：返回 403
+        if (ErrorCode.ACCESS_DENIED.getCode().equals(e.getCode())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(transno, traceId, e.getCode(), e.getMessage()));
+        }
+        // 参数错误：返回 400
+        if (ErrorCode.BAD_REQUEST.getCode().equals(e.getCode())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(transno, traceId, e.getCode(), e.getMessage()));
+        }
+        // 其他业务异常：返回 200，通过 code 区分
+        return ResponseEntity.ok(ApiResponse.error(transno, traceId, e.getCode(), e.getMessage()));
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
+    @ExceptionHandler({
+            MethodArgumentNotValidException.class,
+            BindException.class,
+            MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class,
+            HttpMessageNotReadableException.class
+    })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiResponse<Void> handleValidationException(Exception e, HttpServletRequest request) {
+    public ApiResponse<Void> handleParamException(Exception e, HttpServletRequest request) {
         String transno = extractTransno(request);
         String traceId = extractTraceId(request);
-        String message = "参数校验失败";
+        String message = "参数错误";
         if (e instanceof MethodArgumentNotValidException) {
-            FieldError fieldError = ((MethodArgumentNotValidException) e).getBindingResult().getFieldError();
-            if (fieldError != null) message = fieldError.getDefaultMessage();
+            FieldError fe = ((MethodArgumentNotValidException) e).getBindingResult().getFieldError();
+            if (fe != null) message = fe.getDefaultMessage();
         } else if (e instanceof BindException) {
-            FieldError fieldError = ((BindException) e).getFieldError();
-            if (fieldError != null) message = fieldError.getDefaultMessage();
+            FieldError fe = ((BindException) e).getFieldError();
+            if (fe != null) message = fe.getDefaultMessage();
+        } else if (e instanceof MissingServletRequestParameterException) {
+            message = "缺少必要参数: " + ((MissingServletRequestParameterException) e).getParameterName();
+        } else if (e instanceof MethodArgumentTypeMismatchException) {
+            MethodArgumentTypeMismatchException me = (MethodArgumentTypeMismatchException) e;
+            message = "参数类型错误: " + me.getName();
+        } else if (e instanceof HttpMessageNotReadableException) {
+            message = "请求体解析失败";
         }
-        log.warn("参数校验异常: transno={}, message={}", transno, message);
-        return ApiResponse.error(transno, traceId, ErrorCode.SYSTEM_ERROR, message);
+        log.warn("参数异常: transno={}, type={}, message={}", transno, e.getClass().getSimpleName(), message);
+        return ApiResponse.error(transno, traceId, ErrorCode.BAD_REQUEST, message);
     }
 
     @ExceptionHandler(Exception.class)

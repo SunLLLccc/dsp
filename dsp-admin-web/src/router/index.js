@@ -8,6 +8,11 @@ const routes = [
     component: () => import('../views/login/Login.vue')
   },
   {
+    path: '/403',
+    name: '无权限',
+    component: () => import('../views/error/Forbidden.vue')
+  },
+  {
     path: '/',
     component: () => import('../layout/MainLayout.vue'),
     redirect: '/interface',
@@ -16,6 +21,11 @@ const routes = [
         path: 'interface',
         name: '接口管理',
         component: () => import('../views/interface/List.vue')
+      },
+      {
+        path: 'marketplace',
+        name: '接口市场',
+        component: () => import('../views/marketplace/List.vue')
       },
       {
         path: 'interface/edit/:id?',
@@ -60,19 +70,27 @@ const routes = [
       {
         path: 'system/user',
         name: '用户管理',
-        component: () => import('../views/system/UserList.vue')
+        component: () => import('../views/system/UserList.vue'),
+        meta: { roles: ['ADMIN'] }
       },
       {
         path: 'system/dept',
         name: '部门管理',
-        component: () => import('../views/system/DeptList.vue')
+        component: () => import('../views/system/DeptList.vue'),
+        meta: { roles: ['ADMIN'] }
       },
       {
         path: 'system/system',
         name: '系统管理',
-        component: () => import('../views/system/SystemList.vue')
+        component: () => import('../views/system/SystemList.vue'),
+        meta: { roles: ['ADMIN'] }
       },
     ]
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: '未找到',
+    component: () => import('../views/error/Forbidden.vue')
   }
 ]
 
@@ -81,15 +99,37 @@ const router = createRouter({
   routes
 })
 
+/**
+ * 角色校验：ADMIN 绕过所有检查，否则需匹配 meta.roles 中的任一角色
+ */
+function hasRequiredRole(userRoles, requiredRoles) {
+  if (!requiredRoles || requiredRoles.length === 0) return true
+  if (userRoles.includes('ADMIN')) return true
+  return requiredRoles.some(r => userRoles.includes(r))
+}
+
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  if (to.path !== '/login' && !authStore.isAuthenticated) {
+
+  // 未登录：只允许访问 /login
+  if (!authStore.isAuthenticated && to.path !== '/login') {
     next('/login')
-  } else if (to.path === '/login' && authStore.isAuthenticated) {
-    next('/')
-  } else {
-    next()
+    return
   }
+
+  // 已登录访问 /login：跳转首页
+  if (to.path === '/login' && authStore.isAuthenticated) {
+    next('/')
+    return
+  }
+
+  // 角色校验：meta.roles 指定所需角色，ADMIN 全部绕过
+  if (to.meta && to.meta.roles && !hasRequiredRole(authStore.roles, to.meta.roles)) {
+    next('/403')
+    return
+  }
+
+  next()
 })
 
 export default router

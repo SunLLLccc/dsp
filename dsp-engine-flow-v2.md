@@ -683,14 +683,14 @@ flowchart TD
 
 ## 13. 执行阶段总览
 
-| 阶段 | 组件 | 输入 | 输出 | 关键能力 |
-|------|------|------|------|---------|
-| ① 鉴权 | JwtAuthAspect | ApiRequest | — | JWT校验、时间戳防重放、transno白名单 |
-| ② 审计 | AuditLogAspect | ProceedingJoinPoint | — | @Around环绕，记录请求/响应/耗时/IP |
-| ③ 缓存 | CacheManager | transno | InterfaceConfig | ConcurrentHashMap缓存，定时刷新，按需失效 |
-| ④ 解析 | XmlConfigParser | XML字符串 | InterfaceConfig | DOM4J解析，支持SQL/HTTP/Dubbo/Mongo四种查询类型 |
-| ⑤ 校验 | XmlEngine | requestData | — | 必填参数校验，defaultValue回退 |
-| ⑥ 编排 | QueryOrchestrator | List\<QueryConfig\> | Map\<queryId, List\<Map\>\> | DAG依赖排序，CompletableFuture并行，DFS循环检测 |
-| ⑦ 执行 | 各Executor | 查询配置+参数 | List\<Map\> | SQL(动态SQL+分页)、HTTP(SpEL替换)、Dubbo(泛化调用)、Mongo |
-| ⑧ 映射 | ResultMapper | 查询结果+resultMap | 映射后数据 | 字段重命名、fn:函数调用 |
-| ⑨ 组装 | ResultMapper | mappedResults+responseData | 最终响应Object | 多resultMap合并、嵌套结构 |
+| 阶段   | 组件              | 输入                       | 输出                        | 关键能力                                                    |
+| ------ | ----------------- | -------------------------- | --------------------------- | ----------------------------------------------------------- |
+| ① 鉴权 | JwtAuthAspect     | ApiRequest                 | —                           | JWT 校验、时间戳防重放、transno 白名单                      |
+| ② 审计 | AuditLogAspect    | ProceedingJoinPoint        | —                           | @Around 环绕，记录请求/响应/耗时/IP                         |
+| ③ 缓存 | CacheManager      | transno                    | InterfaceConfig             | ConcurrentHashMap 缓存，定时刷新，按需失效                  |
+| ④ 解析 | XmlConfigParser   | XML 字符串                 | InterfaceConfig             | DOM4J 解析，支持 SQL/HTTP/Dubbo/Mongo 四种查询类型          |
+| ⑤ 校验 | XmlEngine         | requestData                | —                           | 必填参数校验，defaultValue 回退                             |
+| ⑥ 编排 | QueryOrchestrator | List\<QueryConfig\>        | Map\<queryId, List\<Map\>\> | DAG 依赖排序，CompletableFuture 并行，DFS 循环检测          |
+| ⑦ 执行 | 各 Executor       | 查询配置+参数              | List\<Map\>                 | SQL(动态 SQL+分页)、HTTP(SpEL 替换)、Dubbo(泛化调用)、Mongo |
+| ⑧ 映射 | ResultMapper      | 查询结果+resultMap         | 映射后数据                  | 字段重命名、fn:函数调用                                     |
+| ⑨ 组装 | ResultMapper      | mappedResults+responseData | 最终响应 Object             | 多 resultMap 合并、嵌套结构                                 |

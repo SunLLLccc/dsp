@@ -2,7 +2,8 @@ package com.sunlc.dsp.common.model;
 
 import lombok.Data;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * 统一请求报文
@@ -11,6 +12,7 @@ import javax.validation.constraints.NotNull;
 public class ApiRequest<T> {
 
     @NotNull(message = "head不能为空")
+    @Valid
     private RequestHead head;
 
     private T requestData;

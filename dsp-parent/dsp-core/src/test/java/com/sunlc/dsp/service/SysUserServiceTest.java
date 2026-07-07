@@ -30,6 +30,7 @@ class SysUserServiceTest {
     @Mock(lenient = true) private SysUserRoleMapper sysUserRoleMapper;
     @Mock(lenient = true) private SysRoleMapper sysRoleMapper;
     @Mock(lenient = true) private BCryptPasswordEncoder passwordEncoder;
+    @Mock(lenient = true) private SysDeptService sysDeptService;
 
     private SysUserServiceImpl sysUserService;
 
@@ -37,7 +38,7 @@ class SysUserServiceTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        sysUserService = Mockito.spy(new SysUserServiceImpl(sysUserRoleMapper, sysRoleMapper, passwordEncoder));
+        sysUserService = Mockito.spy(new SysUserServiceImpl(sysUserRoleMapper, sysRoleMapper, passwordEncoder, sysDeptService));
         setField(sysUserService, SysUserServiceImpl.class.getSuperclass(), "baseMapper", sysUserMapper);
 
         testUser = new SysUser();
@@ -50,7 +51,18 @@ class SysUserServiceTest {
     }
 
     private void setField(Object target, Class<?> clazz, String fieldName, Object value) throws Exception {
-        Field f = clazz.getDeclaredField(fieldName);
+        Field f = null;
+        Class<?> current = clazz;
+        while (current != null && f == null) {
+            try {
+                f = current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        if (f == null) {
+            throw new NoSuchFieldException(fieldName);
+        }
         f.setAccessible(true);
         f.set(target, value);
     }

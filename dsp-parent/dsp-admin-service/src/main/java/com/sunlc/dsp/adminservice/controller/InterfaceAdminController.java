@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.sunlc.dsp.adminservice.annotation.RequireRole;
 import com.sunlc.dsp.common.model.ApiResponse;
+import com.sunlc.dsp.engine.DebugContext;
 import com.sunlc.dsp.engine.XmlEngine;
+import com.sunlc.dsp.engine.model.DebugTrace;
 import com.sunlc.dsp.entity.ApprovalFlow;
 import com.sunlc.dsp.entity.ApprovalInfo;
 import com.sunlc.dsp.enums.InterfaceStatus;
@@ -17,13 +19,14 @@ import com.sunlc.dsp.service.ApprovalRecordService;
 import com.sunlc.dsp.service.InterfaceInfoService;
 import com.sunlc.dsp.service.InterfaceVersionService;
 import com.sunlc.dsp.service.SysSystemService;
+import com.sunlc.dsp.engine.validator.SqlSecurityValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,6 +42,7 @@ public class InterfaceAdminController {
     private final ApprovalRecordService approvalRecordService;
     private final XmlEngine xmlEngine;
     private final SysSystemService sysSystemService;
+    private final SqlSecurityValidator sqlSecurityValidator;
 
     @Lazy
     @Autowired
@@ -79,6 +83,23 @@ public class InterfaceAdminController {
             throw new RuntimeException("未找到接口 [" + transno + "] 的待审批记录");
         }
         return info.getId();
+    }
+
+    /**
+     * 审批发布前校验待发布版本的 SQL 只读安全性
+     */
+    private void validatePendingVersionSchema(Long approvalId) {
+        com.sunlc.dsp.entity.ApprovalInfo approvalInfo = approvalInfoService.getById(approvalId);
+        if (approvalInfo == null) return;
+        Integer type = approvalInfo.getType();
+        if (type == null || (type != 1 && type != 2)) return;
+        String transno = approvalInfo.getTransno();
+        Integer versionNo = approvalInfo.getVersionNo();
+        if (transno == null || versionNo == null) return;
+        InterfaceVersion version = interfaceVersionService.getVersion(transno, versionNo);
+        if (version != null && version.getInputSchema() != null && !version.getInputSchema().isEmpty()) {
+            sqlSecurityValidator.validateXmlConfig(version.getInputSchema());
+        }
     }
 
     private void fillSystemName(InterfaceInfo info) {
@@ -217,9 +238,14 @@ public class InterfaceAdminController {
             @PathVariable String transno,
             @RequestBody Map<String, String> body,
             HttpServletRequest request) {
+        String inputSchema = body.get("inputSchema");
+        // 保存前校验 SQL 只读安全性
+        if (inputSchema != null && !inputSchema.isEmpty()) {
+            sqlSecurityValidator.validateXmlConfig(inputSchema);
+        }
         String operator = body.getOrDefault("operator", getCurrentUser(request));
         InterfaceVersion version = interfaceVersionService.saveSchema(
-                transno, body.get("inputSchema"), body.get("outputSchema"),
+                transno, inputSchema, body.get("outputSchema"),
                 body.get("changeLog"), operator);
         return ApiResponse.success("VERSION_SAVE", "", version);
     }
@@ -287,7 +313,9 @@ public class InterfaceAdminController {
                 ? request.getAttribute("adminRealName").toString() : "";
         // 通过 transno 查找待审批的 ApprovalInfo 记录
         Long approvalId = findPendingApprovalId(transno);
-        approvalInfoService.approve(approvalId, approver, approverName);
+        // 审批发布前校验待发布版本的 SQL 只读安全性
+        validatePendingVersionSchema(approvalId);
+        approvalInfoService.approve(approvalId, approver, approverName, getCurrentDeptId(request), getCurrentRoles(request));
         return ApiResponse.success("APPROVAL_PASS", "", null);
     }
 
@@ -302,7 +330,7 @@ public class InterfaceAdminController {
                 ? request.getAttribute("adminRealName").toString() : "";
         // 通过 transno 查找待审批的 ApprovalInfo 记录
         Long approvalId = findPendingApprovalId(transno);
-        approvalInfoService.reject(approvalId, approver, approverName, body.get("reason"));
+        approvalInfoService.reject(approvalId, approver, approverName, body.get("reason"), getCurrentDeptId(request), getCurrentRoles(request));
         return ApiResponse.success("APPROVAL_REJECT", "", null);
     }
 
@@ -328,13 +356,121 @@ public class InterfaceAdminController {
         @SuppressWarnings("unchecked")
         Map<String, Object> params = (Map<String, Object>) body.get("params");
 
+        DebugContext debugContext = new DebugContext(true);
+        debugContext.setTransno(transno);
+        debugContext.setStartTimeMs(System.currentTimeMillis());
+
         try {
             String xmlConfig = interfaceInfoService.getActiveXmlConfig(transno);
-            Object result = xmlEngine.execute(xmlConfig, params);
-            return ApiResponse.success("DEBUG", "", result);
+            Object result = xmlEngine.execute(xmlConfig, params, debugContext);
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("success", true);
+            response.put("data", result);
+            response.put("trace", buildTraceMap(debugContext, params));
+            return ApiResponse.success("DEBUG", "", response);
         } catch (Exception e) {
-            return ApiResponse.error("DEBUG", "", "5001", "调试失败: " + e.getMessage());
+            debugContext.setEndTimeMs(System.currentTimeMillis());
+            debugContext.setTotalTimeMs(debugContext.getEndTimeMs() - debugContext.getStartTimeMs());
+            debugContext.setSuccess(false);
+            debugContext.setErrorMessage(sanitizeErrorMessage(e.getMessage()));
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("success", false);
+            response.put("data", null);
+            response.put("error", sanitizeErrorMessage(e.getMessage()));
+            response.put("trace", buildTraceMap(debugContext, params));
+            return ApiResponse.success("DEBUG", "", response);
         }
+    }
+
+    /**
+     * 将 DebugContext 转为前端可展示的 Map。
+     * 仅暴露安全字段，对 SQL 参数做敏感值脱敏。
+     */
+    private Map<String, Object> buildTraceMap(DebugContext debugContext, Map<String, Object> requestParams) {
+        Map<String, Object> trace = new LinkedHashMap<>();
+        trace.put("transno", debugContext.getTransno());
+        trace.put("totalTimeMs", debugContext.getTotalTimeMs());
+        trace.put("success", debugContext.isSuccess());
+
+        // 执行阶段
+        List<Map<String, Object>> steps = new ArrayList<>();
+        for (DebugContext.DebugStep step : debugContext.getSteps()) {
+            Map<String, Object> s = new LinkedHashMap<>();
+            s.put("name", step.getName());
+            s.put("status", step.getStatus());
+            s.put("elapsedTimeMs", step.getElapsedTimeMs());
+            s.put("errorMessage", step.getErrorMessage());
+            steps.add(s);
+        }
+        trace.put("steps", steps);
+
+        // 查询跟踪（参数脱敏）
+        List<Map<String, Object>> queries = new ArrayList<>();
+        for (DebugTrace qt : debugContext.getTraces()) {
+            Map<String, Object> q = new LinkedHashMap<>();
+            q.put("queryId", qt.getQueryId());
+            q.put("type", qt.getType());
+            q.put("datasource", qt.getDatasource());
+            q.put("sql", qt.getSql());
+            q.put("params", sanitizeParams(qt.getParams(), requestParams));
+            q.put("paginationMode", qt.getPaginationMode());
+            q.put("rowCount", qt.getRowCount());
+            q.put("elapsedTimeMs", qt.getElapsedTimeMs());
+            q.put("status", qt.getStatus());
+            q.put("errorMessage", qt.getErrorMessage());
+            queries.add(q);
+        }
+        trace.put("queries", queries);
+        return trace;
+    }
+
+    /**
+     * 对 SQL 参数值做敏感脱敏：若值来自 requestData 中敏感 key（password/token/secret 等），替换为 "***"
+     */
+    private List<Object> sanitizeParams(List<Object> params, Map<String, Object> requestParams) {
+        if (params == null || requestParams == null || requestParams.isEmpty()) {
+            return params;
+        }
+        // 收集 requestData 中敏感 key 对应的值
+        Set<Object> sensitiveValues = new HashSet<>();
+        for (Map.Entry<String, Object> entry : requestParams.entrySet()) {
+            if (isSensitiveKey(entry.getKey()) && entry.getValue() != null) {
+                sensitiveValues.add(entry.getValue());
+            }
+        }
+        if (sensitiveValues.isEmpty()) {
+            return params;
+        }
+        List<Object> result = new ArrayList<>(params.size());
+        for (Object param : params) {
+            result.add(sensitiveValues.contains(param) ? "***" : param);
+        }
+        return result;
+    }
+
+    private static boolean isSensitiveKey(String key) {
+        if (key == null) return false;
+        String lower = key.toLowerCase();
+        return SENSITIVE_KEYS.contains(lower);
+    }
+
+    private static final Set<String> SENSITIVE_KEYS = new HashSet<>(Arrays.asList(
+            "password", "passwd", "pwd", "token", "secret", "appsecret",
+            "authorization", "apikey", "api_key", "accesskey", "access_key",
+            "privatekey", "private_key", "credential"
+    ));
+
+    /**
+     * 截断过长错误信息，防止前端展示异常
+     */
+    private String sanitizeErrorMessage(String message) {
+        if (message == null) return null;
+        if (message.length() > 500) {
+            return message.substring(0, 500) + "...";
+        }
+        return message;
     }
 
     // ==================== 审批记录接口 ====================

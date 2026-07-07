@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+import com.sunlc.dsp.engine.model.DebugTrace;
 
 @Slf4j
 @Component
@@ -39,53 +41,115 @@ public class XmlEngine {
     }
 
     public Object execute(String xmlConfig, Map<String, Object> requestData) {
+        return execute(xmlConfig, requestData, null);
+    }
+
+    /**
+     * 带调试跟踪的执行入口。debugContext 为 null 时等同于无跟踪的普通执行。
+     */
+    public Object execute(String xmlConfig, Map<String, Object> requestData, DebugContext debugContext) {
         InterfaceConfig config = xmlConfigParser.parse(xmlConfig);
-        return executeWithConfig(config, requestData);
+        return executeWithConfig(config, requestData, debugContext);
     }
 
     /**
      * 使用已解析的 InterfaceConfig 执行查询（跳过XML解析，配合缓存使用）
      */
     public Object executeWithConfig(InterfaceConfig config, Map<String, Object> requestData) {
+        return executeWithConfig(config, requestData, null);
+    }
+
+    /**
+     * 带调试跟踪的 executeWithConfig。debugContext 为 null 时零开销。
+     */
+    public Object executeWithConfig(InterfaceConfig config, Map<String, Object> requestData, DebugContext debugContext) {
         log.info("XML解析完成: transno={}, queries={}", config.getTransno(), config.getQueries().size());
 
-        validateParams(config.getRequestData(), requestData);
+        if (debugContext != null) {
+            debugContext.setTransno(config.getTransno());
+            debugContext.setStartTimeMs(System.currentTimeMillis());
+        }
+
+        // 阶段 1: 参数校验
+        recordVoidStep(debugContext, "PARAM_VALIDATE", () ->
+                validateParams(config.getRequestData(), requestData));
 
         // 注册 XML 中定义的内联数据源
         registerInlineDataSources(config.getDataSources());
 
         OrchestrationContext context = new OrchestrationContext(requestData);
 
-        Map<String, List<Map<String, Object>>> queryResults = queryOrchestrator.orchestrate(
-                config.getQueries(),
-                query -> executeQueryWithContext(query, context)
-        );
+        // 阶段 2: 查询执行（DAG 编排）
+        Map<String, List<Map<String, Object>>> queryResults = recordStep(debugContext, "QUERY_EXECUTE", () ->
+                queryOrchestrator.orchestrate(config.getQueries(),
+                        query -> executeQueryWithContext(query, context, debugContext)));
 
+        // 阶段 3: 结果映射
         Map<String, Object> mappedResults = new LinkedHashMap<>();
-        for (ResultMapConfig resultMap : config.getResultMaps()) {
-            List<Map<String, Object>> queryData = queryResults.get(resultMap.getQuery());
-            if (queryData != null) {
-                Object mapped = resultMapper.mapResult(queryData, resultMap);
-                mappedResults.put(resultMap.getId(), mapped);
-            }
-        }
-
-        // 当没有定义任何 resultMap 时，将查询结果直接放入 mappedResults（key=queryId）
-        if (config.getResultMaps().isEmpty()) {
-            for (Map.Entry<String, List<Map<String, Object>>> entry : queryResults.entrySet()) {
-                List<Map<String, Object>> data = entry.getValue();
-                if (data.size() == 1) {
-                    mappedResults.put(entry.getKey(), data.get(0));
-                } else {
-                    mappedResults.put(entry.getKey(), data);
+        recordVoidStep(debugContext, "RESULT_MAP", () -> {
+            for (ResultMapConfig resultMap : config.getResultMaps()) {
+                List<Map<String, Object>> queryData = queryResults.get(resultMap.getQuery());
+                if (queryData != null) {
+                    Object mapped = resultMapper.mapResult(queryData, resultMap);
+                    mappedResults.put(resultMap.getId(), mapped);
                 }
             }
-        }
+            if (config.getResultMaps().isEmpty()) {
+                for (Map.Entry<String, List<Map<String, Object>>> entry : queryResults.entrySet()) {
+                    List<Map<String, Object>> data = entry.getValue();
+                    if (data.size() == 1) {
+                        mappedResults.put(entry.getKey(), data.get(0));
+                    } else {
+                        mappedResults.put(entry.getKey(), data);
+                    }
+                }
+            }
+        });
 
-        Object responseData = resultMapper.buildResponse(config.getResponseData(), mappedResults);
+        // 阶段 4: 响应构建
+        Object responseData = recordStep(debugContext, "RESPONSE_BUILD", () ->
+                resultMapper.buildResponse(config.getResponseData(), mappedResults));
+
+        if (debugContext != null) {
+            debugContext.setEndTimeMs(System.currentTimeMillis());
+            debugContext.setTotalTimeMs(debugContext.getEndTimeMs() - debugContext.getStartTimeMs());
+            debugContext.setSuccess(true);
+        }
 
         log.info("查询执行完成: transno={}", config.getTransno());
         return responseData;
+    }
+
+    /** 记录有返回值的执行阶段 */
+    private <T> T recordStep(DebugContext ctx, String name, Supplier<T> action) {
+        if (ctx == null) {
+            return action.get();
+        }
+        long start = System.currentTimeMillis();
+        try {
+            T result = action.get();
+            ctx.addStep(DebugContext.DebugStep.success(name, System.currentTimeMillis() - start));
+            return result;
+        } catch (Exception e) {
+            ctx.addStep(DebugContext.DebugStep.error(name, System.currentTimeMillis() - start, e.getMessage()));
+            throw e;
+        }
+    }
+
+    /** 记录无返回值的执行阶段 */
+    private void recordVoidStep(DebugContext ctx, String name, Runnable action) {
+        if (ctx == null) {
+            action.run();
+            return;
+        }
+        long start = System.currentTimeMillis();
+        try {
+            action.run();
+            ctx.addStep(DebugContext.DebugStep.success(name, System.currentTimeMillis() - start));
+        } catch (Exception e) {
+            ctx.addStep(DebugContext.DebugStep.error(name, System.currentTimeMillis() - start, e.getMessage()));
+            throw e;
+        }
     }
 
     private void registerInlineDataSources(List<DataSourceConfig> dataSources) {
@@ -103,16 +167,45 @@ public class XmlEngine {
     }
 
     private List<Map<String, Object>> executeQueryWithContext(QueryConfig query,
-                                                                OrchestrationContext context) {
-        Map<String, Object> previousResults = context.getPreviousResults();
-        List<Map<String, Object>> result = executeQuery(query, context.getRequestData(), previousResults);
-        context.putPreviousResult(query.getId(), result);
-        return result;
+                                                                OrchestrationContext context,
+                                                                DebugContext debugContext) {
+        DebugTrace trace = null;
+        if (debugContext != null) {
+            trace = new DebugTrace();
+            trace.setQueryId(query.getId());
+            trace.setType(query.getType());
+            trace.setDatasource(query.getDatasource());
+            trace.setStartTimeMs(System.currentTimeMillis());
+        }
+
+        try {
+            Map<String, Object> previousResults = context.getPreviousResults();
+            List<Map<String, Object>> result = executeQuery(query, context.getRequestData(), previousResults, trace);
+            context.putPreviousResult(query.getId(), result);
+            if (trace != null) {
+                trace.setRowCount(result.size());
+                trace.setStatus("SUCCESS");
+            }
+            return result;
+        } catch (Exception e) {
+            if (trace != null) {
+                trace.setStatus("ERROR");
+                trace.setErrorMessage(e.getMessage());
+            }
+            throw e;
+        } finally {
+            if (trace != null) {
+                trace.setEndTimeMs(System.currentTimeMillis());
+                trace.setElapsedTimeMs(trace.getEndTimeMs() - trace.getStartTimeMs());
+                debugContext.addTrace(trace);
+            }
+        }
     }
 
     private List<Map<String, Object>> executeQuery(QueryConfig query,
                                                     Map<String, Object> requestData,
-                                                    Map<String, Object> previousResults) {
+                                                    Map<String, Object> previousResults,
+                                                    DebugTrace trace) {
         String type = query.getType().toLowerCase();
 
         switch (type) {
@@ -121,7 +214,7 @@ public class XmlEngine {
             case "sql":
             case "oracle":
             case "postgresql":
-                return executeSqlQuery(query, requestData, previousResults);
+                return executeSqlQuery(query, requestData, previousResults, trace);
             case "http":
                 return executeHttpQuery(query, requestData, previousResults);
             case "dubbo":
@@ -135,13 +228,38 @@ public class XmlEngine {
 
     private List<Map<String, Object>> executeSqlQuery(QueryConfig query,
                                                        Map<String, Object> requestData,
-                                                       Map<String, Object> previousResults) {
+                                                       Map<String, Object> previousResults,
+                                                       DebugTrace trace) {
         DynamicSqlHandler.SqlResult sqlResult = dynamicSqlHandler.process(
                 query.getSql(), query.getDynamicSqls(), requestData, previousResults);
 
         String finalSql = sqlResult.sql;
         List<Object> finalParams = sqlResult.params;
+
+        // 导出批次模式：在 PaginationHandler 执行前覆盖分页参数
+        boolean exportMode = requestData.containsKey("_exportPageSize");
+        if (exportMode && query.getPaginationConfig() != null) {
+            PaginationConfig config = query.getPaginationConfig();
+            int exportPageSize = Math.min(
+                    Integer.parseInt(requestData.get("_exportPageSize").toString()),
+                    config.getMaxPageSize());
+            // 注入实际配置的 pageSizeParam（默认"pageSize"），使 PaginationHandler 读取到导出批次大小
+            requestData.put(config.getPageSizeParam(), exportPageSize);
+            if (config.getMode() == PaginationConfig.PaginationMode.OPTIMIZED) {
+                // OPTIMIZED 模式：注入实际配置的 pageNumParam（默认"pageNum"）推进页码
+                int exportPageNum = requestData.containsKey("_exportPageNum")
+                        ? Integer.parseInt(requestData.get("_exportPageNum").toString()) : 1;
+                requestData.put(config.getPageNumParam(), exportPageNum);
+            }
+            if (config.getMode() == PaginationConfig.PaginationMode.CURSOR
+                    && requestData.containsKey("_exportLastId")) {
+                // CURSOR 模式：将 _exportLastId 映射到实际配置的 lastIdParam（默认"lastId"）
+                requestData.put(config.getLastIdParam(), requestData.get("_exportLastId"));
+            }
+        }
+
         if (query.getPaginationConfig() != null) {
+            // PaginationHandler 使用上面覆盖后的参数执行分页
             PaginationHandler.PaginationResult pageResult = paginationHandler.rewrite(
                     sqlResult.sql, query.getPaginationConfig(), requestData, sqlResult.params);
             finalSql = pageResult.sql;
@@ -149,9 +267,26 @@ public class XmlEngine {
             if (pageResult.paginated) {
                 log.debug("分页改写: mode={}, sql={}", pageResult.mode, finalSql);
             }
+        } else if (exportMode) {
+            // 无分页配置的 SQL：直接追加 LIMIT/OFFSET
+            int exportPageSize = Integer.parseInt(requestData.get("_exportPageSize").toString());
+            int exportPageNum = requestData.containsKey("_exportPageNum")
+                    ? Integer.parseInt(requestData.get("_exportPageNum").toString()) : 1;
+            int offset = (exportPageNum - 1) * exportPageSize;
+            finalSql = finalSql + " LIMIT " + exportPageSize + " OFFSET " + offset;
+            log.debug("导出分页追加: pageSize={}, pageNum={}", exportPageSize, exportPageNum);
         }
 
         log.debug("最终SQL: datasource={}, sql={}, params={}", query.getDatasource(), finalSql, finalParams);
+
+        // 调试模式下捕获最终 SQL、参数、分页模式（不含数据源密码等敏感信息）
+        if (trace != null) {
+            trace.setSql(finalSql);
+            trace.setParams(new ArrayList<>(finalParams));
+            if (query.getPaginationConfig() != null) {
+                trace.setPaginationMode(query.getPaginationConfig().getMode().name().toLowerCase());
+            }
+        }
 
         if (finalParams.isEmpty()) {
             return sqlExecutor.query(query.getDatasource(), finalSql);

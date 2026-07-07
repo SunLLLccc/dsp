@@ -10,12 +10,13 @@ import com.sunlc.dsp.enums.VersionStatus;
 import com.sunlc.dsp.service.InterfaceInfoService;
 import com.sunlc.dsp.service.InterfaceTemplateService;
 import com.sunlc.dsp.service.InterfaceVersionService;
+import com.sunlc.dsp.engine.validator.SqlSecurityValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -29,6 +30,7 @@ public class ConfigImportExportController {
     private final InterfaceVersionService interfaceVersionService;
     private final InterfaceTemplateService interfaceTemplateService;
     private final XmlConfigCacheInvalidator xmlConfigCacheInvalidator;
+    private final SqlSecurityValidator sqlSecurityValidator;
 
     private String getCurrentUser(HttpServletRequest request) {
         Object user = request.getAttribute("adminUser");
@@ -171,9 +173,14 @@ public class ConfigImportExportController {
         @SuppressWarnings("unchecked")
         Map<String, Object> schemaMap = (Map<String, Object>) configData.get("schema");
         if (schemaMap != null) {
+            // 导入前校验 SQL 只读安全性
+            String inputSchema = (String) schemaMap.get("inputSchema");
+            if (inputSchema != null && !inputSchema.isEmpty()) {
+                sqlSecurityValidator.validateXmlConfig(inputSchema);
+            }
             InterfaceVersion version = interfaceVersionService.saveSchema(
                     transno,
-                    (String) schemaMap.get("inputSchema"),
+                    inputSchema,
                     (String) schemaMap.get("outputSchema"),
                     changeLog,
                     operator);
@@ -194,6 +201,10 @@ public class ConfigImportExportController {
         Map<String, Object> templateMap = (Map<String, Object>) configData.get("template");
         if (templateMap != null) {
             String xmlContent = (String) templateMap.get("xmlContent");
+            // 导入前校验 XML 中的 SQL 只读安全性
+            if (xmlContent != null && !xmlContent.isEmpty()) {
+                sqlSecurityValidator.validateXmlConfig(xmlContent);
+            }
             InterfaceTemplate existingTemplate = interfaceTemplateService.getByTransno(transno);
 
             if (existingTemplate == null) {

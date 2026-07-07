@@ -5,20 +5,20 @@
         <el-button type="primary" @click="showDialog(null)" v-role="'USER'">新增应用</el-button>
       </div>
 
-      <el-table :data="tableData" border stripe>
+      <el-table :data="tableData" border stripe v-loading="loading" empty-text="暂无应用数据">
         <el-table-column prop="appId" label="应用ID" width="180" />
         <el-table-column prop="appName" label="应用名称" width="180" />
         <el-table-column prop="appSecret" label="密钥" width="200" show-overflow-tooltip />
         <el-table-column prop="allowedTransnos" label="授权接口" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
+            <el-tag :type="COMMON_STATUS_TYPE[row.status] || 'info'">{{ COMMON_STATUS[row.status] || '未知' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="showDialog(row)" v-role="'USER'">编辑</el-button>
-            <el-button size="small" type="warning" @click="handleGenToken(row)">签发Token</el-button>
+            <el-button size="small" type="warning" @click="handleGenToken(row)" v-role="'DEPT_MANAGER'">签发Token</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row)" v-role="'DEPT_MANAGER'">删除</el-button>
           </template>
         </el-table-column>
@@ -63,16 +63,25 @@ import { ref, onMounted } from 'vue'
 import { appAuthApi } from '../../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { hasAnyRole } from '../../directives/role'
+import { COMMON_STATUS, COMMON_STATUS_TYPE } from '../../constants/status'
 
 const tableData = ref([])
+const loading = ref(false)
 const dialogVisible = ref(false)
 const tokenDialogVisible = ref(false)
 const tokenValue = ref('')
 const editForm = ref({ appId: '', appName: '', appSecret: '', allowedTransnos: '' })
 
 async function loadData() {
-  const res = await appAuthApi.list()
-  tableData.value = res.data || []
+  loading.value = true
+  try {
+    const res = await appAuthApi.list()
+    tableData.value = res.data || []
+  } catch {
+    tableData.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 function showDialog(row) {

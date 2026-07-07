@@ -11,7 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import java.util.Map;
 
 import static com.sunlc.dsp.common.enums.ErrorCode.TOKEN_MISSING;
@@ -30,7 +31,7 @@ public class DataApiController {
     @PostMapping("/{transno}")
     public ApiResponse<Object> query(
             @PathVariable String transno,
-            @RequestBody ApiRequest<Map<String, Object>> request) {
+            @RequestBody @Valid ApiRequest<Map<String, Object>> request) {
 
         if (request.getHead() != null && request.getHead().getTransno() != null) {
             if (!transno.equals(request.getHead().getTransno())) {
@@ -44,7 +45,13 @@ public class DataApiController {
         try {
             log.info("数据查询: transno={}, appId={}, traceId={}", transno, getAppId(request), traceId);
 
-            Object result = xmlEngine.executeWithConfig(xmlConfigCacheManager.get(transno), request.getRequestData());
+            // 过滤导出专用参数，防止用户注入 _exportPageSize 触发引擎导出分页
+            Map<String, Object> requestData = request.getRequestData();
+            if (requestData != null) {
+                requestData.keySet().removeIf(key -> key.startsWith("_export"));
+            }
+
+            Object result = xmlEngine.executeWithConfig(xmlConfigCacheManager.get(transno), requestData);
 
             log.info("数据查询完成: transno={}, 耗时={}ms", transno, System.currentTimeMillis() - startTime);
             return ApiResponse.success(transno, traceId, result);
@@ -60,7 +67,7 @@ public class DataApiController {
      */
     @PostMapping("/{transno}/export")
     public void onlineExport(@PathVariable String transno,
-                             @RequestBody ApiRequest<Map<String, Object>> request,
+                             @RequestBody @Valid ApiRequest<Map<String, Object>> request,
                              HttpServletResponse response) {
         Map<String, Object> requestData = request.getRequestData();
         if (requestData == null) {

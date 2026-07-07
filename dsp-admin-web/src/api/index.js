@@ -1,4 +1,4 @@
-import request from './request'
+import request, { downloadFile } from './request'
 
 // 认证API
 export const authApi = {
@@ -61,7 +61,8 @@ export const appAuthApi = {
 // 导出任务API
 export const exportApi = {
   list: (params) => request.get('/export/list', { params }),
-  detail: (id) => request.get(`/export/${id}`)
+  detail: (id) => request.get(`/export/${id}`),
+  download: (id, filename) => downloadFile(`/export/${id}/download`, filename)
 }
 
 // 审批管理API
@@ -88,6 +89,11 @@ export const relationApi = {
 // 审计日志API
 export const auditApi = {
   list: (params) => request.get('/audit/list', { params })
+}
+
+// 接口市场API
+export const marketplaceApi = {
+  list: (params) => request.get('/marketplace/list', { params })
 }
 
 // 用户管理API
