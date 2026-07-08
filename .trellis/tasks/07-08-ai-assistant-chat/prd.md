@@ -30,3 +30,42 @@
 - Keep `prd.md` focused on requirements, constraints, and acceptance criteria.
 - Lightweight tasks can remain PRD-only.
 - For complex tasks, add `design.md` for technical design and `implement.md` for execution planning before `task.py start`.
+
+---
+
+## 完成状态（2026-07-09）
+
+**状态：已完成，通过真实联调验收。**
+
+### 提交记录
+
+| 阶段 | commit | 说明 |
+|------|--------|------|
+| P1 持久化层 | `346ccb8` | ai_chat_session / ai_chat_message 实体/Mapper/Service + 建表 SQL |
+| P2 AI 适配层 | `b9c2682` | AiGateway / StreamHandle / AgentScopeAiGateway（HarnessAgent + streamEvents） |
+| P3 检索层 | `80e0b15` | AssetSourceLoader / DocRetriever / SourceCodeRetriever / RetrievalService |
+| P4-A 后端编排+SSE | `5819fe9` | AssistantChatService / ChatSseEmitter / Controller / 并发限制 |
+| P4-B 前端 chat | `39d8126` | Chat.vue / sseParser / assistant API/store / CitationsView |
+| 联调修复 | `562df1d` | 环境变量命名对齐 + SystemMessage 注入修复 |
+
+### 真实联调结论（DeepSeek deepseek-v4-pro，OpenAI 兼容端点）
+
+6 场景验证：
+- 项目相关问题：✅ start → citations → delta → complete，消息落库 status=1
+- 源码兜底：✅ CurrentUserResolver 问题可回答并带 citations
+- 非项目问题：✅ context 为空仍可正常流式回答
+- 取消：⚠️ 基本通过，并发释放有延迟（见已知限制）
+- 历史恢复：✅ 重新查询会话消息全恢复
+- 删除会话：✅ 逻辑删除后返回 403，不可见
+
+### 已知限制
+
+- **取消即时性**：客户端断开后，SseEmitter 的 onCompletion/onError 回调触发有延迟（Spring MVC 已知特性），并发配额释放不是即时的。一期接受。后续如需更强取消即时性，可考虑显式 cancel endpoint、WebSocket 或后端主动任务状态管理。
+- **AgentScope 2.0 SystemMessage 约束**：框架禁止在 inputMessages 注入 SYSTEM 消息，systemPrompt + retrievalContext 已改为合并进 UserMessage 前置（见 `AgentScopeAiGateway.toMessages`）。
+- **AgentSupplier 每次 get 新建 agent**：不复用，避免有状态 agent 跨会话污染；后续如有性能压力可评估池化。
+
+### 安全提醒
+
+- DeepSeek API Key 已在 shell history 暴露，需轮换（不在任何提交内容中）。
+- 历史 commit `09b6320` 存在旧数据库密码，需轮换数据库密码（当前代码已用环境变量占位符，历史清理需单独授权）。
+- `.agentscope/`（AgentScope 运行时目录）已加入 `.gitignore`。
