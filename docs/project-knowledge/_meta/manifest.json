@@ -1,0 +1,35 @@
+{
+  "projectName": "DSP 数据服务平台 (Data Service Platform)",
+  "projectRoot": "/Users/sunlc/my_workspace/dsp",
+  "projectType": {
+    "primaryType": "fullstack",
+    "allTypes": ["fullstack", "monorepo", "microservices", "backend", "frontend"],
+    "confidence": "confirmed",
+    "source": ".codebase/scan-result.json"
+  },
+  "generatedAt": "2026-06-14T17:30:41Z",
+  "scannedAt": "2026-06-14T16:59:25Z",
+  "sourceCommit": "733a0e6562467549b3a53056f9850a5e4545dc9d",
+  "sourceVersion": "后端 dsp-parent 1.0.0（pom.xml）；前端 dsp-admin-web 0.0.0（package.json 占位）",
+  "pipeline": "project-mastery v1（期 1 学习子流程）",
+  "skillVersions": {
+    "pm-scan": "v2",
+    "pm-techstack-generic": "v1",
+    "pm-conventions": "v1",
+    "pm-api-index": "v1",
+    "pm-build-deploy": "v1",
+    "pm-kb-index": "v1",
+    "pm-verify": "v1"
+  },
+  "kbDocs": [
+    { "id": "01", "file": "01-001-项目概览.md", "skill": "pm-scan", "status": "generated" },
+    { "id": "02", "file": "02-001-技术栈与架构.md", "skill": "pm-techstack-generic", "status": "generated" },
+    { "id": "03", "file": "03-001-开发规范.md", "skill": "pm-conventions", "status": "generated" },
+    { "id": "04", "file": "04-001-API索引.md", "skill": "pm-api-index", "status": "generated" },
+    { "id": "05", "file": "05-001-构建打包部署.md", "skill": "pm-build-deploy", "status": "generated" },
+    { "id": "README", "file": "README.md", "skill": "pm-kb-index", "status": "generated" },
+    { "id": "06", "file": "06-001-校验报告.md", "skill": "pm-verify", "status": "generated" }
+  ],
+  "verificationStatus": "partial（抽样 52 条：一致 41 / 不一致 5 项 / 无法核对 6 项；0 严重、1 中等、4 轻微；架构与调用链一致，Dubbo 校正经独立复核确认成立）",
+  "subprocess": "learning"
+}

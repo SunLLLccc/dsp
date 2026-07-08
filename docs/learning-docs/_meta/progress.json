@@ -1,0 +1,25 @@
+{
+  "projectName": "DSP 数据服务平台",
+  "projectRoot": "/Users/sunlc/my_workspace/dsp",
+  "generatedAt": "2026-06-14T12:58:26Z",
+  "skillVersion": "learn-project v1",
+  "sourceCommit": "733a0e6",
+  "features": [
+    {"name": "XML DSL 数据查询引擎", "selected": true, "slug": "01-xml-dsl-engine", "prompt": "features/prompts/01-xml-dsl-engine.md", "doc": "docs/01-xml-dsl-engine.md", "status": "done"},
+    {"name": "DAG 多查询并行编排", "selected": true, "slug": "02-dag-orchestration", "prompt": "features/prompts/02-dag-orchestration.md", "doc": "docs/02-dag-orchestration.md", "status": "done"},
+    {"name": "动态 SQL 处理", "selected": false, "status": "skipped"},
+    {"name": "多源查询执行器路由", "selected": false, "status": "skipped"},
+    {"name": "分页查询处理", "selected": false, "status": "skipped"},
+    {"name": "结果映射与内置函数注册表", "selected": false, "status": "skipped"},
+    {"name": "XML 配置多级缓存", "selected": false, "status": "skipped"},
+    {"name": "接口版本 + 审批发布流水线", "selected": false, "status": "skipped"},
+    {"name": "在线/离线数据导出", "selected": false, "status": "skipped"},
+    {"name": "多数据源动态管理", "selected": false, "status": "skipped"},
+    {"name": "统一 API 契约层", "selected": false, "status": "skipped"},
+    {"name": "JWT 签名鉴权 + 防重放", "selected": false, "status": "skipped"},
+    {"name": "RBAC 角色权限双防线", "selected": false, "status": "skipped"},
+    {"name": "管理操作审计日志 AOP", "selected": false, "status": "skipped"},
+    {"name": "接口配置导入/导出", "selected": false, "status": "skipped"},
+    {"name": "接口模板管理", "selected": false, "status": "skipped"}
+  ]
+}

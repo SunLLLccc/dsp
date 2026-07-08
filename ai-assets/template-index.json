@@ -1,0 +1,355 @@
+{
+  "version": "1.0",
+  "description": "XML DSL 模板索引。基于 template/README.md 和 template/*.xml 建立。本索引只引用 template/ 中的模板，不复制模板内容。template/ 是 XML DSL 模板唯一事实来源。",
+  "principles": {
+    "templateDriven": "XML 生成必须模板驱动：先按接口特征选择模板，再填充。AI 不允许自由编写 XML。",
+    "noCoverageFallback": "若现有 16 个模板无法覆盖需求，系统提示不支持或需要人工扩展模板，而不是自由生成偏离 DSL 约定的 XML。",
+    "text2apiPhase1": "Text2API 一期只针对 SQL 类接口（appliesTo 包含 sql 的模板）。非 SQL 模板（http/dubbo/mongo 及其混合）一期不作为 Text2API 生成目标，但索引完整记录其能力。"
+  },
+  "datasourceTypes": {
+    "sql": ["mysql", "doris", "sql", "oracle", "postgresql"],
+    "http": ["http"],
+    "dubbo": ["dubbo"],
+    "mongo": ["mongo"]
+  },
+  "templates": [
+    {
+      "id": "01",
+      "file": "template/01-simple-sql-query.xml",
+      "scenario": "简单单表 SQL 查询 + 基础结果映射（如根据 ID 查详情、字典查询）",
+      "appliesTo": ["sql"],
+      "selectionSignals": [
+        "单数据源、单 SQL、无动态条件、无分页、无依赖编排",
+        "需要简单字段映射或函数转换（如日期格式化）"
+      ],
+      "notFor": [
+        "多条件可选筛选（用 02）",
+        "需要分页（用 03/04）",
+        "多查询编排（用 09/10）"
+      ],
+      "queryTypes": ["mysql"],
+      "requiresUserConfirmation": ["SQL 文本", "datasource name", "resultMap 字段映射"],
+      "source": "template/README.md + 模板头部注释"
+    },
+    {
+      "id": "02",
+      "file": "template/02-dynamic-sql-query.xml",
+      "scenario": "动态 SQL 查询：多条件可选筛选 + 集合遍历（IN 语句）",
+      "appliesTo": ["sql"],
+      "selectionSignals": [
+        "条件可选（<if test=\"...\">）",
+        "需要生成 IN (...) 语句（<foreach>）",
+        "多条件组合列表查询"
+      ],
+      "notFor": [
+        "固定条件单查（用 01）",
+        "需要分页（配合 03/04）"
+      ],
+      "queryTypes": ["mysql"],
+      "requiresUserConfirmation": [
+        "<if> 条件表达式（注意 $ 前缀 + SpEL 语法）",
+        "<foreach> collection/item/open/close/separator",
+        "IN 语句注入安全性"
+      ],
+      "source": "template/README.md + 模板头部注释"
+    },
+    {
+      "id": "03",
+      "file": "template/03-cursor-pagination.xml",
+      "scenario": "游标分页查询（cursor-based pagination），避免深分页性能问题",
+      "appliesTo": ["sql"],
+      "selectionSignals": [
+        "大数据量列表、移动端下拉加载",
+        "客户端能提供上一页最后 ID（lastId）",
+        "需要避免 OFFSET 深分页性能问题"
+      ],
+      "notFor": [
+        "PC 端传统页码翻页（用 04）",
+        "无需分页的单查（用 01）"
+      ],
+      "queryTypes": ["mysql"],
+      "requiresUserConfirmation": [
+        "order-by 排序字段",
+        "page-size-param / last-id-param 参数名",
+        "default-page-size / max-page-size 上限"
+      ],
+      "source": "template/README.md + 模板头部注释"
+    },
+    {
+      "id": "04",
+      "file": "template/04-optimized-pagination.xml",
+      "scenario": "优化分页查询（子查询方式），PC 端传统页码翻页",
+      "appliesTo": ["sql"],
+      "selectionSignals": [
+        "PC 端传统分页、报表翻页",
+        "客户端提供页码（从 1 开始）",
+        "需要深分页优化（子查询改写）"
+      ],
+      "notFor": [
+        "移动端游标加载（用 03）",
+        "无需分页的单查（用 01）"
+      ],
+      "queryTypes": ["mysql"],
+      "requiresUserConfirmation": [
+        "order-by 排序字段",
+        "page-num-param / page-size-param 参数名",
+        "深分页子查询改写后的执行计划复核"
+      ],
+      "source": "template/README.md + 模板头部注释"
+    },
+    {
+      "id": "05",
+      "file": "template/05-http-query.xml",
+      "scenario": "HTTP GET 外部接口调用（无需 datasource）",
+      "appliesTo": ["http"],
+      "selectionSignals": [
+        "调用外部 HTTP API（GET）",
+        "聚合第三方接口数据"
+      ],
+      "notFor": [
+        "需要 POST 请求体（用 06）",
+        "本地数据库查询（用 01~04）"
+      ],
+      "queryTypes": ["http"],
+      "requiresUserConfirmation": [
+        "URL 与请求头（含 token 等敏感参数来源）",
+        "响应路径提取规则"
+      ],
+      "source": "template/README.md + 模板头部注释",
+      "text2apiPhase1": "一期 Text2API 不针对 HTTP 接口，仅记录能力。"
+    },
+    {
+      "id": "06",
+      "file": "template/06-http-post-query.xml",
+      "scenario": "HTTP POST 外部接口调用 + 请求体 + 响应路径提取（无需 datasource）",
+      "appliesTo": ["http"],
+      "selectionSignals": [
+        "向外部系统提交数据",
+        "调用需要请求体的 POST API"
+      ],
+      "notFor": [
+        "GET 调用（用 05）",
+        "本地数据库查询（用 01~04）"
+      ],
+      "queryTypes": ["http"],
+      "requiresUserConfirmation": [
+        "URL、请求头、请求体模板",
+        "参数替换 #{$requestData['paramName']} 安全性"
+      ],
+      "source": "template/README.md + 模板头部注释",
+      "text2apiPhase1": "一期 Text2API 不针对 HTTP 接口，仅记录能力。"
+    },
+    {
+      "id": "07",
+      "file": "template/07-dubbo-query.xml",
+      "scenario": "Dubbo 泛化调用（引用 DUBBO 类型数据源）",
+      "appliesTo": ["dubbo"],
+      "selectionSignals": [
+        "调用内部 Dubbo 微服务",
+        "不引入服务接口 JAR 包（泛化调用）"
+      ],
+      "notFor": [
+        "HTTP 外部接口（用 05/06）",
+        "本地数据库查询（用 01~04）"
+      ],
+      "queryTypes": ["dubbo"],
+      "requiresUserConfirmation": [
+        "service 接口全限定名、method、version、group、timeout",
+        "方法参数 type/value"
+      ],
+      "source": "template/README.md + 模板头部注释",
+      "text2apiPhase1": "一期 Text2API 不针对 Dubbo 接口，仅记录能力。"
+    },
+    {
+      "id": "08",
+      "file": "template/08-mongo-query.xml",
+      "scenario": "MongoDB 查询（filter/projection/sort/limit/skip）",
+      "appliesTo": ["mongo"],
+      "selectionSignals": [
+        "查询 MongoDB 集合",
+        "日志、非结构化数据查询"
+      ],
+      "notFor": [
+        "JDBC SQL 类查询（用 01~04）",
+        "需要元数据读取作为 Text2SQL 依据（一期元数据仅 JDBC）"
+      ],
+      "queryTypes": ["mongo"],
+      "requiresUserConfirmation": [
+        "collection 名称",
+        "filter/projection/sort 逻辑",
+        "参数替换用扁平参数名 #{paramName}（非 #{$requestData['...']}）"
+      ],
+      "source": "template/README.md + 模板头部注释",
+      "text2apiPhase1": "一期 Text2API 不针对 Mongo 接口，仅记录能力。"
+    },
+    {
+      "id": "09",
+      "file": "template/09-parallel-orchestration.xml",
+      "scenario": "多查询并行编排（无依赖，结果汇总到响应）",
+      "appliesTo": ["sql"],
+      "selectionSignals": [
+        "多个独立查询互不依赖",
+        "仪表盘、聚合多个独立数据源的概览页",
+        "需要 CompletableFuture 并行执行"
+      ],
+      "notFor": [
+        "查询之间存在依赖（用 10）",
+        "单查询（用 01）"
+      ],
+      "queryTypes": ["mysql"],
+      "requiresUserConfirmation": [
+        "并行查询的独立性（确认无 depends）",
+        "各 resultMap 与 responseData mapTo 组装关系"
+      ],
+      "source": "template/README.md + 模板头部注释"
+    },
+    {
+      "id": "10",
+      "file": "template/10-dependency-orchestration.xml",
+      "scenario": "多查询依赖编排（串行 + 并行混合，depends + #{} 引用）",
+      "appliesTo": ["sql"],
+      "selectionSignals": [
+        "查询间存在依赖（后续查询需要前序查询结果）",
+        "级联查询、先查后聚合、跨表关联",
+        "需要 DAG 依赖排序"
+      ],
+      "notFor": [
+        "查询完全独立无依赖（用 09）",
+        "单查询（用 01）"
+      ],
+      "queryTypes": ["mysql"],
+      "requiresUserConfirmation": [
+        "depends 依赖关系正确性",
+        "#{$queryId['fieldName']} 引用的字段存在性",
+        "单行/多行结果的引用方式差异"
+      ],
+      "source": "template/README.md + 模板头部注释"
+    },
+    {
+      "id": "11",
+      "file": "template/11-result-mapping-functions.xml",
+      "scenario": "结果映射与内置函数转换演示（日期/字符串/类型/数学/空值/条件/JSON/聚合）",
+      "appliesTo": ["sql"],
+      "selectionSignals": [
+        "需要对查询结果进行格式化或转换",
+        "需要查阅内置函数用法（fn:DATE_FORMAT、fn:TYPE_CONVERT、fn:IFF 等）"
+      ],
+      "notFor": [
+        "作为独立接口模板使用（它是函数用法演示样例）",
+        "完整业务接口生成（按需参考其中函数片段，组合到其他模板）"
+      ],
+      "queryTypes": ["mysql"],
+      "requiresUserConfirmation": [
+        "function 函数名与参数顺序",
+        "fn:IFF 条件判断的字段语义（status 等布尔型字段）"
+      ],
+      "source": "template/README.md + 模板头部注释",
+      "note": "作为函数片段参考库，Text2API 生成其他 SQL 接口时按需复制函数用法到目标 resultMap，而非整体套用此模板。"
+    },
+    {
+      "id": "12",
+      "file": "template/12-multi-datasource.xml",
+      "scenario": "多数据源 SQL 查询（如 MySQL + Doris + PostgreSQL）",
+      "appliesTo": ["sql"],
+      "selectionSignals": [
+        "同一接口查询不同数据源",
+        "跨库数据聚合、OLTP + OLAP 混合查询",
+        "各 query 通过 datasource 属性指定不同数据源"
+      ],
+      "notFor": [
+        "单数据源查询（用 01~04）",
+        "需要元数据读取作为 Text2SQL 依据时，需确认各数据源均为 JDBC SQL 类型"
+      ],
+      "queryTypes": ["mysql", "doris", "postgresql"],
+      "requiresUserConfirmation": [
+        "各 query 的 datasource name 与类型",
+        "无 depends 的查询并行执行是否符合预期"
+      ],
+      "source": "template/README.md + 模板头部注释"
+    },
+    {
+      "id": "13",
+      "file": "template/13-sql-http-hybrid.xml",
+      "scenario": "SQL + HTTP 混合查询（依赖传递，本地数据 + 外部接口聚合）",
+      "appliesTo": ["sql", "http"],
+      "selectionSignals": [
+        "先查数据库，再用查到的数据调用外部 HTTP 接口",
+        "q2 依赖 q1（depends=\"q1\"）"
+      ],
+      "notFor": [
+        "纯 SQL 查询（用 01~10）",
+        "纯 HTTP 调用（用 05/06）"
+      ],
+      "queryTypes": ["mysql", "http"],
+      "requiresUserConfirmation": [
+        "HTTP 依赖字段引用 #{$q1['fieldName']} 正确性",
+        "外部接口 URL/参数安全性"
+      ],
+      "source": "template/README.md + 模板头部注释",
+      "text2apiPhase1": "一期 Text2API 仅针对纯 SQL 类接口，混合查询仅记录能力。"
+    },
+    {
+      "id": "14",
+      "file": "template/14-sql-dubbo-hybrid.xml",
+      "scenario": "SQL + Dubbo 混合查询（本地数据 + 内部微服务聚合）",
+      "appliesTo": ["sql", "dubbo"],
+      "selectionSignals": [
+        "先查数据库获取参数，再调 Dubbo 服务",
+        "q2 依赖 q1"
+      ],
+      "notFor": [
+        "纯 SQL 查询（用 01~10）",
+        "纯 Dubbo 调用（用 07）"
+      ],
+      "queryTypes": ["mysql", "dubbo"],
+      "requiresUserConfirmation": [
+        "Dubbo 参数 type/value 引用 #{$q1['fieldName']} 正确性",
+        "service/method/version 配置"
+      ],
+      "source": "template/README.md + 模板头部注释",
+      "text2apiPhase1": "一期 Text2API 仅针对纯 SQL 类接口，混合查询仅记录能力。"
+    },
+    {
+      "id": "15",
+      "file": "template/15-no-resultmap-query.xml",
+      "scenario": "无结果映射的简单查询，直接返回原始结果",
+      "appliesTo": ["sql"],
+      "selectionSignals": [
+        "不需要字段映射或转换",
+        "简单字典查询、配置查询",
+        "直接返回数据库原始字段"
+      ],
+      "notFor": [
+        "需要字段重命名或函数转换（用 01）",
+        "复杂结果组装（用 09/10）"
+      ],
+      "queryTypes": ["mysql"],
+      "requiresUserConfirmation": [
+        "确认确实无需 resultMap",
+        "responseData mapTo 引用 queryId 的方式"
+      ],
+      "source": "template/README.md + 模板头部注释"
+    },
+    {
+      "id": "16",
+      "file": "template/16-full-featured-composite.xml",
+      "scenario": "综合全功能示例（多数据源、多查询类型、依赖编排、动态 SQL、分页、函数、结果映射）",
+      "appliesTo": ["sql", "http", "dubbo", "mongo"],
+      "selectionSignals": [
+        "复杂业务聚合接口的参考模板",
+        "需要查阅 DAG 编排（多源 + 多类型 + 依赖）综合用法"
+      ],
+      "notFor": [
+        "作为简单接口的生成起点（按需拆解为更聚焦的模板）",
+        "Text2API 一期 SQL 接口生成（一期不生成含 http/dubbo/mongo 的复合接口）"
+      ],
+      "queryTypes": ["mysql", "http", "dubbo", "mongo"],
+      "requiresUserConfirmation": [
+        "DAG 编排流程正确性（参考模板内 q1_trades → q2_risk/q3_customer；q4_logs 并行）",
+        "各查询类型与数据源匹配"
+      ],
+      "source": "template/README.md + 模板头部注释",
+      "text2apiPhase1": "一期 Text2API 仅针对纯 SQL 类接口，综合模板仅记录能力供参考。"
+    }
+  ]
+}

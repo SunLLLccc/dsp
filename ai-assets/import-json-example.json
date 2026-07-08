@@ -1,0 +1,30 @@
+{
+  "interfaceInfo": {
+    "transno": "USER_GET_BY_ID_EXAMPLE",
+    "name": "根据ID查询用户",
+    "systemName": "USER_CENTER",
+    "systemId": 100,
+    "description": "根据用户ID查询用户详细信息（Text2API 导入 JSON 样例，基于 template/01-simple-sql-query.xml 精简）"
+  },
+  "schema": {
+    "inputSchema": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<interface transno=\"USER_GET_BY_ID_EXAMPLE\" name=\"根据ID查询用户\" description=\"根据用户ID查询用户详细信息\">\n    <requestData>\n        <param name=\"userId\" type=\"String\" required=\"true\" description=\"用户ID\" />\n    </requestData>\n    <datasource name=\"ds_main\" />\n    <query id=\"q1\" type=\"mysql\" datasource=\"ds_main\">\n        SELECT id, user_name, email, status, created_at\n        FROM users\n        WHERE id = #{$requestData['userId']}\n    </query>\n    <resultMap id=\"userMap\" query=\"q1\">\n        <field name=\"userId\" column=\"id\" />\n        <field name=\"userName\" column=\"user_name\" />\n        <field name=\"email\" column=\"email\" />\n        <field name=\"status\" column=\"status\" />\n        <field name=\"createdAt\" column=\"created_at\" function=\"fn:DATE_FORMAT,yyyy-MM-dd HH:mm:ss\" />\n    </resultMap>\n    <responseData resultMap=\"userMap\">\n        <field name=\"user\" as=\"map\" />\n    </responseData>\n</interface>",
+    "outputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"user\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"userId\": { \"type\": \"string\" },\n        \"userName\": { \"type\": \"string\" },\n        \"email\": { \"type\": \"string\" },\n        \"status\": { \"type\": \"string\" },\n        \"createdAt\": { \"type\": \"string\", \"format\": \"date-time\" }\n      }\n    }\n  }\n}",
+    "changeLog": "Text2API 生成：用户详情查询接口初始版本"
+  },
+  "template": {
+    "xmlContent": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<interface transno=\"USER_GET_BY_ID_EXAMPLE\" name=\"根据ID查询用户\" description=\"根据用户ID查询用户详细信息\">\n    <requestData>\n        <param name=\"userId\" type=\"String\" required=\"true\" description=\"用户ID\" />\n    </requestData>\n    <datasource name=\"ds_main\" />\n    <query id=\"q1\" type=\"mysql\" datasource=\"ds_main\">\n        SELECT id, user_name, email, status, created_at\n        FROM users\n        WHERE id = #{$requestData['userId']}\n    </query>\n    <resultMap id=\"userMap\" query=\"q1\">\n        <field name=\"userId\" column=\"id\" />\n        <field name=\"userName\" column=\"user_name\" />\n        <field name=\"email\" column=\"email\" />\n        <field name=\"status\" column=\"status\" />\n        <field name=\"createdAt\" column=\"created_at\" function=\"fn:DATE_FORMAT,yyyy-MM-dd HH:mm:ss\" />\n    </resultMap>\n    <responseData resultMap=\"userMap\">\n        <field name=\"user\" as=\"map\" />\n    </responseData>\n</interface>",
+    "versionNo": 1
+  },
+  "changeLog": "Text2API 生成用户详情查询接口（样例）",
+  "_notes": {
+    "_comment": "开发说明字段，不参与 ConfigImportExportController.importConfig 解析（Controller 只读 interfaceInfo/schema/template/changeLog）。仅供 Text2API 实现和审核参考，可按需保留或删除。",
+    "fieldSemantics": {
+      "schema.inputSchema": "XML 配置字符串，非 JSON Schema。导入时经 sqlSecurityValidator.validateXmlConfig 做 SQL 只读安全校验。",
+      "schema.outputSchema": "JSON Schema 字符串，描述响应结构。",
+      "template.xmlContent": "XML 配置字符串。运行时引擎执行以本字段为准；inputSchema 仅作 Schema 版本记录与导入期校验。"
+    },
+    "sourceIdentity": "简单 SQL 场景下 schema.inputSchema 与 template.xmlContent 可同源（本样例即如此）。",
+    "legacyWarning": "项目里旧的 generateXmlFromSchema() 曾把 inputSchema 当 JSON Schema 解析，与当前 importConfig 语义冲突，后续 Text2API 实现不应沿用该旧语义。",
+    "codeReference": "dsp-parent/dsp-admin-service/src/main/java/com/sunlc/dsp/adminservice/controller/ConfigImportExportController.java"
+  }
+}
