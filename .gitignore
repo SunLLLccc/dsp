@@ -64,5 +64,8 @@ export-files/
 *.env.local
 *.env.*.local
 
+# ==================== AgentScope 运行时 ====================
+.agentscope/
+
 # ==================== 开发文档 ====================
 docs/superpowers/

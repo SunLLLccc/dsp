@@ -1,0 +1,31 @@
+{
+  "id": "ai-assistant-text2api-planning",
+  "name": "ai-assistant-text2api-planning",
+  "title": "智能助手与 Text2API 能力规划",
+  "description": "",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "sunlc",
+  "assignee": "sunlc",
+  "createdAt": "2026-07-08",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "codex-product-manager-intake-rule",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "07-08-text2api-web-flow",
+    "07-08-ai-assistant-chat",
+    "07-08-dsp-agent-skills",
+    "07-08-knowledge-template-assets"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

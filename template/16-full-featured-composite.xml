@@ -72,7 +72,7 @@
 
     <!-- 查询3: Dubbo查询客户信息（依赖q1，用q1单行结果的字段） -->
     <query id="q3_customer" type="dubbo" datasource="dubbo_ds" depends="q1_trades">
-        <dubbo service="com.fintechervision.customer.CustomerService"
+        <dubbo service="com.sunlc.customer.CustomerService"
                method="getCustomerDetail"
                version="1.0.0"
                timeout="3000">

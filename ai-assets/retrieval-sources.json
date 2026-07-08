@@ -1,0 +1,135 @@
+{
+  "version": "1.0",
+  "description": "DSP 智能助手项目问答检索配置。Web 侧（ai-assistant-chat）一期采用「本地文档优先、源码兜底」策略，预留 RAG 知识库扩展。本文件只描述检索范围与规则，不包含任何读取实现。",
+  "strategy": {
+    "primary": "local-docs",
+    "fallback": "source-code",
+    "note": "问题属于本项目相关时：先检索本地文档；文档结果不足以回答具体实现/函数原理/代码路径时，再触发源码兜底检索。非项目问题直接调 AI，不走本地检索。"
+  },
+  "docs": {
+    "description": "文档优先检索源。优先级从上到下递减。",
+    "sources": [
+      {
+        "path": "docs/project-knowledge/",
+        "type": "directory",
+        "title": "项目知识库（pm-* 系列 skill 生成）",
+        "covers": [
+          "01-001-项目概览.md",
+          "02-001-技术栈与架构.md",
+          "03-001-开发规范.md",
+          "04-001-API索引.md",
+          "05-001-构建打包部署.md"
+        ],
+        "note": "06-001-校验报告.md 待生成，检索时需容忍缺失。"
+      },
+      {
+        "path": "docs/xml-dsl-reference.md",
+        "type": "file",
+        "title": "XML DSL 配置参考",
+        "covers": [
+          "核心结构、参数引用、动态 SQL、SpEL 注意事项、分页、数据源类型、内置函数"
+        ]
+      },
+      {
+        "path": "docs/engine-architecture.md",
+        "type": "file",
+        "title": "XML 引擎架构与执行流程"
+      },
+      {
+        "path": "template/README.md",
+        "type": "file",
+        "title": "XML 模板说明（数据源引用规则与模板列表）"
+      },
+      {
+        "path": "template/*.xml",
+        "type": "glob",
+        "title": "16 个 XML DSL 配置模板示例",
+        "note": "作为 XML DSL 真实用法的样例，配合 docs/xml-dsl-reference.md 检索。"
+      }
+    ]
+  },
+  "sourceCodeFallback": {
+    "description": "源码兜底检索白名单。仅在文档检索结果不足时触发。",
+    "trigger": "文档检索结果无法覆盖具体实现、函数原理或代码路径类问题时触发。",
+    "whitelist": [
+      {
+        "path": "dsp-parent/*/src/main/java",
+        "scope": "后端各模块主源码",
+        "modules": [
+          "dsp-common",
+          "dsp-core",
+          "dsp-engine",
+          "dsp-data-service",
+          "dsp-offline-service",
+          "dsp-admin-service"
+        ]
+      },
+      {
+        "path": "dsp-parent/*/src/test/java",
+        "scope": "后端各模块测试源码（用法样例）"
+      },
+      {
+        "path": "dsp-admin-web/src",
+        "scope": "前端 Vue 3 管理后台源码"
+      }
+    ],
+    "ignore": {
+      "description": "源码兜底检索忽略规则，避免检索构建产物、密钥配置和大文件。",
+      "paths": [
+        "**/target/",
+        "**/node_modules/",
+        "**/dist/",
+        "**/build/"
+      ],
+      "filePatterns": [
+        "*.class",
+        "*.jar",
+        "*.war",
+        "*.min.js",
+        "*.min.css",
+        "*.map",
+        "package-lock.json",
+        "yarn.lock"
+      ],
+      "sensitive": [
+        "application*.yml",
+        "application*.properties",
+        "*application-prod*",
+        "**/resources/application*.yml",
+        "**/*secret*",
+        "**/*credentials*",
+        "**/*.key",
+        "**/*.pem",
+        "**/*.env"
+      ],
+      "note": "密钥/环境配置一律不进入检索，也不进入回答引用。生产环境连接串、密码、JWT 密钥等敏感信息严格排除。",
+      "maxFileSizeKB": 512,
+      "maxFileSizeNote": "超过该阈值的文件跳过检索，避免吞掉检索预算。"
+    }
+  },
+  "citationRules": {
+    "description": "回答引用来源展示规则。",
+    "docs": {
+      "show": [
+        "文档相对路径",
+        "文档标题",
+        "所在章节（如可识别）"
+      ],
+      "note": "优先展示文档路径和标题，帮助用户定位。"
+    },
+    "sourceCode": {
+      "show": [
+        "文件相对路径",
+        "类名",
+        "方法名（如适用）"
+      ],
+      "note": "回答正文优先解释原理和调用链，不默认展示大段源码。仅在用户追问时按需引用关键片段。"
+    }
+  },
+  "ragExtension": {
+    "description": "RAG 知识库扩展边界（一期未启用，预留）。",
+    "enabled": false,
+    "note": "一期不接入向量库或 RAG 知识库。后续接入需在本文件扩展 vectorStore / embedding 配置，并由用户确认是否更新知识库内容。",
+    "updatePolicy": "是否更新 RAG 知识库由用户确认，未经确认的会话内容不写入知识库。"
+  }
+}

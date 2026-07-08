@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.fintechervision</groupId>
+        <groupId>com.sunlc</groupId>
         <artifactId>dsp-parent</artifactId>
         <version>1.0.0</version>
     </parent>
@@ -16,15 +16,15 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.fintechervision</groupId>
+            <groupId>com.sunlc</groupId>
             <artifactId>dsp-common</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.fintechervision</groupId>
+            <groupId>com.sunlc</groupId>
             <artifactId>dsp-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.fintechervision</groupId>
+            <groupId>com.sunlc</groupId>
             <artifactId>dsp-engine</artifactId>
         </dependency>
 
@@ -52,6 +52,16 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+        <!-- AgentScope Java（P0 依赖可用性验证）。通过官方 v2 推荐的 HarnessAgent 接入；业务层仍只依赖项目自有 AiGateway 适配层，不直接绑定 HarnessAgent / AgentScope API。 -->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-harness</artifactId>
+        </dependency>
+        <!-- AgentScope all-in-one：提供 OpenAIChatModel 等模型供应商实现，供 AgentScopeAiGateway 构造真实 HarnessAgent。不引入 spring-boot-starter，避免其 autoconfigure 与项目自定义配置耦合。 -->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

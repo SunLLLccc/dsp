@@ -21,7 +21,7 @@
     <datasource name="dubbo_ds" />
 
     <query id="q1" type="dubbo" datasource="dubbo_ds">
-        <dubbo service="com.fintechervision.customer.CustomerProfileService"
+        <dubbo service="com.sunlc.customer.CustomerProfileService"
                method="getProfile"
                version="1.0.0"
                group="production"

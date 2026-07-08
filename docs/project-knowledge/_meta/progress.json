@@ -1,0 +1,16 @@
+{
+  "projectName": "DSP 数据服务平台 (Data Service Platform)",
+  "projectRoot": "/Users/sunlc/my_workspace/dsp",
+  "generatedAt": "2026-06-14T16:58:00Z",
+  "skillVersion": "project-mastery v1",
+  "sourceCommit": "733a0e6",
+  "phases": [
+    { "name": "scan",        "skill": "pm-scan",             "status": "done", "output": [".codebase/scan-result.json", ".codebase/scan-summary.md", "01-001-项目概览.md"] },
+    { "name": "techstack",   "skill": "pm-techstack-generic", "status": "done", "output": ["02-001-技术栈与架构.md"] },
+    { "name": "conventions", "skill": "pm-conventions",       "status": "done", "output": ["03-001-开发规范.md"] },
+    { "name": "api-index",   "skill": "pm-api-index",         "status": "done", "output": ["04-001-API索引.md"] },
+    { "name": "build-deploy","skill": "pm-build-deploy",      "status": "done", "output": ["05-001-构建打包部署.md"] },
+    { "name": "kb-index",    "skill": "pm-kb-index",          "status": "done", "output": ["README.md"] },
+    { "name": "verify",      "skill": "pm-verify",            "status": "done", "output": ["06-001-校验报告.md"] }
+  ]
+}
