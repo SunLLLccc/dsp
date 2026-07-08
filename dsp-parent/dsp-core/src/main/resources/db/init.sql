@@ -1275,3 +1275,44 @@ INSERT INTO interface_info (transno, name, system_name, status, description, cur
 ('LOAN_RISK_ASSESS',       '贷款风险评估',         '示例系统', 3, '查库获取用户贷款信息，再调Dubbo风控服务评估风险',      1, 'system', 'system'),
 ('DICT_QUERY',             '字典查询',             '示例系统', 3, '查询数据字典，直接返回原始结果',                       1, 'system', 'system'),
 ('TRADE_DETAIL_AGGREGATE', '交易详情聚合查询',      '示例系统', 3, '综合查询交易详情，聚合多数据源信息',                   1, 'system', 'system');
+
+-- ============================================================
+-- AI 智能助手模块（07-08-ai-assistant-chat）
+-- 与业务表分区，前缀 ai_chat_*。遵循逻辑删除约定。
+-- ============================================================
+
+-- -----------------------------------------------------------
+-- 20. AI 智能助手会话表
+-- -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_chat_session (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键',
+    session_id      VARCHAR(64)     NOT NULL COMMENT '业务会话 ID（UUID）',
+    title           VARCHAR(255)    DEFAULT NULL COMMENT '会话标题（取首问摘要）',
+    user_id         BIGINT          NOT NULL COMMENT '归属用户 ID（adminUserId）',
+    user_name       VARCHAR(64)     DEFAULT NULL COMMENT '归属用户名（冗余展示）',
+    created_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-正常 1-已删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_session_id (session_id),
+    KEY idx_user_id (user_id)
+) ENGINE=InnoDB COMMENT='AI 智能助手会话表';
+
+-- -----------------------------------------------------------
+-- 21. AI 智能助手消息表
+-- 软删语义：业务流程不主动删除 ai_chat_message，消息保留用于审计；
+-- deleted 字段预留默认 0，与项目其它表结构一致。
+-- 对用户不可见通过「查询入口先校验 session 未删除」实现（P4 由 AssistantChatService 组合入口保证）。
+-- -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_chat_message (
+    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键',
+    session_id      VARCHAR(64)     NOT NULL COMMENT '业务会话 ID（关联 ai_chat_session.session_id）',
+    role            VARCHAR(16)     NOT NULL COMMENT '角色：user / assistant',
+    content         MEDIUMTEXT      COMMENT '消息正文',
+    citations       TEXT            COMMENT '引用来源 JSON（docs + sources），可空',
+    status          TINYINT         NOT NULL DEFAULT 0 COMMENT '状态：0-生成中 1-完成 2-失败 3-取消',
+    created_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    deleted         TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-正常 1-已删除（预留，消息保留用于审计）',
+    PRIMARY KEY (id),
+    KEY idx_session_id (session_id)
+) ENGINE=InnoDB COMMENT='AI 智能助手消息表';
