@@ -3,7 +3,6 @@ package com.sunlc.dsp.admin.assistant.ai;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.AgentEvent;
 import io.agentscope.core.message.Msg;
-import io.agentscope.core.message.SystemMessage;
 import io.agentscope.core.message.UserMessage;
 import io.agentscope.harness.agent.HarnessAgent;
 import lombok.extern.slf4j.Slf4j;
@@ -114,18 +113,23 @@ public class AgentScopeAiGateway implements AiGateway {
         }
     }
 
-    /** 把 {@link ChatRequest} 翻译为 AgentScope {@link Msg} 列表（System + history + User）。 */
+    /**
+     * 把 {@link ChatRequest} 翻译为 AgentScope {@link Msg} 列表。
+     * <p>
+     * 注意：AgentScope 2.0 禁止在 inputMessages 中注入 SYSTEM 消息（会抛
+     * "Hooks must not inject SYSTEM messages"）。因此 systemPrompt + retrievalContext
+     * 合并到首条 UserMessage 的前置说明中，不输出 SystemMessage。
+     */
     private List<Msg> toMessages(ChatRequest request) {
         List<Msg> msgs = new ArrayList<>();
+        // systemPrompt 与 retrievalContext 作为用户问题的前置上下文
+        StringBuilder prefix = new StringBuilder();
         String systemPrompt = request.getSystemPrompt();
-        if (systemPrompt == null) {
-            systemPrompt = "";
+        if (systemPrompt != null && !systemPrompt.isEmpty()) {
+            prefix.append(systemPrompt).append("\n\n");
         }
         if (request.getRetrievalContext() != null && !request.getRetrievalContext().isEmpty()) {
-            systemPrompt = systemPrompt + "\n\n检索上下文：\n" + request.getRetrievalContext();
-        }
-        if (!systemPrompt.isEmpty()) {
-            msgs.add(new SystemMessage(systemPrompt));
+            prefix.append("检索上下文：\n").append(request.getRetrievalContext()).append("\n\n");
         }
         for (ChatMessage h : request.getHistory()) {
             if ("assistant".equalsIgnoreCase(h.getRole())) {
@@ -134,14 +138,18 @@ public class AgentScopeAiGateway implements AiGateway {
                 msgs.add(new UserMessage(h.getContent()));
             }
         }
-        msgs.add(new UserMessage(request.getUserMessage()));
+        // 当前问题（含前置 system/retrieval 上下文）
+        String userContent = prefix.length() > 0
+                ? prefix + request.getUserMessage()
+                : request.getUserMessage();
+        msgs.add(new UserMessage(userContent));
         return msgs;
     }
 
     private void validateConfig() {
         if (isBlank(properties.getApiKey())) {
             throw new IllegalStateException(
-                    "dsp.assistant.api-key 未配置（环境变量 DSP_AI_API_KEY），无法调用 AI 网关");
+                    "dsp.assistant.api-key 未配置（环境变量 DSP_ASSISTANT_API_KEY），无法调用 AI 网关");
         }
         if (isBlank(properties.getModel())) {
             throw new IllegalStateException("dsp.assistant.model 未配置，无法调用 AI 网关");
