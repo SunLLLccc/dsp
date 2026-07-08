@@ -510,7 +510,7 @@ INSERT INTO interface_template (transno, system_name, interface_name, xml_conten
     <datasource name="dubbo_ds" />
 
     <query id="q1" type="dubbo" datasource="dubbo_ds">
-        <dubbo service="com.fintechervision.customer.CustomerProfileService"
+        <dubbo service="com.sunlc.customer.CustomerProfileService"
                method="getProfile"
                version="1.0.0"
                group="production"
@@ -1036,7 +1036,7 @@ INSERT INTO interface_template (transno, system_name, interface_name, xml_conten
 
     <!-- 第二步: 用q1的结果调Dubbo风控服务（依赖q1） -->
     <query id="q2_risk" type="dubbo" datasource="dubbo_ds" depends="q1_loan">
-        <dubbo service="com.fintechervision.risk.RiskAssessService"
+        <dubbo service="com.sunlc.risk.RiskAssessService"
                method="assess"
                version="1.0.0"
                timeout="5000">
@@ -1177,7 +1177,7 @@ INSERT INTO interface_template (transno, system_name, interface_name, xml_conten
 
     <!-- 查询3: Dubbo查询客户信息（依赖q1，用q1单行结果的字段） -->
     <query id="q3_customer" type="dubbo" datasource="dubbo_ds" depends="q1_trades">
-        <dubbo service="com.fintechervision.customer.CustomerService"
+        <dubbo service="com.sunlc.customer.CustomerService"
                method="getCustomerDetail"
                version="1.0.0"
                timeout="3000">

@@ -147,6 +147,8 @@ dsp-admin-service/src/main/java/com/sunlc/dsp/adminservice/
 
 ## 6. AI 适配层（AiGateway / AgentScope Java 2.0）
 
+> **AI 框架依赖**：一期使用 `io.agentscope:agentscope-harness:2.0.0-RC5`，以官方 v2 推荐的 `HarnessAgent` 作为 AgentScope 侧入口；`agentscope-core` 作为传递依赖，不作为业务模块直接依赖。
+
 ```
 AssistantService ──依赖──> AiGateway(接口)
                                 └── 实现: AgentScopeAiGateway ──依赖──> AgentScope Java 2.0 API
@@ -155,7 +157,7 @@ AssistantService ──依赖──> AiGateway(接口)
 - `AiGateway` 接口方法（一期）：
   - `void streamChat(ChatRequest req, StreamHandler handler)` — 流式问答，回调 `onDelta/onCitations/onComplete/onError`。
   - `boolean isProjectRelated(String question)` — 一期可选，简单规则或交由 `RetrievalService` 判断。
-- `AgentScopeAiGateway` 负责把 AgentScope Java 2.0 的流式回调适配成 `StreamHandler`，并在内部处理超时/重试/降级。
+- `AgentScopeAiGateway` 内部基于 `HarnessAgent.streamEvents()` 获取 AgentScope 事件流（Flux），并将 AgentScope 事件适配为项目自有 `StreamHandler` 的 `onDelta/onCitations/onComplete/onError`，再由 SSE 层推给前端。
 - 配置项（`AssistantProperties`，`@ConfigurationProperties("dsp.assistant")`）：
   - `assets-path`：对应 `DSP_AI_ASSETS_PATH`，默认 `ai-assets/`
   - `model`、`api-key`、`base-url`、`timeout-ms`、`max-retries`
@@ -191,8 +193,9 @@ AssistantService ──依赖──> AiGateway(接口)
 
 ## 11. 风险与取舍
 
-- **AgentScope Java 2.0 依赖引入**：需确认其 Maven 坐标与当前项目 Java 21 / Spring Boot 3.5.16 兼容性。当前源码配置（`dsp-parent/pom.xml`：`<java.version>21</java.version>`、Spring Boot parent `3.5.16`、`maven-compiler-plugin` `<release>${java.version}</release>`）已是 Java 21。旧文档（`AGENTS.md` / `CLAUDE.md` / `README.md` / `docs/project-knowledge/*`）中的 Java 8 / Spring Boot 2.7.18 信息已过期，**不能作为兼容性判断依据**。若实际部署环境仍要求 Java 8，需先单独确认部署基线，否则不按 Java 8 设计。
+- **AgentScope Java 2.0 依赖引入**：需确认其 Maven 坐标与当前项目 Java 21 / Spring Boot 3.5.16 兼容性。当前源码配置（`dsp-parent/pom.xml`：`<java.version>21</java.version>`、Spring Boot parent `3.5.16`、`maven-compiler-plugin` `<release>${java.version}</release>`）已是 Java 21。旧文档（`AGENTS.md` / `CLAUDE.md` / `README.md` / `docs/project-knowledge/*`）中的 Java 8 / Spring Boot 2.7.18 信息已过期，**不能作为兼容性判断依据**。若实际部署环境仍要求 Java 8，需先单独确认部署基线，否则不按 Java 8 设计。**版本风险**：`2.0.0-RC5` 是预发布版本。当前 P0 只验证依赖解析与编译兼容；P2 实现 `AgentScopeAiGateway` 时必须做一次实际调用和 `streamEvents()` 流式事件联调。若 RC API 变化，通过 `AiGateway` 适配层隔离影响。
 - **SSE 与 Spring MVC**：`spring-boot-starter-web` 支持 `SseEmitter`，无需引入 WebFlux；但需注意 `SseEmitter` 异步线程与 Tomcat 线程池配置，避免长连接耗尽线程。一期可调大 `spring.mvc.async.request-timeout` 或限制单用户并发会话数。
+- **Reactor 与 WebFlux 边界**：AgentScope Java 内部使用 Reactor Mono/Flux，这是框架内部响应式依赖；本项目 Web 层仍采用 Spring MVC + `SseEmitter`，不引入 WebFlux，不改变现有 Web 栈。
 - **SSE 前端消费方式**：一期前端统一使用 `fetch + ReadableStream` 消费 `POST /ask` 返回的 `text/event-stream`。原因：浏览器原生 `EventSource` 只能 GET 且无法设置自定义 `Admin-Token` header，而管理端鉴权依赖 `Admin-Token`。不把原生 `EventSource` 作为同等可选方案。
 - **检索质量**：一期轻量检索可能覆盖不全，但符合「文档优先、源码兜底」最低可用目标；向量库/RAG 留后续。
 - **会话隔离**：越权防护必须在 Service 层做（拦截器只做登录校验）。
