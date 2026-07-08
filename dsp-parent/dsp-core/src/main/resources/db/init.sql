@@ -1316,3 +1316,37 @@ CREATE TABLE IF NOT EXISTS ai_chat_message (
     PRIMARY KEY (id),
     KEY idx_session_id (session_id)
 ) ENGINE=InnoDB COMMENT='AI 智能助手消息表';
+
+-- ============================================================
+-- AI Text2API 草稿表（07-08-text2api-web-flow）
+-- 6 阶段状态机草稿，回退 invalidation 机制。
+-- ============================================================
+
+-- -----------------------------------------------------------
+-- 22. AI Text2API 草稿表
+-- -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_text2api_draft (
+    id                      BIGINT          NOT NULL AUTO_INCREMENT COMMENT '主键',
+    draft_id                VARCHAR(64)     NOT NULL COMMENT '业务草稿 ID（UUID）',
+    user_id                 BIGINT          NOT NULL COMMENT '归属用户 ID',
+    user_name               VARCHAR(64)     DEFAULT NULL COMMENT '归属用户名（冗余展示）',
+    stage                   TINYINT         NOT NULL DEFAULT 1 COMMENT '当前阶段：1-需求 2-接口定义 3-SQL 4-模板 5-XML 6-已发布',
+    confirmed_stage         TINYINT         DEFAULT NULL COMMENT '用户最后确认到的阶段',
+    invalidated_from_stage  TINYINT         DEFAULT NULL COMMENT '回退时标记的失效起点（null=无失效）',
+    status                  TINYINT         NOT NULL DEFAULT 0 COMMENT '状态：0-进行中 1-已完成 2-已取消',
+    requirement_text        MEDIUMTEXT      COMMENT '需求原文',
+    interface_draft         TEXT            COMMENT '接口定义 JSON（transno/name/system/inputSchema/outputSchema）',
+    schema_evidence         MEDIUMTEXT      COMMENT 'Text2SQL 依据 JSON（表结构/元数据）',
+    sql_draft               MEDIUMTEXT      COMMENT 'SQL 草稿（结构化 JSON 数组）',
+    template_selection      TEXT            COMMENT '模板选择结果 JSON',
+    xml_draft               MEDIUMTEXT      COMMENT 'XML 草稿',
+    import_json_draft       MEDIUMTEXT      COMMENT '导入 JSON 草稿',
+    correction_records      MEDIUMTEXT      COMMENT '修正记录 JSON（见 ai-assets/correction-memory.md）',
+    publish_error           TEXT            COMMENT '导入失败时的错误信息（允许重试）',
+    created_time            DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_time            DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted                 TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-正常 1-已删除',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_draft_id (draft_id),
+    KEY idx_user_id (user_id)
+) ENGINE=InnoDB COMMENT='AI Text2API 草稿表';
