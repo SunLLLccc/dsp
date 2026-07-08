@@ -63,6 +63,11 @@ const routes = [
         component: () => import('../views/audit/List.vue')
       },
       {
+        path: 'assistant',
+        name: '智能助手',
+        component: () => import('../views/assistant/Chat.vue')
+      },
+      {
         path: 'approval',
         name: '审批管理',
         component: () => import('../views/approval/List.vue')
