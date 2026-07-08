@@ -134,6 +134,12 @@
                 <artifactId>agentscope-harness</artifactId>
                 <version>${agentscope.version}</version>
             </dependency>
+            <!-- AgentScope Java all-in-one（含模型供应商实现，如 OpenAIChatModel）。harness 只依赖 core，不含具体 Model 实现；P2 真实 HarnessAgent 构造需要 OpenAIChatModel，故引入 all-in-one。 -->
+            <dependency>
+                <groupId>io.agentscope</groupId>
+                <artifactId>agentscope</artifactId>
+                <version>${agentscope.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
