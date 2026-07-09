@@ -39,12 +39,15 @@ class Text2ApiServiceImplTest {
     @Mock private AiGateway aiGateway;
     @Mock private TemplateSelector templateSelector;
 
+    private Text2ApiPromptFactory promptFactory;
+    private Text2ApiAiResponseParser responseParser;
     private Text2ApiServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new Text2ApiServiceImpl(draftService, aiGateway, templateSelector);
-        // draftService.save / updateById 默认返回 true（lenient，非所有测试用到）
+        promptFactory = new Text2ApiPromptFactory();
+        responseParser = new Text2ApiAiResponseParser();
+        service = new Text2ApiServiceImpl(draftService, aiGateway, templateSelector, promptFactory, responseParser);
         lenient().when(draftService.save(any())).thenReturn(true);
         lenient().when(draftService.updateById(any())).thenReturn(true);
     }
@@ -207,16 +210,18 @@ class Text2ApiServiceImplTest {
     @Test
     void generateSql_withEvidence_allowsGenerationPath() {
         AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.INTERFACE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\"}");
         when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        mockAiGateway("{\"sqlItems\":[{\"sqlId\":\"main\","
+                + "\"sql\":\"SELECT id FROM users\",\"purpose\":\"查询\",\"dependsOn\":[]}],\"questions\":[]}");
 
         SchemaEvidence evidence = new SchemaEvidence("DATASOURCE_METADATA", Arrays.asList(
                 new SchemaEvidence.TableEvidence("users", Arrays.asList("id", "name", "email"), "用户表")));
         StageResult result = service.generate("d1", 1L, DraftStage.SQL, evidence);
 
-        // 有依据 → 生成路径（当前骨架返回 generated）
         assertTrue(result.isGenerated());
         assertFalse(result.isNeedsMoreInfo());
-        // evidence 落库
         ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
         verify(draftService).updateById(captor.capture());
         assertNotNull(captor.getValue().getSchemaEvidence());
@@ -379,6 +384,325 @@ class Text2ApiServiceImplTest {
         ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
         verify(draftService).updateById(captor.capture());
         assertEquals("查询用户列表", captor.getValue().getRequirementText());
+    }
+
+    // ===== T3-B-1: 阶段前置约束 =====
+
+    @Test
+    void generateInterface_noRequirement_needsMoreInfoNoAiGateway() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText(null); // 无需求
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.INTERFACE, null);
+        assertTrue(r.isNeedsMoreInfo());
+        verify(aiGateway, never()).streamChat(any(), any());
+    }
+
+    @Test
+    void generateSql_notConfirmedInterface_needsMoreInfoNoAiGateway() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询用户");
+        draft.setConfirmedStage(DraftStage.REQUIREMENT); // 未确认接口定义
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        SchemaEvidence evidence = validEvidence();
+        StageResult r = service.generate("d1", 1L, DraftStage.SQL, evidence);
+        assertTrue(r.isNeedsMoreInfo(), "未确认接口定义应拒绝");
+        verify(aiGateway, never()).streamChat(any(), any());
+    }
+
+    @Test
+    void generateSql_noInterfaceDraft_needsMoreInfoNoAiGateway() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询用户");
+        draft.setConfirmedStage(DraftStage.INTERFACE); // 已确认接口定义
+        draft.setInterfaceDraft(null); // 但 interface_draft 为空
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.SQL, validEvidence());
+        assertTrue(r.isNeedsMoreInfo());
+        verify(aiGateway, never()).streamChat(any(), any());
+    }
+
+    @Test
+    void generateTemplate_noSqlDraft_needsMoreInfo() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.SQL);
+        draft.setSqlDraft(null); // 无 SQL
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.TEMPLATE, null);
+        assertTrue(r.isNeedsMoreInfo(), "无 sql_draft 应拒绝模板生成");
+    }
+
+    @Test
+    void generateTemplate_notConfirmedSql_needsMoreInfo() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.INTERFACE); // 未确认 SQL
+        draft.setSqlDraft("{\"sqlItems\":[]}");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.TEMPLATE, null);
+        assertTrue(r.isNeedsMoreInfo(), "未确认 SQL 应拒绝模板生成");
+    }
+
+    @Test
+    void generateXml_missingPrerequisites_needsMoreInfo() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft(null); // 缺接口定义
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isNeedsMoreInfo(), "缺接口定义应拒绝 XML 生成");
+    }
+
+    @Test
+    void generateXml_notConfirmedTemplate_needsMoreInfo() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.SQL); // 未确认模板
+        draft.setInterfaceDraft("{}");
+        draft.setSqlDraft("{}");
+        draft.setTemplateSelection("01|test");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isNeedsMoreInfo(), "未确认模板应拒绝 XML 生成");
+    }
+
+    // ===== T3-B-2: 接口定义真实 AI 生成 =====
+
+    @Test
+    void generateInterface_validAiOutput_interfaceDraftPersisted() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询用户信息");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        // mock AiGateway 同步返回合法 JSON
+        mockAiGateway("{\"transno\":\"USER_QUERY\",\"name\":\"用户查询\","
+                + "\"inputSchema\":\"userId:String\",\"outputSchema\":\"{}\",\"questions\":[]}");
+
+        StageResult r = service.generate("d1", 1L, DraftStage.INTERFACE, null);
+
+        assertTrue(r.isGenerated());
+        assertTrue(r.getMessage().contains("USER_QUERY"));
+        // interface_draft 落库
+        ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
+        verify(draftService).updateById(captor.capture());
+        assertTrue(captor.getValue().getInterfaceDraft().contains("USER_QUERY"));
+    }
+
+    @Test
+    void generateInterface_aiReturnsQuestions_needsMoreInfoNotPersisted() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        mockAiGateway("{\"transno\":\"\",\"name\":\"\",\"inputSchema\":\"\",\"outputSchema\":\"\","
+                + "\"questions\":[\"缺少表名\"]}");
+
+        StageResult r = service.generate("d1", 1L, DraftStage.INTERFACE, null);
+
+        assertTrue(r.isNeedsMoreInfo(), "AI 返回 questions 应 needs_more_info");
+        // 不落库
+        verify(draftService, never()).updateById(any());
+    }
+
+    @Test
+    void generateInterface_aiReturnsInvalidJson_notPersisted() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        mockAiGateway("{\"name\":\"缺transno\"}"); // 缺 transno
+
+        StageResult r = service.generate("d1", 1L, DraftStage.INTERFACE, null);
+
+        // 解析失败 → generated 但 message 含失败信息，不落库 interface_draft
+        verify(draftService, never()).updateById(any());
+    }
+
+    // ===== T3-B-3: Text2SQL 真实 AI 生成 =====
+
+    @Test
+    void generateSql_validAiOutput_sqlDraftPersisted() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询用户");
+        draft.setConfirmedStage(DraftStage.INTERFACE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\"}");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        mockAiGateway("{\"sqlItems\":[{\"sqlId\":\"main\","
+                + "\"sql\":\"SELECT id FROM users\",\"purpose\":\"查询\",\"dependsOn\":[]}],\"questions\":[]}");
+
+        StageResult r = service.generate("d1", 1L, DraftStage.SQL, validEvidence());
+
+        assertTrue(r.isGenerated());
+        assertTrue(r.getMessage().contains("1 段"));
+        ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
+        verify(draftService).updateById(captor.capture());
+        assertTrue(captor.getValue().getSqlDraft().contains("SELECT id FROM users"));
+    }
+
+    @Test
+    void generateSql_aiReturnsInsert_notPersisted() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询");
+        draft.setConfirmedStage(DraftStage.INTERFACE);
+        draft.setInterfaceDraft("{}");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        mockAiGateway("{\"sqlItems\":[{\"sqlId\":\"q1\","
+                + "\"sql\":\"INSERT INTO users VALUES(1)\",\"purpose\":\"插入\",\"dependsOn\":[]}],\"questions\":[]}");
+
+        StageResult r = service.generate("d1", 1L, DraftStage.SQL, validEvidence());
+
+        // INSERT 被拦截 → 不落库
+        verify(draftService, never()).updateById(any());
+    }
+
+    @Test
+    void generateSql_aiReturnsQuestions_needsMoreInfo() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询");
+        draft.setConfirmedStage(DraftStage.INTERFACE);
+        draft.setInterfaceDraft("{}");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        mockAiGateway("{\"sqlItems\":[],\"questions\":[\"缺少字段信息\"]}");
+
+        StageResult r = service.generate("d1", 1L, DraftStage.SQL, validEvidence());
+        assertTrue(r.isNeedsMoreInfo());
+        verify(draftService, never()).updateById(any());
+    }
+
+    @Test
+    void generateSql_aiGatewayThrows_noHalfProduct() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询");
+        draft.setConfirmedStage(DraftStage.INTERFACE);
+        draft.setInterfaceDraft("{}");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        // mock AiGateway 在回调中抛异常
+        when(aiGateway.streamChat(any(), any())).thenAnswer(inv -> {
+            com.sunlc.dsp.admin.assistant.ai.StreamHandler h = inv.getArgument(1);
+            h.onError(new RuntimeException("模型失败"));
+            return (com.sunlc.dsp.admin.assistant.ai.StreamHandle) () -> { };
+        });
+
+        StageResult r = service.generate("d1", 1L, DraftStage.SQL, validEvidence());
+        // 失败路径：不落库到下一阶段
+        verify(draftService, never()).updateById(any());
+    }
+
+    // ===== 异步契约单测（CountDownLatch 等待）=====
+
+    @Test
+    void generateInterface_asyncDeltaThenComplete_waitsAndPersistsFullOutput() throws Exception {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询用户");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        String fullOutput = "{\"transno\":\"USER_Q\",\"name\":\"用户查询\","
+                + "\"inputSchema\":\"userId\",\"outputSchema\":\"{}\",\"questions\":[]}";
+        // 异步：streamChat 返回 handle 后，在新线程延迟 onDelta + onComplete
+        when(aiGateway.streamChat(any(), any())).thenAnswer(inv -> {
+            com.sunlc.dsp.admin.assistant.ai.StreamHandler h = inv.getArgument(1);
+            new Thread(() -> {
+                try {
+                    Thread.sleep(50); // 模拟异步延迟
+                    h.onDelta(fullOutput);
+                    h.onComplete();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+            return (com.sunlc.dsp.admin.assistant.ai.StreamHandle) () -> { };
+        });
+
+        StageResult r = service.generate("d1", 1L, DraftStage.INTERFACE, null);
+
+        assertTrue(r.isGenerated(), "应等待异步完成后生成");
+        assertTrue(r.getMessage().contains("USER_Q"));
+        ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
+        verify(draftService).updateById(captor.capture());
+        assertTrue(captor.getValue().getInterfaceDraft().contains("USER_Q"),
+                "落库的应是完整输出");
+    }
+
+    @Test
+    void generateSql_asyncError_returnsFailedNoPersist() throws Exception {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询");
+        draft.setConfirmedStage(DraftStage.INTERFACE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\"}");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        // 异步：streamChat 返回 handle 后，在新线程延迟 onError
+        when(aiGateway.streamChat(any(), any())).thenAnswer(inv -> {
+            com.sunlc.dsp.admin.assistant.ai.StreamHandler h = inv.getArgument(1);
+            new Thread(() -> {
+                try {
+                    Thread.sleep(50);
+                    h.onError(new RuntimeException("模型异步失败"));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+            return (com.sunlc.dsp.admin.assistant.ai.StreamHandle) () -> { };
+        });
+
+        StageResult r = service.generate("d1", 1L, DraftStage.SQL, validEvidence());
+
+        assertTrue(r.isFailed(), "异步 error 应返回 failed");
+        verify(draftService, never()).updateById(any());
+    }
+
+    @Test
+    void generateSql_asyncPartialDeltaThenComplete_persistsFullAggregated() throws Exception {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setRequirementText("查询");
+        draft.setConfirmedStage(DraftStage.INTERFACE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\"}");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        // 异步：分多个 delta 发送，验证 buffer 聚合完整
+        when(aiGateway.streamChat(any(), any())).thenAnswer(inv -> {
+            com.sunlc.dsp.admin.assistant.ai.StreamHandler h = inv.getArgument(1);
+            new Thread(() -> {
+                try {
+                    Thread.sleep(30);
+                    h.onDelta("{\"sqlItems\":[{\"sqlId\":\"main\",");
+                    Thread.sleep(20);
+                    h.onDelta("\"sql\":\"SELECT id FROM users\",");
+                    Thread.sleep(20);
+                    h.onDelta("\"purpose\":\"查询\",\"dependsOn\":[]}],\"questions\":[]}");
+                    h.onComplete();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+            return (com.sunlc.dsp.admin.assistant.ai.StreamHandle) () -> { };
+        });
+
+        StageResult r = service.generate("d1", 1L, DraftStage.SQL, validEvidence());
+
+        assertTrue(r.isGenerated(), "多段 delta 应聚合完整后落库");
+        ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
+        verify(draftService).updateById(captor.capture());
+        String sqlDraft = captor.getValue().getSqlDraft();
+        assertTrue(sqlDraft.contains("SELECT id FROM users"), "落库的应是聚合后的完整 SQL");
+    }
+
+    // ===== 辅助 =====
+
+    private void mockAiGateway(String output) {
+        when(aiGateway.streamChat(any(), any())).thenAnswer(inv -> {
+            com.sunlc.dsp.admin.assistant.ai.StreamHandler h = inv.getArgument(1);
+            h.onDelta(output);
+            h.onComplete();
+            return (com.sunlc.dsp.admin.assistant.ai.StreamHandle) () -> { };
+        });
+    }
+
+    private SchemaEvidence validEvidence() {
+        return new SchemaEvidence("USER_INPUT", Arrays.asList(
+                new SchemaEvidence.TableEvidence("users", Arrays.asList("id", "name"), "用户表")));
     }
 
     private AiText2ApiDraft ownedDraft() {
