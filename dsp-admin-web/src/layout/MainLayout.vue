@@ -57,6 +57,10 @@
           <el-icon><ChatLineRound /></el-icon>
           <span>智能助手</span>
         </el-menu-item>
+        <el-menu-item index="/assistant/text2api">
+          <el-icon><MagicStick /></el-icon>
+          <span>Text2API</span>
+        </el-menu-item>
         <el-menu-item index="/interface/debug">
           <el-icon><Monitor /></el-icon>
           <span>接口调试</span>
@@ -144,6 +148,10 @@
         <el-menu-item index="/assistant">
           <el-icon><ChatLineRound /></el-icon>
           <span>智能助手</span>
+        </el-menu-item>
+        <el-menu-item index="/assistant/text2api">
+          <el-icon><MagicStick /></el-icon>
+          <span>Text2API</span>
         </el-menu-item>
         <el-menu-item index="/interface/debug">
           <el-icon><Monitor /></el-icon>
@@ -269,7 +277,7 @@ import { useAuthStore } from '../stores/auth'
 import { useTabStore } from '../stores/tabs'
 import {
   Document, Coin, Key, Download, Monitor, Notebook, Stamp, Files,
-  Setting, User, OfficeBuilding, Promotion, Expand, ArrowDown, SwitchButton, Lock, ChatLineRound
+  Setting, User, OfficeBuilding, Promotion, Expand, ArrowDown, SwitchButton, Lock, ChatLineRound, MagicStick
 } from '@element-plus/icons-vue'
 import TabBar from './TabBar.vue'
 import { userApi } from '../api'

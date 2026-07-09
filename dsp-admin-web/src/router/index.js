@@ -68,6 +68,11 @@ const routes = [
         component: () => import('../views/assistant/Chat.vue')
       },
       {
+        path: 'assistant/text2api',
+        name: 'Text2API',
+        component: () => import('../views/assistant/Text2Api.vue')
+      },
+      {
         path: 'approval',
         name: '审批管理',
         component: () => import('../views/approval/List.vue')
