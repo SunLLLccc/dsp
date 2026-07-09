@@ -2,6 +2,7 @@ package com.sunlc.dsp.admin.assistant.text2api;
 
 import com.sunlc.dsp.admin.assistant.ai.AiGateway;
 import com.sunlc.dsp.admin.assistant.template.TemplateSelector;
+import com.sunlc.dsp.common.enums.ErrorCode;
 import com.sunlc.dsp.common.exception.BusinessException;
 import com.sunlc.dsp.entity.AiText2ApiDraft;
 import com.sunlc.dsp.service.AiText2ApiDraftService;
@@ -19,7 +20,9 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,6 +31,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -41,6 +45,7 @@ class Text2ApiServiceImplTest {
     @Mock private AiGateway aiGateway;
     @Mock private TemplateSelector templateSelector;
     @Mock private com.sunlc.dsp.engine.validator.SqlSecurityValidator sqlSecurityValidator;
+    @Mock private com.sunlc.dsp.adminservice.service.ConfigImportService configImportService;
 
     private Text2ApiPromptFactory promptFactory;
     private Text2ApiAiResponseParser responseParser;
@@ -55,7 +60,8 @@ class Text2ApiServiceImplTest {
         templateRenderer = new Text2ApiTemplateRenderer();
         importJsonBuilder = new Text2ApiImportJsonBuilder();
         service = new Text2ApiServiceImpl(draftService, aiGateway, templateSelector,
-                promptFactory, responseParser, templateRenderer, importJsonBuilder, sqlSecurityValidator);
+                promptFactory, responseParser, templateRenderer, importJsonBuilder,
+                sqlSecurityValidator, configImportService);
         lenient().when(draftService.save(any())).thenReturn(true);
         lenient().when(draftService.updateById(any())).thenReturn(true);
         lenient().doNothing().when(sqlSecurityValidator).validateXmlConfig(anyString());
@@ -166,6 +172,9 @@ class Text2ApiServiceImplTest {
         AiText2ApiDraft draft = ownedDraft();
         draft.setStage(DraftStage.XML);
         draft.setConfirmedStage(DraftStage.XML);
+        draft.setInterfaceDraft("{\"transno\":\"T1\"}");
+        draft.setSqlDraft("{\"sqlItems\":[]}");
+        draft.setTemplateSelection("template/x.xml|t");
         draft.setXmlDraft("<interface/>");
         draft.setImportJsonDraft("{}");
         when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
@@ -354,6 +363,9 @@ class Text2ApiServiceImplTest {
     void validateBeforePublish_passesWhenValid() {
         AiText2ApiDraft draft = ownedDraft();
         draft.setConfirmedStage(DraftStage.XML);
+        draft.setInterfaceDraft("{\"transno\":\"T1\"}");
+        draft.setSqlDraft("{\"sqlItems\":[]}");
+        draft.setTemplateSelection("template/x.xml|t");
         draft.setXmlDraft("<interface/>");
         draft.setImportJsonDraft("{}");
         draft.setInvalidatedFromStage(null); // 无失效
@@ -361,6 +373,19 @@ class Text2ApiServiceImplTest {
 
         // 不抛异常
         service.validateBeforePublish("d1", 1L);
+    }
+
+    @Test
+    void validateBeforePublish_rejectsWhenInterfaceSqlTemplateEmpty() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.XML);
+        draft.setXmlDraft("<interface/>");
+        draft.setImportJsonDraft("{}");
+        draft.setInvalidatedFromStage(null);
+        // 接口定义/SQL/模板选择留空 → 拒绝孤立发布
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        assertThrows(BusinessException.class, () -> service.validateBeforePublish("d1", 1L));
     }
 
     // ===== 越权防护 =====
@@ -381,6 +406,142 @@ class Text2ApiServiceImplTest {
     void deleteDraft_nonOwned_throws() {
         when(draftService.getOwnedDraft("d1", 2L)).thenReturn(null);
         assertThrows(BusinessException.class, () -> service.deleteDraft("d1", 2L));
+    }
+
+    // ===== T5: 发布 =====
+
+    @Test
+    void publish_success_callsImportConfigAndAdvancesToPublished() {
+        AiText2ApiDraft draft = publishReadyDraft();
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        when(configImportService.importConfig(any(), eq("alice"))).thenReturn(java.util.Collections.emptyMap());
+
+        AiText2ApiDraft result = service.publish("d1", 1L, "alice");
+
+        // 验证调用了导入服务（唯一发布入口）
+        ArgumentCaptor<java.util.Map<String, Object>> cfg = ArgumentCaptor.forClass(java.util.Map.class);
+        verify(configImportService).importConfig(cfg.capture(), eq("alice"));
+        assertEquals("USER_Q", cfg.getValue().get("interfaceInfo") instanceof java.util.Map
+                ? ((java.util.Map<?, ?>) cfg.getValue().get("interfaceInfo")).get("transno") : null);
+        // 推进阶段 6 + 清空 publishError + 标记完成
+        assertEquals(DraftStage.PUBLISHED, result.getStage());
+        assertEquals(DraftStage.PUBLISHED, result.getConfirmedStage());
+        assertNull(result.getPublishError(), "发布成功应清空 publishError");
+        assertEquals(1, result.getStatus(), "status=1 表示已完成/已发布");
+    }
+
+    @Test
+    void publish_notConfirmedToXml_rejectsAndNeverCallsImport() {
+        AiText2ApiDraft draft = publishReadyDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE); // 未确认 XML
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        assertThrows(BusinessException.class, () -> service.publish("d1", 1L, "alice"));
+        verify(configImportService, never()).importConfig(any(), anyString());
+    }
+
+    @Test
+    void publish_emptyImportJson_rejectsAndNeverCallsImport() {
+        AiText2ApiDraft draft = publishReadyDraft();
+        draft.setImportJsonDraft(null);
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        assertThrows(BusinessException.class, () -> service.publish("d1", 1L, "alice"));
+        verify(configImportService, never()).importConfig(any(), anyString());
+    }
+
+    @Test
+    void publish_xmlInvalidated_rejectsAndNeverCallsImport() {
+        AiText2ApiDraft draft = publishReadyDraft();
+        draft.setInvalidatedFromStage(DraftStage.XML); // 阶段 5 失效
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        assertThrows(BusinessException.class, () -> service.publish("d1", 1L, "alice"));
+        verify(configImportService, never()).importConfig(any(), anyString());
+    }
+
+    @Test
+    void publish_importServiceThrows_writesPublishErrorAndDoesNotAdvance() {
+        AiText2ApiDraft draft = publishReadyDraft();
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        when(configImportService.importConfig(any(), anyString()))
+                .thenThrow(new BusinessException(ErrorCode.BAD_REQUEST, "接口编码已存在冲突"));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> service.publish("d1", 1L, "alice"));
+
+        // 不推进阶段
+        assertNotEquals(DraftStage.PUBLISHED, draft.getStage());
+        // 落 publishError
+        ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
+        verify(draftService).updateById(captor.capture());
+        assertNotNull(captor.getValue().getPublishError(), "失败应写入 publishError");
+        assertTrue(captor.getValue().getPublishError().contains("接口编码已存在冲突"));
+    }
+
+    @Test
+    void publish_afterFailure_canRetry() {
+        // 第一次：导入失败，落 publishError
+        AiText2ApiDraft draft = publishReadyDraft();
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        when(configImportService.importConfig(any(), anyString()))
+                .thenThrow(new BusinessException(ErrorCode.BAD_REQUEST, "冲突"))
+                .thenReturn(java.util.Collections.emptyMap()); // 第二次成功
+
+        // 第一次失败
+        assertThrows(BusinessException.class, () -> service.publish("d1", 1L, "alice"));
+        // 第二次重试成功（前置仍满足：confirmedStage 未变）
+        AiText2ApiDraft result = service.publish("d1", 1L, "alice");
+        assertEquals(DraftStage.PUBLISHED, result.getStage());
+        assertNull(result.getPublishError(), "重试成功后应清空 publishError");
+    }
+
+    @Test
+    void publish_alreadyPublished_canRepublish() {
+        // 已发布草稿重复发布（重试语义）：confirmedStage=PUBLISHED(6) >= XML(5)
+        AiText2ApiDraft draft = publishReadyDraft();
+        draft.setStage(DraftStage.PUBLISHED);
+        draft.setConfirmedStage(DraftStage.PUBLISHED);
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        when(configImportService.importConfig(any(), anyString()))
+                .thenReturn(java.util.Collections.emptyMap());
+
+        AiText2ApiDraft result = service.publish("d1", 1L, "alice");
+        assertEquals(DraftStage.PUBLISHED, result.getStage());
+        verify(configImportService, times(1)).importConfig(any(), eq("alice"));
+    }
+
+    @Test
+    void publish_operatorBlank_fallsBackToUserId() {
+        AiText2ApiDraft draft = publishReadyDraft();
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        when(configImportService.importConfig(any(), anyString()))
+                .thenReturn(java.util.Collections.emptyMap());
+
+        service.publish("d1", 1L, ""); // operator 为空
+
+        // 应降级为 userId 字符串
+        verify(configImportService).importConfig(any(), eq("1"));
+    }
+
+    @Test
+    void publish_nonOwned_throws() {
+        when(draftService.getOwnedDraft("d1", 2L)).thenReturn(null);
+        assertThrows(BusinessException.class, () -> service.publish("d1", 2L, "bob"));
+        verify(configImportService, never()).importConfig(any(), anyString());
+    }
+
+    /** 构造一个满足发布前置条件的草稿（confirmed=XML + 全产物非空）。 */
+    private AiText2ApiDraft publishReadyDraft() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.XML);
+        draft.setInvalidatedFromStage(null);
+        draft.setInterfaceDraft("{\"transno\":\"USER_Q\"}");
+        draft.setSqlDraft("{\"sqlItems\":[{\"sqlId\":\"q1\",\"sql\":\"SELECT 1\",\"purpose\":\"x\",\"dependsOn\":[]}]}");
+        draft.setTemplateSelection("template/x.xml|t");
+        draft.setXmlDraft("<interface/>");
+        draft.setImportJsonDraft("{\"interfaceInfo\":{\"transno\":\"USER_Q\"},\"schema\":{},\"template\":{}}");
+        return draft;
     }
 
     @Test

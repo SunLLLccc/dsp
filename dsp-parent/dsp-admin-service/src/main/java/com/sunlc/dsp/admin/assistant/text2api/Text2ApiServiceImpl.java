@@ -6,6 +6,7 @@ import com.sunlc.dsp.admin.assistant.ai.ChatMessage;
 import com.sunlc.dsp.admin.assistant.ai.ChatRequest;
 import com.sunlc.dsp.admin.assistant.template.TemplateSelectionResult;
 import com.sunlc.dsp.admin.assistant.template.TemplateSelector;
+import com.sunlc.dsp.adminservice.service.ConfigImportService;
 import com.sunlc.dsp.common.enums.ErrorCode;
 import com.sunlc.dsp.common.exception.BusinessException;
 import com.sunlc.dsp.entity.AiText2ApiDraft;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -38,6 +40,11 @@ public class Text2ApiServiceImpl implements Text2ApiService {
     private final Text2ApiTemplateRenderer templateRenderer;
     private final Text2ApiImportJsonBuilder importJsonBuilder;
     private final com.sunlc.dsp.engine.validator.SqlSecurityValidator sqlSecurityValidator;
+    /**
+     * T5 发布依赖：通过 {@link ConfigImportService#importConfig} 完成接口导入发布。
+     * 这是发布到接口/schema/template 表的唯一入口，不绕过它直写业务表。
+     */
+    private final ConfigImportService configImportService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ===== 草稿管理 =====
@@ -350,6 +357,69 @@ public class Text2ApiServiceImpl implements Text2ApiService {
             throw new BusinessException(ErrorCode.BAD_REQUEST,
                     "XML 或导入 JSON 草稿为空，不允许发布");
         }
+        // 避免孤立发布：接口定义/SQL/模板选择至少保持非空
+        if (isBlank(draft.getInterfaceDraft()) || isBlank(draft.getSqlDraft())
+                || isBlank(draft.getTemplateSelection())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "接口定义/SQL/模板选择存在空值，不允许孤立发布");
+        }
+    }
+
+    /**
+     * 发布草稿（T5）。
+     * <p>
+     * 流程：归属校验 → 前置校验 → 解析 importJsonDraft → 调 ConfigImportService.importConfig
+     * → 成功推进阶段 6、清空 publishError；失败写 publishError 后抛 BusinessException（可重试）。
+     * <p>
+     * 允许重复发布（已发布草稿重试）：前置条件仍按 confirmedStage>=XML 校验，
+     * 已发布草稿的 confirmedStage=PUBLISHED(6) >= XML(5)，故可通过并重新导入覆盖。
+     */
+    @Override
+    public AiText2ApiDraft publish(String draftId, Long userId, String operator) {
+        AiText2ApiDraft draft = getOwnedDraftOrThrow(draftId, userId);
+        validateBeforePublish(draftId, userId); // 复用：归属 + 前置全部在此
+
+        String op = (operator == null || operator.isBlank()) ? String.valueOf(userId) : operator;
+
+        // 解析 importJsonDraft（已由 T3-C 的 ImportJsonBuilder 生成）为 Map
+        Map<String, Object> configData;
+        try {
+            configData = objectMapper.readValue(draft.getImportJsonDraft(),
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                    });
+        } catch (Exception e) {
+            // JSON 结构异常：落 publishError 并抛出（不推进阶段）
+            draft.setPublishError("导入 JSON 解析失败: " + e.getMessage());
+            draft.setUpdatedTime(LocalDateTime.now());
+            draftService.updateById(draft);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,
+                    "导入 JSON 解析失败，已记录错误，请重新生成 XML/JSON 后重试");
+        }
+
+        // 调用导入服务（发布的唯一入口，不绕过直写业务表）
+        try {
+            configImportService.importConfig(configData, op);
+        } catch (Exception e) {
+            log.warn("text2api 发布失败: draftId={}, error={}", draftId, e.getMessage(), e);
+            // 不推进阶段；落 publishError 供前端展示；可重试
+            String reason = e instanceof BusinessException
+                    ? e.getMessage()
+                    : "导入服务异常: " + e.getMessage();
+            draft.setPublishError(reason);
+            draft.setUpdatedTime(LocalDateTime.now());
+            draftService.updateById(draft);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,
+                    "发布失败，已记录错误，可重试: " + reason);
+        }
+
+        // 成功：推进阶段 6 + 清空 publishError + 标记完成
+        draft.setStage(DraftStage.PUBLISHED);
+        draft.setConfirmedStage(DraftStage.PUBLISHED);
+        draft.setPublishError(null);
+        draft.setStatus(1); // 1=已完成/已发布
+        draft.setUpdatedTime(LocalDateTime.now());
+        draftService.updateById(draft);
+        return draft;
     }
 
     @Override

@@ -163,6 +163,27 @@ public class Text2ApiController {
         return ApiResponse.success(TRANSNO, "", DraftVO.from(draft));
     }
 
+    // ===== 发布（T5）=====
+
+    /**
+     * 发布草稿：校验前置条件后调用 ConfigImportService.importConfig 完成接口导入。
+     * <p>
+     * 前置不足 / 导入失败均抛 BusinessException，由统一异常处理返回错误响应；
+     * 失败已落库 publishError，前端可拉取 draft 展示并重新发布（允许重试）。
+     * <p>
+     * Controller 不直接注入 ConfigImportService，发布逻辑全在 {@link Text2ApiService#publish} 内。
+     */
+    @PostMapping("/drafts/{draftId}/publish")
+    public ApiResponse<DraftVO> publish(@PathVariable String draftId, HttpServletRequest request) {
+        Long userId = CurrentUserResolver.requireUserId(request);
+        String operator = CurrentUserResolver.resolveUserName(request);
+        if (operator == null || operator.isBlank()) {
+            operator = String.valueOf(userId);
+        }
+        AiText2ApiDraft draft = text2ApiService.publish(draftId, userId, operator);
+        return ApiResponse.success(TRANSNO, "", DraftVO.from(draft));
+    }
+
     // ===== 阶段生成（SSE）=====
 
     /**
