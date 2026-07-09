@@ -55,6 +55,23 @@ public interface Text2ApiService {
      */
     void validateBeforePublish(String draftId, Long userId);
 
+    /**
+     * 发布草稿（T5）：校验前置条件后调用 {@code ConfigImportService.importConfig} 完成接口导入。
+     * <p>
+     * 成功：推进到阶段 6（PUBLISHED）、清空 publishError。
+     * 失败：不推进阶段、写入 publishError、抛 {@link com.sunlc.dsp.common.exception.BusinessException}，
+     * 调用方可再次调用本方法重试。
+     * <p>
+     * 允许重复发布（已发布草稿也可重试），用于上次导入失败后重试。
+     *
+     * @param draftId  草稿 ID
+     * @param userId   当前用户（归属校验）
+     * @param operator 操作人（写入接口 createdBy/updatedBy），为空时由实现降级为 userId
+     * @return 发布后的最新草稿
+     * @throws com.sunlc.dsp.common.exception.BusinessException 前置不足或导入失败
+     */
+    AiText2ApiDraft publish(String draftId, Long userId, String operator);
+
     /** 逻辑删除草稿。 */
     void deleteDraft(String draftId, Long userId);
 }

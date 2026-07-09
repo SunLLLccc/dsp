@@ -258,14 +258,56 @@ class Text2ApiControllerTest {
                 .map(java.lang.reflect.Field::getName)
                 .filter(n -> !n.equals("generateExecutor"))
                 .collect(java.util.stream.Collectors.toList());
-        // 只能依赖编排服务 + 并发限制器 + 配置，不能依赖 Mapper / 底层 draft service
+        // 只能依赖编排服务 + 并发限制器 + 配置，不能依赖 Mapper / 底层 draft service / ConfigImportService
         assertTrue(injected.contains("text2ApiService"), "应依赖 Text2ApiService");
         assertTrue(injected.contains("concurrencyLimiter"), "应依赖 ChatConcurrencyLimiter");
         for (String name : injected) {
             assertFalse(name.toLowerCase().contains("mapper"),
                     "Controller 不应注入 Mapper: " + name);
+            assertFalse(name.toLowerCase().contains("configimport"),
+                    "Controller 不应直接注入 ConfigImportService（发布逻辑应在 Service 内）: " + name);
         }
     }
+
+    // ===== T5: 发布端点 =====
+
+    @Test
+    void publish_success_resolvesOperatorAndDelegatesToService() {
+        HttpServletRequest req = mockRequest(USER_ID, USER_NAME);
+        AiText2ApiDraft draft = ownedDraft("d1", USER_ID);
+        draft.setStage(DraftStage.PUBLISHED);
+        when(text2ApiService.publish("d1", USER_ID, USER_NAME)).thenReturn(draft);
+
+        var resp = controller.publish("d1", req);
+
+        assertNotNull(resp.getData());
+        assertEquals(DraftStage.PUBLISHED, resp.getData().getStage());
+        verify(text2ApiService).publish("d1", USER_ID, USER_NAME);
+    }
+
+    @Test
+    void publish_blankUserName_fallsBackToUserIdString() {
+        HttpServletRequest req = mockRequest(USER_ID, "");
+        when(text2ApiService.publish("d1", USER_ID, String.valueOf(USER_ID)))
+                .thenReturn(ownedDraft("d1", USER_ID));
+
+        controller.publish("d1", req);
+
+        // operator 为空时降级为 userId 字符串
+        verify(text2ApiService).publish("d1", USER_ID, String.valueOf(USER_ID));
+    }
+
+    @Test
+    void publish_serviceThrowsBusinessException_propagatesToClient() {
+        HttpServletRequest req = mockRequest(USER_ID, USER_NAME);
+        // 模拟发布失败（前置不足或导入失败）
+        when(text2ApiService.publish("d1", USER_ID, USER_NAME))
+                .thenThrow(new BusinessException(com.sunlc.dsp.common.enums.ErrorCode.SYSTEM_ERROR,
+                        "发布失败，已记录错误，可重试"));
+
+        assertThrows(BusinessException.class, () -> controller.publish("d1", req));
+    }
+
 
     // ===== 补充：generate 过程抛异常（非 StageResult.failed）仍释放额度 =====
 
