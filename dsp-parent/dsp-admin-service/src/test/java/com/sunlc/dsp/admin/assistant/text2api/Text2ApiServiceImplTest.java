@@ -14,6 +14,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,18 +40,33 @@ class Text2ApiServiceImplTest {
     @Mock private AiText2ApiDraftService draftService;
     @Mock private AiGateway aiGateway;
     @Mock private TemplateSelector templateSelector;
+    @Mock private com.sunlc.dsp.engine.validator.SqlSecurityValidator sqlSecurityValidator;
 
     private Text2ApiPromptFactory promptFactory;
     private Text2ApiAiResponseParser responseParser;
+    private Text2ApiTemplateRenderer templateRenderer;
+    private Text2ApiImportJsonBuilder importJsonBuilder;
     private Text2ApiServiceImpl service;
 
     @BeforeEach
     void setUp() {
         promptFactory = new Text2ApiPromptFactory();
         responseParser = new Text2ApiAiResponseParser();
-        service = new Text2ApiServiceImpl(draftService, aiGateway, templateSelector, promptFactory, responseParser);
+        templateRenderer = new Text2ApiTemplateRenderer();
+        importJsonBuilder = new Text2ApiImportJsonBuilder();
+        service = new Text2ApiServiceImpl(draftService, aiGateway, templateSelector,
+                promptFactory, responseParser, templateRenderer, importJsonBuilder, sqlSecurityValidator);
         lenient().when(draftService.save(any())).thenReturn(true);
         lenient().when(draftService.updateById(any())).thenReturn(true);
+        lenient().doNothing().when(sqlSecurityValidator).validateXmlConfig(anyString());
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        if (prevUserDir != null) {
+            System.setProperty("user.dir", prevUserDir);
+            prevUserDir = null;
+        }
     }
 
     // ===== P0: SchemaEvidence 门禁（核心安全约束）=====
@@ -687,6 +704,320 @@ class Text2ApiServiceImplTest {
         verify(draftService).updateById(captor.capture());
         String sqlDraft = captor.getValue().getSqlDraft();
         assertTrue(sqlDraft.contains("SELECT id FROM users"), "落库的应是聚合后的完整 SQL");
+    }
+
+    // ===== T3-C: XML/JSON 模板填充 =====
+
+    @org.junit.jupiter.api.io.TempDir
+    Path tempDir;
+
+    @Test
+    void generateXml_validInputs_generatesXmlAndImportJson() throws Exception {
+        setupTemplateFile("template/01-simple-sql-query.xml");
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft("{\"transno\":\"USER_Q\",\"name\":\"用户查询\","
+                + "\"inputSchema\":\"userId\",\"outputSchema\":\"{\\\"type\\\":\\\"object\\\"}\"}");
+        draft.setSqlDraft("{\"sqlItems\":[{\"sqlId\":\"q1\","
+                + "\"sql\":\"SELECT id, name FROM users WHERE id = 1\","
+                + "\"purpose\":\"查询\",\"dependsOn\":[]}]}");
+        draft.setTemplateSelection("template/01-simple-sql-query.xml|简单SQL");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+
+        assertTrue(r.isGenerated(), "应生成 XML/JSON: " + r.getMessage());
+        ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
+        verify(draftService).updateById(captor.capture());
+        AiText2ApiDraft updated = captor.getValue();
+        assertNotNull(updated.getXmlDraft());
+        assertNotNull(updated.getImportJsonDraft());
+        // XML 含 transno 填充
+        assertTrue(updated.getXmlDraft().contains("USER_Q"));
+        // importJson 兼容结构
+        assertTrue(updated.getImportJsonDraft().contains("interfaceInfo"));
+        assertTrue(updated.getImportJsonDraft().contains("schema"));
+        assertTrue(updated.getImportJsonDraft().contains("template"));
+        assertTrue(updated.getImportJsonDraft().contains("xmlContent"));
+    }
+
+    @Test
+    void generateXml_templateFileNotExist_failed() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\",\"name\":\"x\","
+                + "\"inputSchema\":\"id\",\"outputSchema\":\"{}\"}");
+        draft.setSqlDraft("{\"sqlItems\":[{\"sqlId\":\"q1\",\"sql\":\"SELECT 1\",\"purpose\":\"x\",\"dependsOn\":[]}]}");
+        draft.setTemplateSelection("template/nonexistent.xml|x");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isFailed(), "模板不存在应 failed");
+        verify(draftService, never()).updateById(any());
+    }
+
+    @Test
+    void generateXml_pathEscape_failed() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\",\"name\":\"x\","
+                + "\"inputSchema\":\"id\",\"outputSchema\":\"{}\"}");
+        draft.setSqlDraft("{\"sqlItems\":[{\"sqlId\":\"q1\",\"sql\":\"SELECT 1\",\"purpose\":\"x\",\"dependsOn\":[]}]}");
+        draft.setTemplateSelection("../../etc/passwd|x");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isFailed(), "越界路径应 failed");
+        verify(draftService, never()).updateById(any());
+    }
+
+    // ===== 必改1：路径限定 template/ 目录 =====
+
+    @Test
+    void generateXml_nonTemplatePath_projectXml_failed() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\",\"name\":\"x\","
+                + "\"inputSchema\":\"id\",\"outputSchema\":\"{}\"}");
+        draft.setSqlDraft("{\"sqlItems\":[{\"sqlId\":\"q1\",\"sql\":\"SELECT 1\",\"purpose\":\"x\",\"dependsOn\":[]}]}");
+        draft.setTemplateSelection("dsp-parent/pom.xml|x");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isFailed(), "非 template/ 路径应 failed");
+        verify(draftService, never()).updateById(any());
+    }
+
+    @Test
+    void generateXml_nonTemplatePath_readme_failed() {
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\",\"name\":\"x\","
+                + "\"inputSchema\":\"id\",\"outputSchema\":\"{}\"}");
+        draft.setSqlDraft("{\"sqlItems\":[{\"sqlId\":\"q1\",\"sql\":\"SELECT 1\",\"purpose\":\"x\",\"dependsOn\":[]}]}");
+        draft.setTemplateSelection("README.md|x");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isFailed(), "非 template/ 路径应 failed");
+    }
+
+    // ===== 必改2：精确匹配不残留样例 =====
+
+    @Test
+    void generateXml_sqlCountMismatch_failed() throws Exception {
+        // 模板有 2 个 query，SQL 只 1 段 → 精确匹配失败
+        setupTemplateFileWithTwoQueries();
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\",\"name\":\"x\","
+                + "\"inputSchema\":\"id\",\"outputSchema\":\"{}\"}");
+        draft.setSqlDraft("{\"sqlItems\":[{\"sqlId\":\"q1\",\"sql\":\"SELECT 1\",\"purpose\":\"x\",\"dependsOn\":[]}]}");
+        draft.setTemplateSelection("template/two-query.xml|x");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isFailed(), "query节点数与SQL段数不匹配应 failed");
+        verify(draftService, never()).updateById(any());
+    }
+
+    @Test
+    void generateXml_exactMatch_allQueriesReplaced() throws Exception {
+        // 模板有 2 个 query，SQL 2 段 → 精确匹配，全部替换
+        setupTemplateFileWithTwoQueries();
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\",\"name\":\"x\","
+                + "\"inputSchema\":\"id\",\"outputSchema\":\"{}\"}");
+        draft.setSqlDraft("{\"sqlItems\":["
+                + "{\"sqlId\":\"q1\",\"sql\":\"SELECT id FROM real_table_a\",\"purpose\":\"a\",\"dependsOn\":[]},"
+                + "{\"sqlId\":\"q2\",\"sql\":\"SELECT id FROM real_table_b\",\"purpose\":\"b\",\"dependsOn\":[]}"
+                + "]}");
+        draft.setTemplateSelection("template/two-query.xml|x");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isGenerated(), "精确匹配应成功: " + r.getMessage());
+
+        ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
+        verify(draftService).updateById(captor.capture());
+        String xml = captor.getValue().getXmlDraft();
+        // 不应残留模板样例 SQL（SAMPLE_xxx）
+        assertFalse(xml.contains("SAMPLE_"), "不应残留模板样例 SQL");
+        // 应包含真实 SQL
+        assertTrue(xml.contains("real_table_a"));
+        assertTrue(xml.contains("real_table_b"));
+    }
+
+    @Test
+    void generateXml_xmlSecurityValidationFails_failed() throws Exception {
+        setupTemplateFile("template/01-simple-sql-query.xml");
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\",\"name\":\"x\","
+                + "\"inputSchema\":\"id\",\"outputSchema\":\"{}\"}");
+        draft.setSqlDraft("{\"sqlItems\":[{\"sqlId\":\"q1\",\"sql\":\"SELECT 1\",\"purpose\":\"x\",\"dependsOn\":[]}]}");
+        draft.setTemplateSelection("template/01-simple-sql-query.xml|x");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+        // mock 安全校验失败
+        org.mockito.Mockito.doThrow(new com.sunlc.dsp.common.exception.BusinessException(
+                com.sunlc.dsp.common.enums.ErrorCode.BAD_REQUEST, "不安全SQL"))
+                .when(sqlSecurityValidator).validateXmlConfig(anyString());
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isFailed(), "XML 安全校验失败应 failed");
+        verify(draftService, never()).updateById(any());
+    }
+
+    @Test
+    void generateXml_singleSqlTemplateWithMultipleSql_failed() throws Exception {
+        setupTemplateFile("template/01-simple-sql-query.xml");
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft("{\"transno\":\"T1\",\"name\":\"x\","
+                + "\"inputSchema\":\"id\",\"outputSchema\":\"{}\"}");
+        // 多段 SQL（01 模板只支持单 SQL）
+        draft.setSqlDraft("{\"sqlItems\":["
+                + "{\"sqlId\":\"q1\",\"sql\":\"SELECT 1\",\"purpose\":\"x\",\"dependsOn\":[]},"
+                + "{\"sqlId\":\"q2\",\"sql\":\"SELECT 2\",\"purpose\":\"y\",\"dependsOn\":[]}"
+                + "]}");
+        draft.setTemplateSelection("template/01-simple-sql-query.xml|x");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isFailed(), "单 SQL 模板遇多 SQL 应 failed");
+        verify(draftService, never()).updateById(any());
+    }
+
+    @Test
+    void generateXml_importJsonStructureCompatible() throws Exception {
+        setupTemplateFile("template/01-simple-sql-query.xml");
+        AiText2ApiDraft draft = ownedDraft();
+        draft.setConfirmedStage(DraftStage.TEMPLATE);
+        draft.setInterfaceDraft("{\"transno\":\"USER_LIST\",\"name\":\"用户列表\","
+                + "\"system\":\"UC\",\"inputSchema\":\"page\","
+                + "\"outputSchema\":\"{\\\"type\\\":\\\"array\\\"}\"}");
+        draft.setSqlDraft("{\"sqlItems\":[{\"sqlId\":\"q1\","
+                + "\"sql\":\"SELECT id FROM users\",\"purpose\":\"查询\",\"dependsOn\":[]}]}");
+        draft.setTemplateSelection("template/01-simple-sql-query.xml|x");
+        when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+        StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+        assertTrue(r.isGenerated());
+
+        ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
+        verify(draftService).updateById(captor.capture());
+        String importJson = captor.getValue().getImportJsonDraft();
+
+        // 结构校验
+        com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(importJson);
+        assertEquals("USER_LIST", node.get("interfaceInfo").get("transno").asText());
+        assertEquals("用户列表", node.get("interfaceInfo").get("name").asText());
+        // schema.inputSchema == xmlDraft（一期同源）
+        assertEquals(captor.getValue().getXmlDraft(), node.get("schema").get("inputSchema").asText());
+        assertEquals("{\"type\":\"array\"}", node.get("schema").get("outputSchema").asText());
+        // template.xmlContent == xmlDraft
+        assertEquals(captor.getValue().getXmlDraft(), node.get("template").get("xmlContent").asText());
+    }
+
+    /** 在 TempDir 下创建模板文件，并设 user.dir。 */
+    private void setupTemplateFile(String relPath) throws Exception {
+        Path templateFile = tempDir.resolve(relPath);
+        Files.createDirectories(templateFile.getParent());
+        Files.writeString(templateFile, TEMPLATE_XML);
+        prevUserDir = System.getProperty("user.dir");
+        System.setProperty("user.dir", tempDir.toString());
+    }
+
+    /** 在 TempDir 下创建含 2 个 query 的模板。 */
+    private void setupTemplateFileWithTwoQueries() throws Exception {
+        Path templateFile = tempDir.resolve("template/two-query.xml");
+        Files.createDirectories(templateFile.getParent());
+        Files.writeString(templateFile, TEMPLATE_XML_TWO_QUERIES);
+        prevUserDir = System.getProperty("user.dir");
+        System.setProperty("user.dir", tempDir.toString());
+    }
+
+    private String prevUserDir;
+
+    /** 简单模板 XML（含 interface/query 节点）。 */
+    private static final String TEMPLATE_XML =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                    + "<interface transno=\"TEMPLATE\" name=\"模板\" description=\"\">\n"
+                    + "    <requestData>\n"
+                    + "        <param name=\"id\" type=\"String\" required=\"true\" />\n"
+                    + "    </requestData>\n"
+                    + "    <datasource name=\"ds_main\" />\n"
+                    + "    <query id=\"q1\" type=\"mysql\" datasource=\"ds_main\">\n"
+                    + "        SELECT 1\n"
+                    + "    </query>\n"
+                    + "    <resultMap id=\"m\" query=\"q1\">\n"
+                    + "        <field name=\"id\" column=\"id\" />\n"
+                    + "    </resultMap>\n"
+                    + "    <responseData resultMap=\"m\" />\n"
+                    + "</interface>";
+
+    /** 含 2 个 query 的模板（样例 SQL 含 SAMPLE_ 前缀，用于验证不残留）。 */
+    private static final String TEMPLATE_XML_TWO_QUERIES =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                    + "<interface transno=\"TEMPLATE\" name=\"模板\" description=\"\">\n"
+                    + "    <datasource name=\"ds_main\" />\n"
+                    + "    <query id=\"q1\" type=\"mysql\" datasource=\"ds_main\">\n"
+                    + "        SELECT SAMPLE_COL_A FROM SAMPLE_TABLE_A\n"
+                    + "    </query>\n"
+                    + "    <query id=\"q2\" type=\"mysql\" datasource=\"ds_main\">\n"
+                    + "        SELECT SAMPLE_COL_B FROM SAMPLE_TABLE_B\n"
+                    + "    </query>\n"
+                    + "    <responseData />\n"
+                    + "</interface>";
+
+    // ===== 建议改1：真实模板集成测试 =====
+
+    @Test
+    void generateXml_realTemplate01_generatesCorrectly() {
+        // 向上查找仓库根（含 template/ 目录）
+        java.nio.file.Path candidate = java.nio.file.Paths.get(System.getProperty("user.dir"));
+        java.nio.file.Path repoRoot = null;
+        for (int i = 0; i < 5 && candidate != null; i++) {
+            if (candidate.resolve("template/01-simple-sql-query.xml").toFile().exists()) {
+                repoRoot = candidate;
+                break;
+            }
+            candidate = candidate.getParent();
+        }
+        org.junit.jupiter.api.Assumptions.assumeTrue(repoRoot != null,
+                "未找到真实 template/01-simple-sql-query.xml，跳过");
+
+        prevUserDir = System.getProperty("user.dir");
+        System.setProperty("user.dir", repoRoot.toString());
+        try {
+            AiText2ApiDraft draft = ownedDraft();
+            draft.setConfirmedStage(DraftStage.TEMPLATE);
+            draft.setInterfaceDraft("{\"transno\":\"USER_REAL_TEST\",\"name\":\"真实模板测试\","
+                    + "\"inputSchema\":\"userId\",\"outputSchema\":\"{\\\"type\\\":\\\"object\\\"}\"}");
+            draft.setSqlDraft("{\"sqlItems\":[{\"sqlId\":\"q1\","
+                    + "\"sql\":\"SELECT id, user_name FROM users WHERE id = 1\","
+                    + "\"purpose\":\"查询\",\"dependsOn\":[]}]}");
+            draft.setTemplateSelection("template/01-simple-sql-query.xml|简单SQL");
+            when(draftService.getOwnedDraft("d1", 1L)).thenReturn(draft);
+
+            StageResult r = service.generate("d1", 1L, DraftStage.XML, null);
+            assertTrue(r.isGenerated(), "真实模板应成功: " + r.getMessage());
+
+            ArgumentCaptor<AiText2ApiDraft> captor = ArgumentCaptor.forClass(AiText2ApiDraft.class);
+            verify(draftService).updateById(captor.capture());
+            AiText2ApiDraft updated = captor.getValue();
+            // transno 已替换
+            assertTrue(updated.getXmlDraft().contains("USER_REAL_TEST"));
+            // SQL 已替换为用户 SQL
+            assertTrue(updated.getXmlDraft().contains("SELECT id, user_name FROM users WHERE id = 1"));
+            // importJson 结构兼容
+            assertTrue(updated.getImportJsonDraft().contains("interfaceInfo"));
+            assertTrue(updated.getImportJsonDraft().contains("USER_REAL_TEST"));
+        } finally {
+            System.setProperty("user.dir", prevUserDir);
+            prevUserDir = null;
+        }
     }
 
     // ===== 辅助 =====
