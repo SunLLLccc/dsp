@@ -35,6 +35,9 @@ public class Text2ApiServiceImpl implements Text2ApiService {
     private final TemplateSelector templateSelector;
     private final Text2ApiPromptFactory promptFactory;
     private final Text2ApiAiResponseParser responseParser;
+    private final Text2ApiTemplateRenderer templateRenderer;
+    private final Text2ApiImportJsonBuilder importJsonBuilder;
+    private final com.sunlc.dsp.engine.validator.SqlSecurityValidator sqlSecurityValidator;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ===== 草稿管理 =====
@@ -234,7 +237,7 @@ public class Text2ApiServiceImpl implements Text2ApiService {
                 "模板: " + selection.getTemplateFile() + "（" + selection.getSelectionReason() + "）");
     }
 
-    // ===== 阶段 5：XML（T3-B 仍骨架，但前置约束已锁）=====
+    // ===== 阶段 5：XML/JSON 生成（真实模板填充）=====
 
     private StageResult generateXml(AiText2ApiDraft draft) {
         // 前置约束：必须已确认模板 + interface/sql/template 非空
@@ -245,11 +248,41 @@ public class Text2ApiServiceImpl implements Text2ApiService {
             return StageResult.needsMoreInfo(DraftStage.XML,
                     "缺少接口定义/SQL/模板选择，无法生成 XML。");
         }
-        // T3-C 填充真实模板填充
+
+        // 解析 templateSelection 提取 templateFile
+        String templateFile = extractTemplateFile(draft.getTemplateSelection());
+        if (templateFile == null) {
+            return StageResult.failed(DraftStage.XML, "无法解析模板选择中的模板文件路径");
+        }
+
+        // 渲染 XML（路径安全 + DOM4J 填充）
+        Text2ApiTemplateRenderer.RenderResult renderResult =
+                templateRenderer.render(templateFile, draft.getInterfaceDraft(), draft.getSqlDraft());
+        if (!renderResult.isSuccess()) {
+            return StageResult.failed(DraftStage.XML, renderResult.getErrorMessage());
+        }
+        String xmlDraft = renderResult.getXml();
+
+        // XML 安全校验（落库前）
+        try {
+            sqlSecurityValidator.validateXmlConfig(xmlDraft);
+        } catch (Exception e) {
+            return StageResult.failed(DraftStage.XML, "XML 安全校验失败: " + e.getMessage());
+        }
+
+        // 构造导入 JSON
+        String importJsonDraft = importJsonBuilder.build(draft.getInterfaceDraft(), xmlDraft);
+        if (importJsonDraft == null) {
+            return StageResult.failed(DraftStage.XML, "导入 JSON 构造失败");
+        }
+
+        // 落库
+        draft.setXmlDraft(xmlDraft);
+        draft.setImportJsonDraft(importJsonDraft);
         draft.setStage(DraftStage.XML);
         draft.setUpdatedTime(LocalDateTime.now());
         draftService.updateById(draft);
-        return StageResult.generated(DraftStage.XML, "XML/JSON 生成骨架（T3-C 填充）");
+        return StageResult.generated(DraftStage.XML, "XML/JSON 已生成，请复核后导入发布");
     }
 
     // ===== confirm / rollback =====
@@ -405,6 +438,15 @@ public class Text2ApiServiceImpl implements Text2ApiService {
             throw new BusinessException(ErrorCode.ACCESS_DENIED, "草稿不存在或无权访问");
         }
         return draft;
+    }
+
+    /** 从 templateSelection（格式 "file|reason"）提取模板文件路径。 */
+    private String extractTemplateFile(String templateSelection) {
+        if (templateSelection == null) {
+            return null;
+        }
+        int idx = templateSelection.indexOf('|');
+        return idx > 0 ? templateSelection.substring(0, idx).trim() : templateSelection.trim();
     }
 
     private String evidenceToText(SchemaEvidence evidence) {
