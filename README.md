@@ -6,7 +6,7 @@ DSP（数据服务平台）是数据服务基础设施平台，通过 XML 配置
 
 | 层级 | 技术 |
 |------|------|
-| 后端 | Java 8 + Spring Boot 2.7.18 + MyBatis-Plus + Dynamic-DS + Druid + DOM4J + EasyExcel + Dubbo 3.2 + MongoDB + JWT |
+| 后端 | Java 21 + Spring Boot 3.5.16 + MyBatis-Plus + Dynamic-DS + Druid + DOM4J + EasyExcel + Dubbo 3.2 + MongoDB + JWT |
 | 前端 | Vue 3.5 + Element Plus + Pinia + Vue Router 4 + Vite 8 + Axios |
 | 包名 | com.sunlc.dsp |
 
@@ -22,6 +22,7 @@ dsp/
 │   ├── dsp-offline-service/  # 离线导出服务 (可部署 jar, port=8081)
 │   └── dsp-admin-service/    # 管理平台服务 (可部署 jar, port=8082)
 ├── dsp-admin-web/            # 前端项目 (Vue 3 + Vite)
+├── ai-assets/                # 智能助手 / Text2API 默认资产与索引
 └── template/                 # XML 配置模板
 ```
 
@@ -40,9 +41,9 @@ dsp-admin-service   → dsp-common, dsp-core, dsp-engine
 
 ### 环境要求
 
-- JDK 8+
+- JDK 21+
 - Maven 3.6+
-- Node.js 16+
+- Node.js 20+
 - MySQL 5.7+
 - Redis 5.0+
 - MongoDB 4.0+（可选，使用 mongo 查询类型时需要）
@@ -111,7 +112,9 @@ npm run preview
 - **审批流程** — 接口版本发布支持提交审批、通过、驳回流程，前端审批管理页面
 - **JWT 鉴权** — 签名验证 + 过期校验 + 白名单 + 防重放
 - **应用授权** — AppId/AppSecret 管理，接口级别授权控制
-- **管理后台** — 接口管理/数据源管理/审批管理/导出管理/应用授权/审计日志
+- **智能助手** — AgentScope Java 2.0 接入，支持项目问答、SSE 流式输出、本地文档优先检索与源码兜底
+- **Text2API** — 从自然语言需求到 SQL 类接口发布的阶段式工作区：需求 → 接口定义 → Text2SQL → 模板选择 → XML/JSON → 发布
+- **管理后台** — 接口管理/数据源管理/审批管理/导出管理/应用授权/审计日志/智能助手/Text2API
 
 ## 引擎架构
 
@@ -174,6 +177,8 @@ npm run preview
 | dsp-admin-service | 8082 | `/dsp/admin/interface/*` | 接口管理 CRUD + 版本 + 审批 + 调试 |
 | dsp-admin-service | 8082 | `/dsp/admin/datasource/*` | 数据源管理 CRUD + 动态注册 + 连接测试 |
 | dsp-admin-service | 8082 | `/dsp/admin/app/*` | 应用授权 CRUD + Token 签发 |
+| dsp-admin-service | 8082 | `/dsp/admin/assistant/chat/*` | 智能助手会话、消息历史、SSE 问答 |
+| dsp-admin-service | 8082 | `/dsp/admin/assistant/text2api/*` | Text2API 草稿、阶段生成、确认/回退、导入发布 |
 
 ## 前端页面
 
@@ -187,6 +192,8 @@ npm run preview
 | 应用授权 | /appauth | 应用管理、Token签发 |
 | 导出管理 | /export | 导出任务列表 |
 | 审计日志 | /audit | 操作审计日志查询 |
+| 智能助手 | /assistant | 项目问答、引用展示、会话历史、逻辑删除 |
+| Text2API | /assistant/text2api | 需求到 SQL 类接口发布的 6 阶段工作区 |
 
 ## 数据库表结构
 
@@ -200,6 +207,9 @@ npm run preview
 | export_task | 导出任务 | ExportTask |
 | app_auth | 应用授权 | AppAuth |
 | audit_log | 操作审计日志 | AuditLog |
+| ai_chat_session | 智能助手会话 | AiChatSession |
+| ai_chat_message | 智能助手消息 | AiChatMessage |
+| ai_text2api_draft | Text2API 草稿与阶段产物 | AiText2ApiDraft |
 
 ## 配置说明
 
@@ -208,8 +218,35 @@ npm run preview
 - **数据源密码** — AES 加密存储，`ENC(base64)` 格式，密钥配置在 `dsp.security.encrypt-key`
 - **XML缓存** — `dsp.cache.xml.refresh-enabled=true` 启用定时刷新，`refresh-interval` 刷新间隔（毫秒）
 - **MongoDB** — `spring.data.mongodb.uri`，需引入 spring-boot-starter-data-mongodb
+- **AI 助手** — `dsp.assistant.model` / `dsp.assistant.base-url` / `dsp.assistant.api-key`，API Key 建议通过 `DSP_ASSISTANT_API_KEY` 注入
+- **AI 资产目录** — `dsp.assistant.assets-path`，生产建议通过 `DSP_ASSISTANT_ASSETS_PATH` 指向部署机外部目录；默认读取仓库内 `ai-assets/`
+- **Text2API 元数据读取** — `dsp.assistant.metadata.timeout-seconds` / `max-tables` / `max-columns` 控制只读元数据扫描上限
 - **前端代理** — Vite 将 `/dsp` 请求代理到 `localhost:8082`
 - **导出目录** — 离线导出文件存储在 `./export-files`
+
+## 智能助手与 Text2API
+
+### 智能助手
+
+- 后端使用 AgentScope Java 2.0 RC5 作为 AI 适配层，业务层只依赖项目自有 `AiGateway`。
+- 问答采用 Spring MVC `SseEmitter` 输出，前端通过 `fetch + ReadableStream` 消费 SSE。
+- 项目相关问题优先检索本地文档；文档命中不足时按白名单从源码兜底检索，并返回引用来源。
+- 会话与消息持久化在 `ai_chat_session` / `ai_chat_message`，删除会话为逻辑删除，消息保留审计。
+
+### Text2API
+
+Text2API 一期聚焦 SQL 类接口生成，必须基于用户提供的表结构依据生成 SQL，不能在没有表结构/字段依据时生成看似可用的 SQL。
+
+阶段流转：
+
+```
+需求文本 → 接口定义 → Text2SQL → 模板选择 → XML/JSON 生成 → 导入发布
+```
+
+- Text2SQL 必须有 `SchemaEvidence`：可来自当前会话输入、知识库或数据源元数据。
+- XML 生成必须基于 `template/` 下的模板选择与填充，AI 不允许自由编写 XML。
+- 导入发布复用 `ConfigImportService.importConfig`，生成的导入 JSON 中 `schema.inputSchema` 与 `template.xmlContent` 一期同源为 XML 配置字符串。
+- 发布失败会保留草稿并记录 `publishError`，允许修正后重试发布。
 
 ## 业务错误码
 
