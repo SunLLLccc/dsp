@@ -36,6 +36,26 @@ public class AssistantProperties {
     /** 资产目录路径（对应环境变量 DSP_ASSISTANT_ASSETS_PATH），P3 检索层使用。 */
     private String assetsPath = "ai-assets";
 
+    /** 元数据读取配置（Text2API T1）。 */
+    private Metadata metadata = new Metadata();
+
+    /** 元数据读取安全配置。 */
+    public static class Metadata {
+        /** 连接超时（秒）。 */
+        private int timeoutSeconds = 10;
+        /** 最大返回表数。 */
+        private int maxTables = 100;
+        /** 每表最大字段数。 */
+        private int maxColumns = 200;
+
+        public int getTimeoutSeconds() { return timeoutSeconds; }
+        public void setTimeoutSeconds(int timeoutSeconds) { this.timeoutSeconds = timeoutSeconds; }
+        public int getMaxTables() { return maxTables; }
+        public void setMaxTables(int maxTables) { this.maxTables = maxTables; }
+        public int getMaxColumns() { return maxColumns; }
+        public void setMaxColumns(int maxColumns) { this.maxColumns = maxColumns; }
+    }
+
     public String getModel() {
         return model;
     }
@@ -98,5 +118,13 @@ public class AssistantProperties {
 
     public void setAssetsPath(String assetsPath) {
         this.assetsPath = assetsPath;
+    }
+
+    public Metadata getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(Metadata metadata) {
+        this.metadata = metadata;
     }
 }

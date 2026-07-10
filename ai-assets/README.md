@@ -1,8 +1,8 @@
 # ai-assets — Web 侧智能助手与 Text2API 默认资产
 
-本目录是 **Web 侧**（智能助手 `chat` + Text2API）默认样例资产目录，沉淀项目问答检索范围、XML 模板选择规则、配置导入 JSON 样例和纠错记忆规则，供后续 `07-08-ai-assistant-chat`、`07-08-text2api-web-flow` 子任务直接消费。
+本目录是 **Web 侧**（智能助手 `chat` + Text2API）默认样例资产目录，沉淀项目问答检索范围、XML 模板选择规则、配置导入 JSON 样例和纠错记忆规则，供智能助手与 Text2API 运行时消费。
 
-> 本目录只产出资产与规则文件，**不实现** AI 调用、SSE、Text2API 状态机、agent skills 或后端读取逻辑。`dsp-*` skills 的专用资产放在各自 `.agents/skills/dsp-*/` 目录下，不放在这里。
+> 本目录只放 Web 侧资产与规则文件，不放密钥、运行时日志或构建产物。`dsp-*` skills 的专用资产放在各自 `.agents/skills/dsp-*/` 目录下，不放在这里。
 
 ## 1. 本地默认目录与生产外部目录的关系
 
@@ -12,11 +12,9 @@
 
 ### 环境变量约定
 
-| 环境变量 | 作用 | 默认值（未配置时） |
-|---------|------|-------------------|
-| `DSP_AI_ASSETS_PATH` | Web 侧资产目录绝对路径。后端读取本目录下的 JSON 索引和 Markdown 规则。 | 仓库内 `ai-assets/`（仅用于本地开发；生产必须显式配置外部路径） |
-
-> 环境变量名为**规划建议名**，最终命名以 `07-08-ai-assistant-chat` / `07-08-text2api-web-flow` 实现任务确认为准。若最终改名，需同步更新本说明。
+| 配置项 | 环境变量 | 作用 | 默认值（未配置时） |
+|--------|----------|------|-------------------|
+| `dsp.assistant.assets-path` | `DSP_ASSISTANT_ASSETS_PATH` | Web 侧资产目录路径。后端读取本目录下的 JSON 索引和 Markdown 规则。 | `ai-assets`（相对当前工作目录，仅用于本地开发；生产建议显式配置外部绝对路径） |
 
 ## 2. 文件清单
 
@@ -60,13 +58,13 @@
 
 1. 按阶段流转：需求文本 → 接口输入输出草稿 → Text2SQL（需表结构依据） → 模板选择确认 → 填充 XML + 生成导入 JSON → 用户最终“导入并发布”。
 2. 模板选择阶段读取 `template-index.json`，向用户展示模板文件、适用场景、选择理由、填充点和重点复核项，获得用户确认后才生成 XML。
-3. 最终“导入并发布”复用现有 `/dsp/admin/config/import` 入口，导入 JSON 结构对照 `import-json-example.json`。
+3. 最终“导入并发布”复用后端 `ConfigImportService.importConfig`，导入 JSON 结构对照 `import-json-example.json`。
 4. 用户纠错按 `correction-memory.md` 规则沉淀到草稿修正记录/学习记录，不自动写入 RAG 或项目知识库。
 
 ### skills（dsp-*）
 
 - `dsp-text2api` skill 可引用同一份 `template-index.json` 选择规则和 `import-json-example.json` 格式，但运行时读取自身 `.agents/skills/dsp-text2api/` 相对目录。
-- Web 资产与 skills 资产可引用同一来源模板，但运行时目录职责分开：Web 读 `DSP_AI_ASSETS_PATH`，skills 读自身相对目录。
+- Web 资产与 skills 资产可引用同一来源模板，但运行时目录职责分开：Web 读 `dsp.assistant.assets-path` / `DSP_ASSISTANT_ASSETS_PATH`，skills 读自身相对目录。
 
 ## 6. 维护提示
 
