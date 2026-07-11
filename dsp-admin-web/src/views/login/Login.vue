@@ -18,20 +18,20 @@
         </div>
         <h1 class="brand-title">DSP</h1>
         <div class="brand-divider"></div>
-        <h2 class="brand-subtitle">数据服务平台</h2>
-        <p class="brand-desc">统一数据查询 · 接口管理 · 审批发布</p>
+        <h2 class="brand-subtitle">AI 数据接口平台</h2>
+        <p class="brand-desc">让数据需求安全地生成、审核并发布为接口</p>
         <div class="brand-features">
           <div class="feature-item">
             <div class="feature-dot"></div>
-            <span>多数据源引擎</span>
+            <span>受控生成</span>
           </div>
           <div class="feature-item">
             <div class="feature-dot"></div>
-            <span>可视化调试</span>
+            <span>查询编排</span>
           </div>
           <div class="feature-item">
             <div class="feature-dot"></div>
-            <span>审批工作流</span>
+            <span>全程治理</span>
           </div>
         </div>
       </div>
@@ -59,7 +59,7 @@
           </el-form-item>
         </el-form>
         <div class="login-footer">
-          <span>DSP Data Service Platform</span>
+          <span>DSP AI Data Interface Platform</span>
         </div>
       </div>
     </div>
@@ -240,7 +240,8 @@ async function handleLogin() {
 
 .brand-desc {
   font-size: 13px;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
+  line-height: 1.8;
   opacity: 0.6;
   margin-bottom: 36px;
 }

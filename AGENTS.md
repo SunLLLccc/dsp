@@ -7,7 +7,7 @@ Language=Chinese
 ## 2. 构建与运行
 
 ```bash
-# 后端 (Maven, Java 8, Spring Boot 2.7.18)
+# 后端 (Maven, Java 21, Spring Boot 3.5.16)
 cd dsp-parent
 mvn clean compile                          # 编译全部模块
 mvn clean compile -pl dsp-engine -am       # 编译单个模块及其依赖
@@ -46,7 +46,7 @@ dsp-admin-service   → dsp-common, dsp-core, dsp-engine
 
 ## 4. 技术栈
 
-Java 8、Spring Boot 2.7.18、MyBatis-Plus 3.5.5（逻辑删除 `deleted` 字段）、Dynamic-DS 3.6.1 多数据源、DOM4J、Druid、JWT (jjwt 0.11.5)、Dubbo 3.2.11、EasyExcel 3.3.4
+Java 21、Spring Boot 3.5.16、MyBatis-Plus 3.5.16（逻辑删除 `deleted` 字段）、Dynamic-DS 4.5.0 多数据源、DOM4J、Druid 1.2.28、JWT (jjwt 0.11.5)、Dubbo 3.2.11、EasyExcel 3.3.4、AgentScope Java 2.0.0-RC5
 前端：Vue 3 + Element Plus + Pinia + Vite
 
 ## 5. 关键约定

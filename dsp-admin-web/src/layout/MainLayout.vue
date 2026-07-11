@@ -183,7 +183,7 @@
       <el-header class="layout-header">
         <div class="header-left">
           <el-icon class="hamburger-btn" @click="drawerVisible = true"><Expand /></el-icon>
-          <span class="header-brand">数据服务平台</span>
+          <span class="header-brand">AI 数据接口平台</span>
         </div>
         <div class="header-right">
           <el-dropdown trigger="click" @command="handleUserCommand">
