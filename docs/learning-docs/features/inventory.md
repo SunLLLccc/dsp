@@ -1,22 +1,22 @@
-# 功能清单 — DSP 数据服务平台
+# 功能清单 — DSP AI 数据接口平台
 
 > 由 lp-feature-scan 自动生成。每个功能附【核心度/复杂度/依赖/证据】。
 > 人在回路：在要深入学习的功能前把 `- [ ]` 改为 `- [x]`，lp-prompt-gen 只对选中的功能生成提示词与文档。
-> 说明文档充分（README + docs/engine-architecture.md + docs/xml-dsl-reference.md + template/ 17 个 DSL 示例），功能识别以文档层为主、结构与入口层交叉验证，证据均经实际文件存在性核对。
+> 说明文档充分（README + docs/engine-architecture.md + docs/xml-dsl-reference.md + template/ 16 个 DSL 示例），功能识别以文档层为主、结构与入口层交叉验证，证据均经实际文件存在性核对。
 
 ## 功能清单（按核心度排序）
 
 ### - [x] 1. XML DSL 数据查询引擎（四阶段执行流水线）
 
-- **简介**：通过 XML 配置定义接口逻辑（参数/查询/数据源/结果映射/响应），XmlEngine 按"参数校验→DAG 查询编排→结果映射→响应构建"四阶段流水线执行，是整个 DSP 平台"零代码发布接口"的执行内核。
-- **核心度**：核心（README 核心特性首条；docs/engine-architecture.md 整篇围绕它；6 个模块全部直接或间接依赖它）
+- **简介**：通过 XML 配置定义查询接口的执行结构（参数/查询/数据源/结果映射/响应），XmlEngine 按"参数校验→DAG 查询编排→结果映射→响应构建"四阶段流水线执行，是 DSP 查询接口的运行执行底座。
+- **核心度**：核心（README 将其定位为 XML DSL 执行底座；docs/engine-architecture.md 整篇围绕它；6 个模块全部直接或间接依赖它）
 - **复杂度**：高
 - **依赖**：无（这是平台主线，学其它功能的前置）
 - **证据**：
   - `dsp-parent/dsp-engine/src/main/java/com/sunlc/dsp/engine/XmlEngine.java`: 引擎主类，executeWithConfig() 四阶段流水线（validateParams→QueryOrchestrator→ResultMapper→buildResponse），含带/不带 DebugContext 的两套入口
   - `dsp-parent/dsp-engine/src/main/java/com/sunlc/dsp/engine/parser/XmlConfigParser.java`: DOM4J 解析 XML 字符串为 InterfaceConfig（request/datasource/query/resultMap/responseData 五部分）
   - `docs/engine-architecture.md`: 完整记录引擎总览流程与详细执行流水线
-  - `README.md`: "XML 配置化开发 — 通过 XML 定义接口逻辑，零代码发布接口"
+  - `README.md`: "XML DSL 执行底座 — 通过 XML 定义请求、查询、结果映射和响应结构，由运行引擎解释执行"
 
 ### - [x] 2. DAG 多查询并行编排（CompletableFuture + 依赖拓扑 + 环检测）
 
@@ -86,10 +86,10 @@
   - `docs/engine-architecture.md`: "缓存机制" 与 README "缓存架构" 章节
   - `README.md`: "本地缓存 — XML 配置解析结果缓存，5分钟定时刷新，发布/下线即时失效"
 
-### - [ ] 8. 接口版本 + 审批发布流水线（零代码发布）
+### - [ ] 8. 接口版本 + 审批发布流水线（治理闭环）
 
-- **简介**：InterfaceVersionService 管理 Schema 版本（saveSchema/versionList/getVersion），提供"提交审批→通过发布→驳回→撤回→下线"完整生命周期；审批通过触发缓存失效使新版本对外生效，实现"零代码"上线。
-- **核心度**：核心（README 核心特性"审批流程"；平台"零代码发布接口"闭环的关键环节）
+- **简介**：InterfaceVersionService 管理 Schema 版本（saveSchema/versionList/getVersion），提供"提交审批→通过发布→驳回→撤回→下线"完整生命周期；审批通过触发缓存失效使新版本对外生效，是查询接口治理闭环的关键环节。
+- **核心度**：核心（README 核心特性"版本、审批与发布治理"；平台受控生成和接口发布闭环的关键环节）
 - **复杂度**：中
 - **依赖**：XML DSL 数据查询引擎、XML 配置多级缓存（审批通过触发失效）、统一 API 契约层
 - **证据**：
@@ -183,7 +183,7 @@
 ### - [ ] 16. 接口模板管理（XML 模板 + Schema 自动生成 + 历史版本）
 
 - **简介**：InterfaceTemplateService 管理可复用 XML 模板（create/update/publish/offline），支持从 Schema 自动生成 XML（generateXmlFromSchema），并维护模板历史版本（InterfaceTemplateHistory）。
-- **核心度**：边缘（提效工具，非主线执行链路；但体现"零代码"理念下的模板沉淀机制）
+- **核心度**：边缘（提效工具，非主线执行链路；体现模板复用与配置沉淀机制）
 - **复杂度**：中
 - **依赖**：XML DSL 数据查询引擎、接口版本（模板与版本协同）
 - **证据**：

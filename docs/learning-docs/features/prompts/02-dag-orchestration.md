@@ -37,7 +37,7 @@
 
 背景读物（读者如有需要可先读）：
 
-- `docs/project-knowledge/01-项目概览.md`、`docs/project-knowledge/02-技术栈与架构.md`: 帮助理解引擎在分层中的位置与并发模型选型背景。
+- `docs/project-knowledge/01-001-项目概览.md`、`docs/project-knowledge/02-001-技术栈与架构.md`: 帮助理解引擎在分层中的位置与并发模型选型背景。
 
 ## 学习目标（读者读完后应能回答）
 
